@@ -1,0 +1,227 @@
+{
+  "id": "3BcT6o9Nf6yxtuDiQAglEIK7fsl",
+  "version": "1",
+  "turboVersion": "2.8.21",
+  "monorepo": true,
+  "globalCacheInputs": {
+    "rootKey": "I can’t see ya, but I know you’re here",
+    "files": {},
+    "hashOfExternalDependencies": "e80737dbc2457ce3",
+    "hashOfInternalDependencies": "",
+    "environmentVariables": {
+      "specified": {
+        "env": [],
+        "passThroughEnv": null
+      },
+      "configured": [],
+      "inferred": [
+        "VERCEL_TARGET_ENV=ab8e18ef4ebebeddc0b3152ce9c9006e14fc05242e3fc9ce32246ea6a9543074"
+      ],
+      "passthrough": null
+    },
+    "engines": {
+      "node": "20.x"
+    }
+  },
+  "execution": {
+    "command": "turbo run build",
+    "repoPath": "",
+    "success": 1,
+    "failed": 0,
+    "cached": 0,
+    "attempted": 1,
+    "startTime": 1774787175599,
+    "endTime": 1774787185898,
+    "exitCode": 0
+  },
+  "packages": [
+    "@nexus/api",
+    "@nexus/editor",
+    "@nexus/ui",
+    "web"
+  ],
+  "envMode": "strict",
+  "frameworkInference": true,
+  "tasks": [
+    {
+      "taskId": "web#build",
+      "task": "build",
+      "package": "web",
+      "hash": "5afdffa01fb73ce9",
+      "inputs": {
+        ".git/COMMIT_EDITMSG": "01b3173c56ea29f0e3547caa64df2ec15e18e966",
+        ".git/HEAD": "b870d82622c1a9ca6bcaf5df639680424a1904b0",
+        ".git/config": "6c9406b7d9320db083eca69b3f8bee9a6c7b50d4",
+        ".git/description": "498b267a8c7812490d6479839c5577eaaec79d62",
+        ".git/hooks/applypatch-msg.sample": "a5d7b84a673458d14d9aab082183a1968c2c7492",
+        ".git/hooks/commit-msg.sample": "b58d1184a9d43a39c0d95f32453efc78581877d6",
+        ".git/hooks/fsmonitor-watchman.sample": "23e856f5deeb7f564afc22f2beed54449c2d3afb",
+        ".git/hooks/post-update.sample": "ec17ec1939b7c3e86b7cb6c0c4de6b0818a7e75e",
+        ".git/hooks/pre-applypatch.sample": "4142082bcb939bbc17985a69ba748491ac6b62a5",
+        ".git/hooks/pre-commit.sample": "e144712c85c055bcf3248ab342592b440a477062",
+        ".git/hooks/pre-merge-commit.sample": "399eab1924e39da570b389b0bef1ca713b3b05c3",
+        ".git/hooks/pre-push.sample": "4ce688d32b7532862767345f2b991ae856f7d4a8",
+        ".git/hooks/pre-rebase.sample": "6cbef5c370d8c3486ca85423dd70440c5e0a2aa2",
+        ".git/hooks/pre-receive.sample": "a1fd29ec14823d8bc4a8d1a2cfe35451580f5118",
+        ".git/hooks/prepare-commit-msg.sample": "10fa14c5ab0134436e2ae435138bf921eb477c60",
+        ".git/hooks/push-to-checkout.sample": "af5a0c0018b5e9c04b56ac52f21b4d28f48d99ea",
+        ".git/hooks/update.sample": "c4d426bc6ee9430ee7813263ce6d5da7ec78c3c6",
+        ".git/index": "7d0cac960bca87cdc71dd9e27ba0b15a187c4743",
+        ".git/info/exclude": "a5196d1be8fb59edf8062bef36d3a602e0812139",
+        ".git/logs/HEAD": "2bb0e44112cfd89eaa809f01c39b490ee166c59f",
+        ".git/logs/refs/heads/main": "2bb0e44112cfd89eaa809f01c39b490ee166c59f",
+        ".git/objects/00/4145cddf3f9db91b57b9cb596683c8eb420862": "b03377b086b11305a318dce3ad75f4ed6e4d3b45",
+        ".git/objects/05/e726d1b4201bc8c7716d2b058279676582e8c0": "5a915487215b715fd57309ace99464b505539007",
+        ".git/objects/06/d3c9b82212a818a1ab5db65b0a6734e37746cc": "30de02238fb58ce2212277e348c79c7d3680c0d9",
+        ".git/objects/2c/0ccb3713851228c02bd71c9edb2d75759f3366": "180511e765f323ee47e848941778fc05164e7e29",
+        ".git/objects/3f/36f7c5c4cfb7fb3c745bfd7d38b2d21a8c441d": "8f55b612ea4aa2f4d02ed96a71eb338aec5e1de1",
+        ".git/objects/43/c994c2d3617f947bcb5adf1933e21dabe46bb5": "023b433c6a17c4608a8e54997eed645cf1c1af63",
+        ".git/objects/51/74b28c565c285e3e312ec5178be64fbeca8398": "3c78a4833649eee3f67907fa79c99f01d3946eb1",
+        ".git/objects/52/0a6378500902b888f6d381a0d32211d45b5047": "86d8f84cfcc61bc68fe6a20bc7aa00632ce2d596",
+        ".git/objects/56/7f17b0d7c7fb662c16d4357dd74830caf2dccb": "8732022e6c50db6e2956d8005273b23eded4087e",
+        ".git/objects/58/1a9d5b591dfcd01516bf429db120be05a6534f": "426be0428cc83ad325c560cbd366e91b1b03fdbe",
+        ".git/objects/5e/f6a520780202a1d6addd833d800ccb1ecac0bb": "61f99d935994d45e91b9b551da2a70da6576916c",
+        ".git/objects/60/ba54a581a19f14f408d7d2a29cf0984f3b228c": "9f1c0f0e74c953a0ec2dd1f0c225120f0cf0cb99",
+        ".git/objects/61/e36849cf7cfa9f1f71b4a3964a4953e3e243d3": "d68826c043ea4bf39973a86e5f73446618a3d740",
+        ".git/objects/6d/0b5d4cf7114c0c036572e5645dbcd0d9a0fd46": "6b37b22e9c2999ae2d81d8849682a734b1d5330a",
+        ".git/objects/71/8d6fea4835ec2d246af9800eddb7ffb276240c": "d1a82dbfb9c954cd703f4dac6ad9102af716e0aa",
+        ".git/objects/77/053960334e2e34dc584dea8019925c3b4ccca9": "d53a573975852a1f9627f75757b1c19a25d0633c",
+        ".git/objects/8b/d0e39085d5260e7f8faffcad2fdc45e10aef33": "f2e61d23b20ad5f5e1c35b69923573ac60717710",
+        ".git/objects/8f/8d07d25a701cc0879222fe43f135f700c03654": "055d23d4d4c3ca58087eaa905ade9b060d15c4e3",
+        ".git/objects/97/6eb90df142ef2c4f3f39cee8b0e4c4f4771b62": "8cf168a3357fd9daf790856df8366b33909bdcbd",
+        ".git/objects/a2/dc41ecee5ec435200fe7cba2bde4107f823774": "fd9a3e10735c3f1c3d4b33e07d3673190f4072e7",
+        ".git/objects/b2/b2a44f6ebc70c450043c05a002e7a93ba5d651": "a899069cad61e29aeed5b194bef1a2cf70202e0f",
+        ".git/objects/c8/8f389de09f418da376598c42e8788d4fb6d172": "61b2adf1f9d9529dfe30fea9d057daf89351ee7b",
+        ".git/objects/cf/9c65d3e0676a0169374d827f7abb97497789ef": "77c50e7479c1ba1e099043c738bf81841df8b261",
+        ".git/objects/e2/15bc4ccf138bbc38ad58ad57e92135484b3c0f": "295631969ae92cba6224680404c1c1dad57889b1",
+        ".git/objects/e9/ffa3083ad279ecf95fd8eae59cb253e9a539c4": "c23adad8c6dbae1a9fb3ca669c9301a02060992c",
+        ".git/refs/heads/main": "e8a3f5eef8ac89a36425fbff9379decfd4e7c65e",
+        ".gitignore": "5ef6a520780202a1d6addd833d800ccb1ecac0bb",
+        ".turbo/turbo-build.log": "aa7b9a7dee04ab53991f079292cc29b20da9dd36",
+        "AGENTS.md": "8bd0e39085d5260e7f8faffcad2fdc45e10aef33",
+        "CLAUDE.md": "43c994c2d3617f947bcb5adf1933e21dabe46bb5",
+        "README.md": "e215bc4ccf138bbc38ad58ad57e92135484b3c0f",
+        "e2e/sidebar.spec.ts": "1563391982c4b4c5fc58664243f4de2db650d08e",
+        "e2e/smoke.spec.ts": "3b315bfd1c383357cac839b19d7778162ea399dc",
+        "eslint.config.mjs": "05e726d1b4201bc8c7716d2b058279676582e8c0",
+        "next.config.ts": "e9ffa3083ad279ecf95fd8eae59cb253e9a539c4",
+        "package.json": "a41c7e900ec18a81b5804692c0d0d3815057e6e3",
+        "pnpm-lock.yaml": "6d0b5d4cf7114c0c036572e5645dbcd0d9a0fd46",
+        "pnpm-workspace.yaml": "581a9d5b591dfcd01516bf429db120be05a6534f",
+        "postcss.config.mjs": "61e36849cf7cfa9f1f71b4a3964a4953e3e243d3",
+        "public/file.svg": "004145cddf3f9db91b57b9cb596683c8eb420862",
+        "public/globe.svg": "567f17b0d7c7fb662c16d4357dd74830caf2dccb",
+        "public/next.svg": "5174b28c565c285e3e312ec5178be64fbeca8398",
+        "public/vercel.svg": "77053960334e2e34dc584dea8019925c3b4ccca9",
+        "public/window.svg": "b2b2a44f6ebc70c450043c05a002e7a93ba5d651",
+        "sentry.client.config.ts": "216345d9cf8ab51e8deb3f409c7f72f1c5f06882",
+        "sentry.edge.config.ts": "216345d9cf8ab51e8deb3f409c7f72f1c5f06882",
+        "sentry.server.config.ts": "216345d9cf8ab51e8deb3f409c7f72f1c5f06882",
+        "src/app/(auth)/actions.ts": "ba00ad6f00a7bb7bec533e660945f59d3fba4bb3",
+        "src/app/(auth)/layout.tsx": "8f38f0135548000cec3e37476d681d7082c5526e",
+        "src/app/(auth)/login/page.tsx": "1a30839f4b0d041ebddd2f3e80c28626f4dbd3e1",
+        "src/app/(auth)/signup/page.tsx": "59f7f975bbe8c8a6f6e5e634fa17b089305bf54d",
+        "src/app/(dashboard)/w/[workspace_slug]/actions.ts": "10655ab2091d5b77d36e8aff687aa2cbe2606bec",
+        "src/app/(dashboard)/w/[workspace_slug]/dashboard/page.tsx": "0e85a41f7027ffc3121c3a0a7f75bf1c77e85980",
+        "src/app/(dashboard)/w/[workspace_slug]/layout.tsx": "50093b1ad66b58dbba78c67b38fdf020c4af0ba2",
+        "src/app/(dashboard)/w/[workspace_slug]/n/[node_id]/page.tsx": "5b60b63f0fc42aebcf37dafa7a34f0085ae7a5da",
+        "src/app/(dashboard)/w/[workspace_slug]/team-actions.ts": "139878c327dd7c4efb63e37fa2627792aa3bcff1",
+        "src/app/accept-invite/page.tsx": "5866fc5119bd1ea4a07931dc56b1a2e4161c1f38",
+        "src/app/api/ai/generate/route.ts": "2d5f9d956588c1e3b4f699c4e273c131aed3d282",
+        "src/app/favicon.ico": "718d6fea4835ec2d246af9800eddb7ffb276240c",
+        "src/app/globals.css": "ad96baa8a99472c5a562e11198d1eb0261e25dc9",
+        "src/app/layout.tsx": "7c3eecb825e5f633cd138545bfdd506d7861f188",
+        "src/app/page.tsx": "e0b163bfdbde1475d024c8295c23cea95b08ecb3",
+        "src/components/business/BusinessSwitcher.tsx": "b0e5b5e8a59408a18bab01830cfc97d6c664906b",
+        "src/components/business/CreateBusinessModal.tsx": "0770320221e882ea704d1ed6941696e61961364a",
+        "src/components/business/TeamSettingsModal.tsx": "51b2e0f14bd735d38d2356d9c84ae5bb942ab509",
+        "src/components/dashboard/SidebarItem.tsx": "e168f279301283b25ecba3309cf972ce94480bba",
+        "src/components/dashboard/SidebarTree.tsx": "66b2555208a11761f42a530ad1afe58fa208420d",
+        "src/components/editor/AIBubbleMenu.tsx": "c6dd4e79b6c907fa47a61c3b1c59fb8b71350d95",
+        "src/components/editor/AIPromptBar.tsx": "1e043504f61338b8fda2e654fd62eb12febc64f2",
+        "src/components/editor/AvatarStack.tsx": "545c72bf1a54b127c824d1d89511afd6f68af633",
+        "src/components/editor/NexusEditor.tsx": "f0b4c9aa12d35a385189bd4364623019f0f2c86c",
+        "src/components/editor/extensions/SlashCommand.ts": "8a93dea9e6cac3d0f070eec200de0950dd31ff30",
+        "src/components/editor/extensions/SlashCommandList.tsx": "097ae679858d62974eec5b4ef451a63ceaab5c10",
+        "src/components/editor/utils.test.ts": "34444cdfa22d0cff1772d0614bff245c03529cf9",
+        "src/components/editor/utils.ts": "2fd906bd0aaf029059055da64f14912a70ec1ea6",
+        "src/components/providers/PostHogProvider.tsx": "70abcd460c83f8647a899b98ab5b1c9948c827d4",
+        "src/lib/realtime/SupabaseYjsProvider.ts": "93f94fb2c630228f249dcb7adde2354c9aad12ee",
+        "src/lib/supabase/client.ts": "e6db2a13b519e0c419b64ce67d7769f998fb36bc",
+        "src/lib/supabase/server.ts": "f9d927a54a0d8df1f88f897c7d948782273f46c8",
+        "src/lib/tree.test.ts": "df1853f40f6873ff6d773213880ffd5756a47031",
+        "src/lib/tree.ts": "056213f04140736dc5cf4e9ec7b4eb3631168ae5",
+        "src/lib/utils.ts": "cf287e8b04aa09f077e825fb51b58b59a7885881",
+        "src/middleware.ts": "d191eafa3e822bc791bb45ccc75f5b0d144cbd1e",
+        "src/test/actions.test.ts": "73eb1731f303b2658197194bfa65d97d90a0c15d",
+        "src/test/setup.ts": "7bc4b35abd941b23f1f7078ac3b300fac5106df1",
+        "tsconfig.json": "cf9c65d3e0676a0169374d827f7abb97497789ef",
+        "vitest.config.ts": "7625106c986604f9477b19678f7777d245cf7b4c"
+      },
+      "hashOfExternalDependencies": "b9f55eba6032d5b6",
+      "cache": {
+        "local": false,
+        "remote": false,
+        "status": "MISS",
+        "timeSaved": 0
+      },
+      "command": "next build",
+      "cliArguments": [],
+      "outputs": [
+        ".next/**",
+        "dist/**"
+      ],
+      "excludedOutputs": [
+        ".next/cache/**"
+      ],
+      "logFile": "apps/web/.turbo/turbo-build.log",
+      "directory": "apps/web",
+      "dependencies": [
+        "@nexus/api#build"
+      ],
+      "dependents": [],
+      "with": [],
+      "resolvedTaskDefinition": {
+        "outputs": [
+          "!.next/cache/**",
+          ".next/**",
+          "dist/**"
+        ],
+        "cache": true,
+        "dependsOn": [
+          "^build"
+        ],
+        "inputs": [],
+        "outputLogs": "full",
+        "persistent": false,
+        "interruptible": false,
+        "env": [],
+        "passThroughEnv": null,
+        "interactive": false
+      },
+      "expandedOutputs": [],
+      "framework": "nextjs",
+      "envMode": "strict",
+      "environmentVariables": {
+        "specified": {
+          "env": [],
+          "passThroughEnv": null
+        },
+        "configured": [],
+        "inferred": [],
+        "passthrough": null
+      },
+      "execution": {
+        "startTime": 1774787175643,
+        "endTime": 1774787185897,
+        "exitCode": 0
+      }
+    }
+  ],
+  "user": "",
+  "scm": {
+    "type": "git",
+    "sha": null,
+    "branch": null
+  }
+}

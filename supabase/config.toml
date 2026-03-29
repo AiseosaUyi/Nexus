@@ -1,0 +1,35 @@
+# A string used to distinguish different Supabase projects on the same host. Defaults to the
+# working directory name when running `supabase init`.
+project_id = "nexus"
+
+[api]
+enabled = true
+# Port to use for the API URL.
+port = 54321
+# Port to use for Postgres.
+db_port = 54322
+# Port to use for the Realtime service.
+realtime_port = 54323
+# Port to use for the Auth service.
+auth_port = 54324
+
+[db]
+# Port to use for the local database URL.
+port = 54322
+# The database major version to use. This has to be the same as your remote database's.
+major_version = 15
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/*"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false # Fast local development loops without actual email gating
+
+[studio]
+enabled = true
+port = 54323
