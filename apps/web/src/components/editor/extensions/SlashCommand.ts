@@ -118,6 +118,33 @@ export const suggestion = {
           editor.chain().focus().deleteRange(range).setHorizontalRule().run();
         },
       },
+      {
+        title: 'Table',
+        description: 'Insert a simple table.',
+        searchTerms: ['table', 'grid', 'spreadsheet'],
+        command: ({ editor, range }: any) => {
+          editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+        },
+      },
+      {
+        title: 'Image',
+        description: 'Upload or embed an image.',
+        searchTerms: ['picture', 'photo', 'img'],
+        command: ({ editor, range }: any) => {
+          const url = window.prompt('URL');
+          if (url) {
+            editor.chain().focus().deleteRange(range).setImage({ src: url }).run();
+          }
+        },
+      },
+      {
+        title: 'Callout',
+        description: 'Make writing stand out.',
+        searchTerms: ['info', 'alert', 'notice'],
+        command: ({ editor, range }: any) => {
+          editor.chain().focus().deleteRange(range).toggleCodeBlock().run(); // Fallback for now, will refine with custom extension
+        },
+      },
     ].filter(item => {
       if (typeof query !== 'string' || query.length === 0) return true;
       const q = query.toLowerCase();

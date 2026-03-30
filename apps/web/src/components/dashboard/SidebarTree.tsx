@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import Link from 'next/link';
 import SidebarItem from './SidebarItem';
+import SearchModal from './SearchModal';
 import { Node, NodeWithChildren } from '@nexus/api/schema';
 import { buildTree } from '@/lib/tree';
-import { Plus } from 'lucide-react';
+import { Plus, Search, Clock, Settings, Home, Sparkles } from 'lucide-react';
 import { createNode, updateNode } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { useRouter } from 'next/navigation';
 import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -21,6 +23,7 @@ export default function SidebarTree({
   workspaceSlug 
 }: SidebarTreeProps) {
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const router = useRouter();
 
   const tree = useMemo(() => buildTree(nodes), [nodes]);
@@ -44,10 +47,22 @@ export default function SidebarTree({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5, // Requires 5px of movement before drag starts (allows clicks)
+        distance: 3, // Requires 3px of movement before drag starts (allows snappier clicks)
       },
     })
   );
+
+  // Global Search Shortcut (CMD+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -90,16 +105,64 @@ export default function SidebarTree({
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div className="flex flex-col w-full h-full">
+      <div className="flex flex-col w-full h-full bg-sidebar py-3">
+        
+        {/* Top Navigation & Workspace Controls */}
+        <div className="px-3 mb-6 space-y-0.5">
+          <button className="flex items-center gap-2 w-full p-1.5 hover:bg-hover rounded-md transition-colors cursor-pointer outline-none text-sm group">
+            <div className="w-5 h-5 bg-cta/10 rounded-sm flex items-center justify-center text-cta font-bold text-[10px]">W</div>
+            <span className="text-foreground font-bold truncate">Workspace</span>
+          </button>
+          
+          <div className="h-2" />
+          
+          <button 
+            onClick={() => setIsSearchOpen(true)}
+            className="flex items-center gap-2 w-full p-1.5 hover:bg-hover rounded-md transition-colors cursor-pointer outline-none text-sm group"
+          >
+            <Search className="w-4 h-4 text-muted group-hover:text-foreground" />
+            <span className="text-muted group-hover:text-foreground transition-colors">Search</span>
+            <kbd className="ml-auto text-[10px] bg-muted/10 px-1 rounded opacity-50">⌘K</kbd>
+          </button>
+          
+          <Link href={`/w/${workspaceSlug}/dashboard`}>
+            <button className="flex items-center gap-2 w-full p-1.5 hover:bg-hover rounded-md transition-colors cursor-pointer outline-none text-sm group">
+              <Home className="w-4 h-4 text-muted group-hover:text-foreground" />
+              <span className="text-muted group-hover:text-foreground transition-colors">Home</span>
+            </button>
+          </Link>
+
+          <Link href={`/w/${workspaceSlug}/updates`}>
+            <button className="flex items-center gap-2 w-full p-1.5 hover:bg-hover rounded-md transition-colors cursor-pointer outline-none text-sm group">
+              <Clock className="w-4 h-4 text-muted group-hover:text-foreground" />
+              <span className="text-muted group-hover:text-foreground transition-colors">Updates</span>
+            </button>
+          </Link>
+
+          <Link href={`/w/${workspaceSlug}/settings`}>
+            <button className="flex items-center gap-2 w-full p-1.5 hover:bg-hover rounded-md transition-colors cursor-pointer outline-none text-sm group">
+              <Settings className="w-4 h-4 text-muted group-hover:text-foreground" />
+              <span className="text-muted group-hover:text-foreground transition-colors">Settings</span>
+            </button>
+          </Link>
+          
+          <button 
+            onClick={() => handleCreateNode('document')}
+            className="flex items-center gap-2 w-full p-1.5 hover:bg-hover rounded-md transition-colors cursor-pointer outline-none text-sm group mt-4 border border-border/5 bg-background shadow-xs"
+          >
+            <Plus className="w-4 h-4 text-cta" strokeWidth={2.5} />
+            <span className="text-foreground font-semibold">New Page</span>
+          </button>
+        </div>
 
       {/* Private Section Heading */}
-      <div className="flex items-center justify-between px-2 mb-1 group/section">
-        <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#37352f]/40">Private</h4>
+      <div className="flex items-center justify-between px-4 mb-1 group/section mt-2">
+          <h4 className="px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/50 mb-2">Favorites</h4>
         <button 
           onClick={() => handleCreateNode('document')}
-          className="opacity-0 group-hover/section:opacity-40 hover:opacity-100 p-0.5 rounded-sm hover:bg-foreground/5 transition-opacity cursor-pointer"
+          className="opacity-0 group-hover/section:opacity-60 hover:opacity-100 p-0.5 rounded-sm hover:bg-hover transition-all cursor-pointer text-muted"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-3.5 h-3.5" strokeWidth={2} />
         </button>
       </div>
 
@@ -117,15 +180,22 @@ export default function SidebarTree({
       </div>
 
       {/* Footer Shortcut to create a new page */}
-      <div className="px-2 py-2 mt-auto border-t border-[#37352f]/5">
+      <div className="px-2 py-2 mt-auto border-t border-border">
         <button 
           onClick={() => handleCreateNode('document')}
-          className="flex items-center gap-2 w-full p-1.5 hover:bg-foreground/5 rounded-md transition-colors cursor-pointer outline-none text-sm group"
+          className="flex items-center gap-2 w-full p-1.5 hover:bg-hover rounded-md transition-colors cursor-pointer outline-none text-sm group"
         >
-          <Plus className="w-4 h-4 opacity-40 shrink-0 group-hover:opacity-100 transition-opacity" />
-          <span className="opacity-70 group-hover:opacity-100">New Page</span>
+          <Plus className="w-4 h-4 text-muted shrink-0 group-hover:text-foreground transition-all" strokeWidth={2} />
+          <span className="text-foreground/70 group-hover:text-foreground">New Page</span>
         </button>
       </div>
+      
+      {/* Search Modal */}
+      <SearchModal 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+        nodes={nodes} 
+      />
     </div>
     </DndContext>
   );

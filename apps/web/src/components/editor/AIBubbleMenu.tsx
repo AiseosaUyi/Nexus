@@ -11,6 +11,7 @@ import {
   X,
   ChevronDown 
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AIAction {
   id: string;
@@ -136,63 +137,61 @@ export default function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
       {/* Main Trigger Button */}
       <button
         onClick={() => setIsOpen(prev => !prev)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gradient-to-r from-violet-500 to-indigo-500 text-white text-[13px] font-semibold shadow-md hover:opacity-90 transition-all duration-150"
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-accent/10 border border-accent/20 text-accent text-[13px] font-bold hover:bg-accent/20 transition-all cursor-pointer"
         title="Ask AI"
       >
-        <Sparkles className="w-3.5 h-3.5" />
+        <Sparkles className="w-3.5 h-3.5" strokeWidth={2.5} />
         <span>AI</span>
-        <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={cn("w-3 h-3 transition-transform opacity-60", isOpen && "rotate-180")} />
       </button>
 
       {/* Dropdown */}
       {isOpen && state === 'idle' && (
-        <div className="absolute left-0 top-full mt-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-100 p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute left-0 top-full mt-2 w-64 bg-background rounded-lg shadow-popover border border-border p-1 z-50 animate-in fade-in zoom-in-95 duration-100">
           {AI_ACTIONS.map(action => (
             <button
               key={action.id}
               onClick={() => runAction(action.id)}
-              className="flex w-full items-center gap-3 px-3 py-2 rounded-lg hover:bg-violet-50 transition-colors text-left group"
+              className="flex w-full items-center gap-3 px-3 py-1.5 rounded-md hover:bg-hover transition-colors text-left group cursor-pointer"
             >
-              <div className="text-violet-400 group-hover:text-violet-600 transition-colors">
+              <div className="text-accent/60 group-hover:text-accent transition-colors">
                 {action.icon}
               </div>
-              <div>
-                <div className="text-[13px] font-medium text-slate-700">{action.label}</div>
-                <div className="text-[11px] text-slate-400">{action.description}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-medium text-foreground/90 group-hover:text-foreground">{action.label}</div>
+                <div className="text-[11px] text-muted truncate">{action.description}</div>
               </div>
             </button>
           ))}
         </div>
       )}
 
-      {/* Loading State */}
       {state === 'loading' && (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-violet-50 border border-violet-200 text-violet-700 text-[13px] font-medium">
+        <div className="flex items-center gap-2 px-3 py-1 rounded bg-accent/5 border border-accent/10 text-accent text-[13px] font-medium animate-in fade-in">
           <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-          <span>Writing...</span>
+          <span className="font-display">Nexus AI writing...</span>
         </div>
       )}
 
-      {/* Accept/Discard Bar */}
       {state === 'done' && (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 bg-background border border-border p-0.5 rounded shadow-sm animate-in fade-in">
           <button
             onClick={handleAccept}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-500 text-white text-[13px] font-semibold hover:bg-emerald-600 transition-colors"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-accent text-white text-[12px] font-bold hover:bg-accent/90 transition-colors cursor-pointer"
           >
             <CheckCircle className="w-3.5 h-3.5" />
             Accept
           </button>
           <button
             onClick={handleRetry}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 text-slate-600 text-[13px] font-semibold hover:bg-slate-200 transition-colors"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-sm hover:bg-hover text-foreground/80 text-[12px] font-medium transition-colors cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Retry
           </button>
           <button
             onClick={handleDiscard}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 text-slate-600 text-[13px] font-semibold hover:bg-red-50 hover:text-red-500 transition-colors"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-sm hover:bg-red-500/10 text-red-500 text-[12px] font-medium transition-colors cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
             Discard

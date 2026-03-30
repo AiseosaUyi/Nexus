@@ -10,6 +10,13 @@ import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 import * as Y from 'yjs';
 import { SlashCommand, suggestion } from './extensions/SlashCommand';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { Image } from '@tiptap/extension-image';
+import { Typography } from '@tiptap/extension-typography';
+import { HorizontalRule } from '@tiptap/extension-horizontal-rule';
 import { BlockType } from '@nexus/api/schema';
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { syncBlocks, updateYjsSnapshot } from '@/app/(dashboard)/w/[workspace_slug]/actions';
@@ -19,6 +26,7 @@ import { SupabaseYjsProvider } from '@/lib/realtime/SupabaseYjsProvider';
 import AIBubbleMenu from './AIBubbleMenu';
 import AIPromptBar from './AIPromptBar';
 import { Bold, Italic, Strikethrough, Code } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface NexusEditorProps {
   initialContent?: any;
@@ -95,6 +103,15 @@ export default function NexusEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       SlashCommand.configure({ suggestion }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Image.configure({ inline: false, allowBase64: true }),
+      Typography,
+      HorizontalRule.configure({
+        HTMLAttributes: { class: 'my-8 border-t border-border/20' },
+      }),
       // @ts-ignore — Tiptap v2/v3 peer mismatch; works correctly at runtime
       Collaboration.configure({ document: ydoc }),
       // @ts-ignore
@@ -102,7 +119,7 @@ export default function NexusEditor({
     ],
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose-base lg:prose-lg xl:prose-2xl focus:outline-none min-h-[500px] w-full max-w-none font-sans text-[#37352f] px-12 md:px-24 py-20',
+        class: 'prose prose-sm sm:prose-base lg:prose-lg focus:outline-none min-h-[500px] w-full max-w-none font-sans text-foreground selection:bg-accent/30',
       },
     },
     onUpdate: ({ editor }) => {
@@ -166,34 +183,46 @@ export default function NexusEditor({
       {editor && toolbarPos && (
         <div
           style={{ top: toolbarPos.top, left: toolbarPos.left }}
-          className="absolute z-50 flex items-center gap-0.5 bg-white rounded-xl shadow-xl border border-slate-100 p-1 -translate-x-1/2 -translate-y-full"
+          className="absolute z-50 flex items-center gap-0.5 bg-background rounded-lg shadow-popover border border-border p-0.5 -translate-x-1/2 -translate-y-full mb-2 animate-in fade-in zoom-in-95"
           onMouseDown={e => e.preventDefault()}
         >
           <button
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors ${editor.isActive('bold') ? 'bg-slate-100 text-slate-900 font-bold' : ''}`}
+            className={cn(
+              "w-7 h-7 rounded flex items-center justify-center text-muted hover:bg-hover transition-colors",
+              editor.isActive('bold') && "bg-active text-foreground font-bold"
+            )}
           >
-            <Bold className="w-3.5 h-3.5" />
+            <Bold className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors ${editor.isActive('italic') ? 'bg-slate-100 text-slate-900' : ''}`}
+            className={cn(
+              "w-7 h-7 rounded flex items-center justify-center text-muted hover:bg-hover transition-colors",
+              editor.isActive('italic') && "bg-active text-foreground"
+            )}
           >
-            <Italic className="w-3.5 h-3.5" />
+            <Italic className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleStrike().run()}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors ${editor.isActive('strike') ? 'bg-slate-100 text-slate-900' : ''}`}
+            className={cn(
+              "w-7 h-7 rounded flex items-center justify-center text-muted hover:bg-hover transition-colors",
+              editor.isActive('strike') && "bg-active text-foreground"
+            )}
           >
-            <Strikethrough className="w-3.5 h-3.5" />
+            <Strikethrough className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleCode().run()}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors ${editor.isActive('code') ? 'bg-slate-100 text-slate-900' : ''}`}
+            className={cn(
+              "w-7 h-7 rounded flex items-center justify-center text-muted hover:bg-hover transition-colors",
+              editor.isActive('code') && "bg-active text-foreground"
+            )}
           >
-            <Code className="w-3.5 h-3.5" />
+            <Code className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
-          <div className="w-px h-5 bg-slate-200 mx-1" />
+          <div className="w-px h-4 bg-border mx-1" />
           <AIBubbleMenu editor={editor} />
         </div>
       )}

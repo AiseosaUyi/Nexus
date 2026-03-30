@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { useRouter } from "next/navigation";
 import { X, Plus, Loader2 } from "lucide-react";
-import { createBusiness } from "@/app/(auth)/actions"; // I'll add this action later
+import { createBusiness } from "@/app/(auth)/actions";
 
 export default function CreateBusinessModal({ trigger }: { trigger?: React.ReactNode }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,8 +22,9 @@ export default function CreateBusinessModal({ trigger }: { trigger?: React.React
       const response = await createBusiness(formData);
       if (response?.error) {
         setError(response.error);
-      } else {
+      } else if (response?.data) {
         setIsOpen(false);
+        router.push(`/w/${response.data.slug}/dashboard`);
       }
     } catch (err) {
       setError("An unexpected error occurred.");
@@ -42,26 +45,26 @@ export default function CreateBusinessModal({ trigger }: { trigger?: React.React
       </Dialog.Trigger>
       
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 animate-in fade-in" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-lg shadow-xl p-6 z-50 animate-in zoom-in-95 fade-in duration-200 focus:outline-none">
-          <div className="flex items-center justify-between mb-4">
-            <Dialog.Title className="text-xl font-semibold text-[#37352f]">
-              Create new workspace
+        <Dialog.Overlay className="fixed inset-0 bg-background/60 backdrop-blur-md z-50 animate-in fade-in duration-300" />
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-sidebar border border-border/10 rounded-2xl shadow-popover p-8 z-50 animate-in zoom-in-95 fade-in duration-300 focus:outline-none">
+          <div className="flex items-center justify-between mb-6">
+            <Dialog.Title className="text-2xl font-black font-display tracking-tight text-foreground">
+              Create workspace
             </Dialog.Title>
             <Dialog.Close asChild>
-              <button className="p-1 hover:bg-foreground/5 rounded-full transition-colors opacity-40 hover:opacity-100 cursor-pointer">
+              <button className="p-1 hover:bg-hover rounded-full transition-colors text-muted/40 hover:text-foreground cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </Dialog.Close>
           </div>
 
-          <Dialog.Description className="text-sm text-[#37352f]/60 mb-6">
-            Workspaces are where your team lives. You can create as many as you need.
+          <Dialog.Description className="text-sm text-foreground/70 mb-8 font-medium">
+            Workspaces are where your team lives and moves. You can create as many as you need.
           </Dialog.Description>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-[#37352f]/80 mb-1">
+            <div className="space-y-1.5">
+              <label htmlFor="name" className="text-[11px] font-bold text-foreground/70 ml-0.5 uppercase tracking-widest">
                 Workspace Name
               </label>
               <input
@@ -70,23 +73,23 @@ export default function CreateBusinessModal({ trigger }: { trigger?: React.React
                 type="text"
                 required
                 placeholder="Acme Inc."
-                className="w-full px-3 py-2 text-sm rounded-md border border-[#37352f]/20 bg-white text-[#37352f] placeholder:text-[#37352f]/30 outline-none focus:ring-2 focus:ring-[#37352f]/20 focus:border-[#37352f]/40 transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-border/20 bg-background text-foreground placeholder:text-foreground/30 outline-none focus:ring-4 focus:ring-cta/10 focus:border-cta transition-all text-[15px] font-medium"
               />
             </div>
 
-            <div>
-              <label htmlFor="slug" className="block text-sm font-medium text-[#37352f]/80 mb-1">
+            <div className="space-y-1.5">
+              <label htmlFor="slug" className="text-[11px] font-bold text-foreground/70 ml-0.5 uppercase tracking-widest">
                 Workspace Slug
               </label>
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-[#37352f]/40 font-mono">nexus.so/w/</span>
+                <span className="text-xs text-foreground/40 font-mono tracking-tight">nexus-app.com/w/</span>
                 <input
                   id="slug"
                   name="slug"
                   type="text"
                   required
                   placeholder="acme"
-                  className="flex-1 w-full px-3 py-2 text-sm rounded-md border border-[#37352f]/20 bg-white text-[#37352f] placeholder:text-[#37352f]/30 outline-none focus:ring-2 focus:ring-[#37352f]/20 focus:border-[#37352f]/40 transition-all font-mono"
+                  className="flex-1 w-full px-4 py-3 rounded-xl border border-border/20 bg-background text-foreground placeholder:text-foreground/30 outline-none focus:ring-4 focus:ring-cta/10 focus:border-cta transition-all font-mono text-sm"
                 />
               </div>
             </div>
@@ -97,11 +100,11 @@ export default function CreateBusinessModal({ trigger }: { trigger?: React.React
               </div>
             )}
 
-            <div className="flex justify-end gap-3 mt-8">
+            <div className="flex justify-end gap-3 mt-10">
               <Dialog.Close asChild>
                 <button
                   disabled={loading}
-                  className="px-4 py-2 text-sm font-medium border border-[#37352f]/10 rounded-md hover:bg-foreground/5 transition-colors cursor-pointer"
+                  className="px-5 py-2.5 text-sm font-bold border border-border/10 rounded-xl hover:bg-foreground/5 transition-colors cursor-pointer text-muted-foreground"
                 >
                   Cancel
                 </button>
@@ -109,7 +112,7 @@ export default function CreateBusinessModal({ trigger }: { trigger?: React.React
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[#37352f] text-white rounded-md hover:bg-[#37352f]/90 transition-colors cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold bg-foreground text-background rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-lg disabled:opacity-50"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Create Workspace

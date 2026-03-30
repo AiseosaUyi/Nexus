@@ -25,42 +25,41 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh the session — keeps it alive on every request
+  // Refresh session on every request
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
 
+  // Auth routes: /login, /signup
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/signup');
-  const isProtectedRoute = !isAuthRoute && pathname !== '/';
 
-  // Redirect unauthenticated users to /login
+  // Protected routes: anything under /w/* or /dashboard
+  const isProtectedRoute =
+    pathname.startsWith('/w/') || pathname.startsWith('/dashboard');
+
+  // 1. Unauthenticated users trying to access protected routes → send to /login
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from auth pages
+  // 2. Authenticated users on auth pages (/login, /signup) → send to /dashboard
+  //    which will then redirect to their workspace
   if (user && isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
 
+  // 3. Everything else (including '/' landing page) — let it pass through
   return supabaseResponse;
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization)
-     * - favicon.ico, sitemap.xml, robots.txt
-     * - public assets
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

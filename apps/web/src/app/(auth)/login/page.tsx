@@ -1,85 +1,78 @@
+'use client';
+
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { signIn } from '../actions';
+import { Sparkles, LogIn, AlertCircle } from 'lucide-react';
 
-export const metadata = {
-  title: 'Sign in — Nexus',
-  description: 'Sign in to your Nexus workspace',
-};
-
-interface LoginPageProps {
-  searchParams: Promise<{ error?: string }>;
-}
-
-export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { error } = await searchParams;
+export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get('error');
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-[#37352f] text-center mb-1">
-        Sign in to Nexus
-      </h1>
-      <p className="text-sm text-[#37352f]/60 text-center mb-6">
-        Welcome back. Enter your details below.
-      </p>
+    <div className="w-full max-w-sm mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-black font-display tracking-tight text-foreground">
+          Welcome back
+        </h1>
+        <p className="text-sm text-muted">
+          Your knowledge base is waiting for you.
+        </p>
+      </div>
 
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-md bg-red-50 border border-red-200 text-sm text-red-700">
-          {decodeURIComponent(error)}
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-500 text-sm animate-in shake-1">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <p>{decodeURIComponent(error)}</p>
         </div>
       )}
 
-      <form action={signIn} className="space-y-3">
-        <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-[#37352f]/80 mb-1"
-          >
-            Email
+      <form action={signIn} className="space-y-4">
+        <div className="space-y-1">
+          <label htmlFor="email" className="text-[13px] font-bold text-muted ml-1 uppercase tracking-wider">
+            Email Address
           </label>
           <input
             id="email"
             name="email"
             type="email"
             required
-            autoComplete="email"
             placeholder="you@example.com"
-            className="w-full px-3 py-2 text-sm rounded-md border border-[#37352f]/20 bg-white text-[#37352f] placeholder:text-[#37352f]/30 outline-none focus:ring-2 focus:ring-[#37352f]/20 focus:border-[#37352f]/40 transition-all"
+            className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground placeholder:text-muted/50 outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all text-sm"
           />
         </div>
 
-        <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-[#37352f]/80 mb-1"
-          >
-            Password
-          </label>
+        <div className="space-y-1">
+          <div className="flex items-center justify-between ml-1">
+            <label htmlFor="password" className="text-[13px] font-bold text-muted uppercase tracking-wider">
+              Password
+            </label>
+            <Link href="/forgot-password" title="Coming soon!" className="text-[11px] text-muted hover:text-white font-bold transition-colors">
+              Forgot?
+            </Link>
+          </div>
           <input
             id="password"
             name="password"
             type="password"
             required
-            autoComplete="current-password"
             placeholder="••••••••"
-            className="w-full px-3 py-2 text-sm rounded-md border border-[#37352f]/20 bg-white text-[#37352f] placeholder:text-[#37352f]/30 outline-none focus:ring-2 focus:ring-[#37352f]/20 focus:border-[#37352f]/40 transition-all"
+            className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground placeholder:text-muted/50 outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all text-sm"
           />
         </div>
 
         <button
           type="submit"
-          className="w-full py-2 px-4 mt-2 bg-[#37352f] hover:bg-[#37352f]/90 text-white text-sm font-medium rounded-md transition-colors cursor-pointer"
+          className="w-full py-3 px-4 bg-cta hover:opacity-90 text-cta-foreground text-sm font-bold rounded-lg shadow-lg shadow-cta/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
         >
-          Continue
+          Sign In
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-[#37352f]/50">
-        Don&apos;t have an account?{' '}
-        <Link
-          href="/signup"
-          className="text-[#37352f]/80 font-medium hover:underline underline-offset-2"
-        >
-          Sign up
+      <p className="text-center text-sm text-muted pt-2 font-display">
+        Don't have an account?{' '}
+        <Link href="/signup" className="text-white font-bold hover:underline transition-colors">
+          Create Account
         </Link>
       </p>
     </div>

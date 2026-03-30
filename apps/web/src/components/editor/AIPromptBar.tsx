@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Editor } from '@tiptap/react';
 import { Sparkles, Send, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AIPromptBarProps {
   editor: Editor;
@@ -82,18 +83,18 @@ export default function AIPromptBar({ editor, isOpen, onClose }: AIPromptBarProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4">
-      <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden ring-2 ring-violet-400/30">
-        {/* Purple gradient accent at the top */}
-        <div className="h-[2px] w-full bg-gradient-to-r from-violet-500 via-indigo-500 to-fuchsia-500" />
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4 animate-in slide-in-from-bottom-4 duration-300">
+      <div className="relative bg-background/80 backdrop-blur-md rounded-xl shadow-popover border border-accent/20 overflow-hidden ring-1 ring-accent/5">
+        {/* Accent line at top */}
+        <div className="h-[1px] w-full bg-accent/30" />
         
         <div className="flex items-center gap-3 px-4 py-3">
-          <div className="flex items-center gap-2 text-violet-500 shrink-0">
-            <Sparkles className="w-4 h-4" />
-            <span className="text-[13px] font-semibold text-violet-600">Ask AI</span>
+          <div className="flex items-center gap-2 text-accent shrink-0">
+            <Sparkles className="w-4 h-4" strokeWidth={2.5} />
+            <span className="text-[13px] font-bold font-display uppercase tracking-wider">Nexus AI</span>
           </div>
 
-          <div className="w-px h-4 bg-slate-200" />
+          <div className="w-px h-4 bg-border" />
 
           <input
             ref={inputRef}
@@ -101,36 +102,36 @@ export default function AIPromptBar({ editor, isOpen, onClose }: AIPromptBarProp
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="What would you like to write or transform?"
-            className="flex-1 text-[14px] text-slate-700 placeholder:text-slate-400 outline-none bg-transparent"
+            placeholder="Ask Nexus AI to write, edit, or transform..."
+            className="flex-1 text-[14px] text-foreground placeholder:text-muted outline-none bg-transparent"
             disabled={isLoading}
           />
 
           {isLoading ? (
-            <div className="shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-white animate-pulse" />
+            <div className="shrink-0 w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-accent animate-pulse" />
             </div>
           ) : (
             <button
               onClick={handleSubmit}
               disabled={!prompt.trim()}
-              className="shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center hover:opacity-90 disabled:opacity-40 transition-all"
+              className="shrink-0 w-8 h-8 rounded-lg bg-accent text-white flex items-center justify-center hover:bg-accent/90 disabled:opacity-30 transition-all cursor-pointer"
             >
-              <Send className="w-3.5 h-3.5 text-white" />
+              <Send className="w-4 h-4" strokeWidth={2} />
             </button>
           )}
 
-          <button onClick={onClose} className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors">
-            <X className="w-4 h-4" />
+          <button onClick={onClose} className="shrink-0 text-muted hover:text-foreground transition-colors cursor-pointer">
+            <X className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
 
-        <div className="px-4 pb-2 flex items-center gap-3">
-          {['Summarize this page', 'Write an introduction', 'Draft a conclusion', 'Continue writing'].map(suggestion => (
+        <div className="px-4 pb-3 flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {['Summarize content', 'Improve writing', 'Make professional', 'Continue drafting'].map(suggestion => (
             <button
               key={suggestion}
               onClick={() => setPrompt(suggestion)}
-              className="text-[11px] text-slate-400 hover:text-violet-500 transition-colors bg-slate-50 hover:bg-violet-50 px-2 py-0.5 rounded-full"
+              className="text-[11px] font-medium text-muted hover:text-accent transition-colors bg-accent/5 hover:bg-accent/10 px-2 py-0.5 rounded whitespace-nowrap cursor-pointer"
             >
               {suggestion}
             </button>

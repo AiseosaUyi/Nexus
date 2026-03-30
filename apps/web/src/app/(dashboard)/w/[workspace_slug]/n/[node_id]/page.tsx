@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getBlocks } from '../../actions';
 import NexusEditor from '@/components/editor/NexusEditor';
-import AvatarStack from '@/components/editor/AvatarStack';
 import { BlockType } from '@nexus/api/schema';
+import PageHeader from '@/components/dashboard/PageHeader';
 
 interface NodePageProps {
   params: Promise<{
@@ -48,36 +48,27 @@ export default async function NodePage({ params }: NodePageProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white overflow-hidden">
-      {/* Page Header (Cover & Title) */}
-      <div className="w-full max-w-4xl mx-auto mt-20 px-12 md:px-24 flex justify-between items-end">
-        <div className="flex flex-col gap-4 group">
-          {node.icon && (
-            <span className="text-4xl">{node.icon}</span>
-          )}
-          <h1 className="text-4xl font-bold text-[#37352f] outline-none border-none bg-transparent w-full">
-            {node.title || "Untitled"}
-          </h1>
-        </div>
-        
-        {/* Realtime Presence (Avatar Stack) */}
-        <div className="flex flex-col items-end gap-1 mb-2">
-          <div className="text-[10px] font-semibold text-[#37352f]/30 uppercase tracking-[0.1em]">
-            Collaborators
-          </div>
-          <AvatarStack nodeId={node_id} />
-        </div>
-      </div>
-
-      {/* Tiptap Editor */}
+    <div className="flex flex-col h-full bg-background overflow-hidden selection:bg-accent/30">
+      {/* Scrollable Content Container */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <NexusEditor 
-          nodeId={node_id}
-          initialContent={initialContent}
-          initialSnapshot={node.yjs_snapshot as any}
-          userName={userName}
-          userColor={userColor}
+        {/* Page Header (Cover & Title & Props) */}
+        <PageHeader 
+          title={node.title || "Untitled"} 
+          icon={node.icon} 
+          nodeId={node_id} 
+          updatedAt={node.updated_at}
         />
+        
+        {/* Tiptap Editor */}
+        <div className="w-full max-w-4xl mx-auto px-12 md:px-24 py-8">
+          <NexusEditor 
+            nodeId={node_id}
+            initialContent={initialContent}
+            initialSnapshot={node.yjs_snapshot as any}
+            userName={userName}
+            userColor={userColor}
+          />
+        </div>
       </div>
     </div>
   );

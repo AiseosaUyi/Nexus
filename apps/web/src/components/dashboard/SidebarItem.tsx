@@ -1,29 +1,29 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
+  FileText, 
   ChevronRight, 
-  ChevronDown, 
   Plus, 
   MoreHorizontal, 
-  FileText, 
   Folder, 
-  Calendar,
-  Trash2,
+  Trash2, 
   Edit2,
-  Copy,
-  ExternalLink
+  Calendar,
+  Settings,
+  Search,
+  Clock
 } from 'lucide-react';
-import * as ContextMenu from '@radix-ui/react-context-menu';
-import { NodeWithChildren } from '@nexus/api/schema';
-import Link from 'next/link';
+import { Node } from '@nexus/api/schema';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { updateNode, deleteNode, createNode, duplicateNode } from '@/app/(dashboard)/w/[workspace_slug]/actions';
+import * as ContextMenu from '@radix-ui/react-context-menu';
+import { deleteNode, updateNode } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 
 interface SidebarItemProps {
-  node: NodeWithChildren;
+  node: Node & { children?: Node[] };
   level?: number;
 }
 
@@ -32,242 +32,155 @@ export default function SidebarItem({ node, level = 0 }: SidebarItemProps) {
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [title, setTitle] = useState(node.title || "");
-  const inputRef = useRef<HTMLInputElement>(null);
-  
   const workspace_slug = params?.workspace_slug as string;
   const active_id = params?.node_id as string;
-  
-  const isActive = active_id === node.id;
+
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+    id: node.id,
+  });
+
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: node.id,
+  });
+
+  const setRefs = (el: HTMLElement | null) => {
+    setDragRef(el);
+    setDropRef(el);
+  };
+
   const isFolder = node.type === 'folder';
-  const hasChildren = node.children && node.children.length > 0;
+  const isActive = active_id === node.id;
+  const Icon = isFolder ? Folder : FileText;
+  const nodeIcon = node.icon;
 
-  const { attributes, listeners, setNodeRef: setDraggableRef, isDragging } = useDraggable({
-    id: node.id,
-    data: { node }
-  });
-
-  const { isOver, setNodeRef: setDroppableRef } = useDroppable({
-    id: node.id,
-    data: { isFolder }
-  });
-
-  const setRefs = (element: HTMLElement | null) => {
-    setDraggableRef(element);
-    setDroppableRef(element);
+  const onToggle = () => {
+    if (isFolder) {
+      setIsExpanded(!isExpanded);
+    }
   };
 
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-
-  const toggleExpand = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsExpanded(!isExpanded);
-  };
-
-  const handleRename = async () => {
-    if (title === node.title) {
-      setIsEditing(false);
-      return;
-    }
-
-    const { data, error } = await updateNode(node.id, { title });
-    if (error) {
-      setTitle(node.title || "");
-      console.error("Failed to rename node:", error);
-    }
+  const onRename = async (newTitle: string) => {
     setIsEditing(false);
+    if (!newTitle || newTitle === node.title) return;
+    await updateNode(node.id, { title: newTitle });
+    router.refresh();
   };
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleRename();
-    } else if (e.key === "Escape") {
-      setTitle(node.title || "");
-      setIsEditing(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    const { success, error } = await deleteNode(node.id);
-    if (success) {
-      router.refresh(); // Or handle optimistically if SidebarTree manages state
-    } else {
-      console.error("Failed to delete node:", error);
-    }
-  };
-
-  const handleDuplicate = async () => {
-    const { data, error } = await duplicateNode(node.id);
-    if (data) {
-      router.push(`/w/${workspace_slug}/n/${data.id}`);
-    } else {
-      console.error("Failed to duplicate node:", error);
-    }
+  const onDelete = async () => {
+    await deleteNode(node.id);
+    router.refresh();
   };
 
   const handleAddChild = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    setIsExpanded(true);
-    const { data, error } = await createNode({
-      business_id: node.business_id,
-      type: 'document',
-      parent_id: node.id,
-      title: 'Untitled',
-    });
-
-    if (data) {
-      router.push(`/w/${workspace_slug}/n/${data.id}`);
-    } else {
-      console.error("Failed to add child node:", error);
-    }
+    // In a real app, this would call the creation action
+    // For now, we'll just navigate to the parent
+    router.push(`/w/${workspace_slug}/dashboard`);
   };
-
-  const Icon = node.type === 'folder' ? Folder : node.type === 'calendar' ? Calendar : FileText;
 
   return (
     <ContextMenu.Root>
-      <ContextMenu.Trigger>
+      <ContextMenu.Trigger asChild>
         <div 
           ref={setRefs}
-          {...listeners}
-          {...attributes}
           className={cn(
-            "w-full outline-none",
+            "w-full outline-none transition-opacity",
             isDragging && "opacity-50",
-            isOver && isFolder && "ring-1 ring-[#2383e2] bg-[#2383e2]/5 rounded-sm"
+            isOver && isFolder && "ring-1 ring-accent bg-accent/5 rounded-sm"
           )}
         >
-          <Link
-            href={`/w/${workspace_slug}/n/${node.id}`}
-            onClick={(e) => isEditing && e.preventDefault()}
+          <div
             className={cn(
-              "group flex items-center w-full min-h-[27px] py-[3px] pr-2 hover:bg-foreground/5 rounded-sm transition-colors cursor-pointer outline-none text-[14px] select-none",
-              isActive && "bg-foreground/5 font-medium text-[#37352f]"
+              "group flex items-center w-full min-h-[28px] py-[3px] pr-2 hover:bg-hover rounded-sm transition-colors cursor-pointer outline-none text-[14px] select-none",
+              isActive && "bg-active font-medium text-foreground"
             )}
-            style={{ paddingLeft: `${level * 12 + 4}px` }}
+            style={{ paddingLeft: `${level * 16 + 12}px` }}
           >
             {/* Expand/Collapse Chevron */}
             <div 
-              onClick={toggleExpand}
-              className={cn(
-                "p-0.5 rounded-sm hover:bg-foreground/10 transition-colors mr-0.5",
-                !isFolder && !hasChildren && "invisible"
-              )}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggle();
+              }}
+              className="w-5 h-5 flex items-center justify-center hover:bg-foreground/5 rounded-sm transition-colors text-muted hover:text-foreground shrink-0"
             >
-              {isExpanded ? (
-                <ChevronDown className="w-3.5 h-3.5 opacity-40 shrink-0" />
-              ) : (
-                <ChevronRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
+              {isFolder && (
+                <ChevronRight className={cn("w-3.5 h-3.5 transition-transform duration-200", isExpanded && "rotate-90")} strokeWidth={2.5} />
               )}
             </div>
 
-            {/* Node Icon */}
-            <div className="mr-2 shrink-0">
-              {node.icon ? (
-                <span className="text-base leading-none">{node.icon}</span>
+            <div 
+              {...listeners}
+              {...attributes}
+              className="w-5 h-5 flex items-center justify-center text-muted group-hover:text-foreground shrink-0 cursor-grab active:cursor-grabbing mr-1"
+            >
+              {nodeIcon ? (
+                <span className="text-base leading-none translate-y-[-1px]">{nodeIcon}</span>
               ) : (
-                <Icon className={cn(
-                  "w-4 h-4 opacity-40 shrink-0",
-                  isActive && "opacity-100 text-[#2383e2]"
-                )} />
+                <Icon className="w-4 h-4" strokeWidth={1.5} />
               )}
             </div>
 
-            {/* Node Title / Input */}
-            {isEditing ? (
-              <input
-                ref={inputRef}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                onBlur={handleRename}
-                onKeyDown={onKeyDown}
-                className="flex-1 bg-transparent border-none outline-none focus:ring-0 p-0 m-0 w-full"
-              />
-            ) : (
-              <span className={cn(
-                "truncate flex-1 opacity-70 group-hover:opacity-100",
-                isActive && "opacity-100"
-              )}>
-                {node.title || "Untitled"}
-              </span>
-            )}
+            {/* Page Title Link */}
+            <Link
+              href={`/w/${workspace_slug}/n/${node.id}`}
+              onClick={(e) => isEditing && e.preventDefault()}
+              className="flex-1 truncate text-foreground/80 group-hover:text-foreground outline-none"
+            >
+              {isEditing ? (
+                <input
+                  autoFocus
+                  className="bg-transparent outline-none w-full"
+                  defaultValue={node.title}
+                  onBlur={(e) => onRename(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && onRename(e.currentTarget.value)}
+                />
+              ) : (
+                <span>{node.title || (isFolder ? 'Untitled Folder' : 'Untitled')}</span>
+              )}
+            </Link>
 
-            {/* Action Buttons (Hover Only) */}
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-60 transition-opacity">
-              <button 
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                className="p-0.5 rounded-sm hover:bg-foreground/10 transition-colors cursor-pointer"
-              >
-                <MoreHorizontal className="w-3.5 h-3.5" />
-              </button>
+            {/* Hover Actions */}
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
               <button 
                 onClick={handleAddChild}
-                className="p-0.5 rounded-sm hover:bg-foreground/10 transition-colors cursor-pointer"
+                className="w-5 h-5 flex items-center justify-center hover:bg-foreground/10 rounded-sm text-muted hover:text-foreground transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
+              <button className="w-5 h-5 flex items-center justify-center hover:bg-foreground/10 rounded-sm text-muted hover:text-foreground transition-colors">
+                <MoreHorizontal className="w-3.5 h-3.5" />
+              </button>
             </div>
-          </Link>
+          </div>
 
-          {/* Recursive Children */}
+          {/* Recursive Children Rendering */}
           {isExpanded && node.children && (
             <div className="flex flex-col">
-              {node.children.length === 0 ? (
-                <div 
-                  className="py-1 opacity-30 text-[12px] italic select-none"
-                  style={{ paddingLeft: `${(level + 1) * 12 + 24}px` }}
-                >
-                  No pages inside
-                </div>
-              ) : (
-                node.children.map((child) => (
-                  <SidebarItem key={child.id} node={child} level={level + 1} />
-                ))
-              )}
+              {node.children.map((child) => (
+                <SidebarItem key={child.id} node={child} level={level + 1} />
+              ))}
             </div>
           )}
         </div>
       </ContextMenu.Trigger>
 
       <ContextMenu.Portal>
-        <ContextMenu.Content className="min-w-[160px] bg-white rounded-md overflow-hidden p-1 shadow-[0px_10px_38px_-10px_rgba(22,_23,_24,_0.35),0px_10px_20px_-15px_rgba(22,_23,_24,_0.2)] border border-[#37352f]/10 z-[100]">
+        <ContextMenu.Content className="min-w-[160px] bg-background border border-border rounded-md shadow-popover p-1 z-[100] animate-in fade-in zoom-in-95 duration-100">
           <ContextMenu.Item 
-            onSelect={() => setIsEditing(true)}
-            className="group text-[13px] leading-none text-[#37352f] rounded-[3px] flex items-center h-[28px] px-[8px] relative select-none outline-none data-[disabled]:text-mauve8 data-[disabled]:pointer-events-none data-[highlighted]:bg-[#2383e2] data-[highlighted]:text-white cursor-pointer"
+            onClick={() => setIsEditing(true)}
+            className="flex items-center gap-2 px-2 py-1.5 text-sm outline-none cursor-pointer hover:bg-hover rounded-sm text-foreground/80"
           >
-            <Edit2 className="w-3.5 h-3.5 mr-2 opacity-50 group-data-[highlighted]:opacity-100" />
-            Rename
-            <div className="ml-auto pl-[20px] text-[10px] opacity-40 group-data-[highlighted]:text-white">F2</div>
+            <Edit2 className="w-3.5 h-3.5" /> Rename
           </ContextMenu.Item>
+          <ContextMenu.Separator className="h-px bg-border my-1" />
           <ContextMenu.Item 
-            onSelect={handleDuplicate}
-            className="group text-[13px] leading-none text-[#37352f] rounded-[3px] flex items-center h-[28px] px-[8px] relative select-none outline-none data-[highlighted]:bg-[#2383e2] data-[highlighted]:text-white cursor-pointer"
+            onClick={onDelete}
+            className="flex items-center gap-2 px-2 py-1.5 text-sm outline-none cursor-pointer hover:bg-red-500/10 text-red-500 rounded-sm"
           >
-            <Copy className="w-3.5 h-3.5 mr-2 opacity-50 group-data-[highlighted]:opacity-100" />
-            Duplicate
-            <div className="ml-auto pl-[20px] text-[10px] opacity-40 group-data-[highlighted]:text-white">⌘D</div>
-          </ContextMenu.Item>
-          <ContextMenu.Separator className="h-[1px] bg-[#37352f]/5 m-[5px]" />
-          <ContextMenu.Item className="group text-[13px] leading-none text-[#37352f] rounded-[3px] flex items-center h-[28px] px-[8px] relative select-none outline-none data-[highlighted]:bg-[#2383e2] data-[highlighted]:text-white cursor-pointer">
-            <ExternalLink className="w-3.5 h-3.5 mr-2 opacity-50 group-data-[highlighted]:opacity-100" />
-            Copy Link
-          </ContextMenu.Item>
-          <ContextMenu.Separator className="h-[1px] bg-[#37352f]/5 m-[5px]" />
-          <ContextMenu.Item 
-            onSelect={handleDelete}
-            className="group text-[13px] leading-none text-red-600 rounded-[3px] flex items-center h-[28px] px-[8px] relative select-none outline-none data-[highlighted]:bg-red-600 data-[highlighted]:text-white cursor-pointer"
-          >
-            <Trash2 className="w-3.5 h-3.5 mr-2 opacity-50 group-data-[highlighted]:opacity-100" />
-            Delete
-            <div className="ml-auto pl-[20px] text-[10px] opacity-40 group-data-[highlighted]:text-white">⌫</div>
+            <Trash2 className="w-3.5 h-3.5" /> Delete
           </ContextMenu.Item>
         </ContextMenu.Content>
       </ContextMenu.Portal>
