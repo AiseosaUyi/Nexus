@@ -115,9 +115,9 @@ export default function TeamSettingsModal({
     <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
       <Dialog.Trigger asChild>
         {trigger || (
-          <button className="flex items-center gap-2 w-full p-1.5 hover:bg-foreground/5 rounded-md transition-colors cursor-pointer outline-none text-sm">
-            <Settings className="w-4 h-4 opacity-40 shrink-0" />
-            <span className="opacity-70">Settings & Members</span>
+          <button className="flex items-center gap-2 w-full p-1.5 hover:bg-hover rounded-md transition-colors cursor-pointer outline-none text-[14px] group">
+            <Settings className="w-4 h-4 text-foreground/40 group-hover:text-foreground shrink-0" strokeWidth={2} />
+            <span className="text-foreground/70 group-hover:text-foreground font-medium">Settings & Members</span>
           </button>
         )}
       </Dialog.Trigger>

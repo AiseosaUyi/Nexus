@@ -52,16 +52,34 @@ export interface BusinessMember {
   joined_at: string;
 }
 
+export interface Teamspace {
+  id: string;
+  business_id: string;
+  name: string;
+  icon: string | null;
+  description: string | null;
+  position: number;
+  is_private: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Node {
   id: string;
   business_id: string;
   parent_id: string | null;
+  teamspace_id: string | null;
   type: NodeType;
   title: string;
+  name: string | null;
+  is_name_custom: boolean;
   icon: string | null;
   cover_url: string | null;
   position: number;
   is_archived: boolean;
+  is_public: boolean;
+  public_slug: string | null;
   yjs_snapshot: Uint8Array | null;
   created_by: string | null;
   created_at: string;
@@ -122,6 +140,7 @@ export interface CreateBusinessPayload {
 export interface CreateNodePayload {
   business_id: string;
   parent_id?: string | null;
+  teamspace_id?: string | null;
   type: NodeType;
   title?: string;
   icon?: string;

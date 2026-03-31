@@ -45,7 +45,7 @@ describe('Editor Data Transformation', () => {
     expect(tiptap.type).toBe('doc');
     expect(tiptap.content).toHaveLength(2);
     expect(tiptap.content[0].type).toBe('heading');
-    expect(tiptap.content[0].attrs.level).toBe(1);
+    expect((tiptap.content[0] as any).attrs.level).toBe(1);
   });
 
   it('should return a default paragraph if blocks are empty', () => {

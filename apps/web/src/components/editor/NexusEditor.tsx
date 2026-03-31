@@ -10,13 +10,23 @@ import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 import * as Y from 'yjs';
 import { SlashCommand, suggestion } from './extensions/SlashCommand';
-import { Table } from '@tiptap/extension-table';
+import { Table as TiptapTable } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { Image } from '@tiptap/extension-image';
 import { Typography } from '@tiptap/extension-typography';
 import { HorizontalRule } from '@tiptap/extension-horizontal-rule';
+import { Details } from '@tiptap/extension-details';
+import { DetailsContent } from '@tiptap/extension-details-content';
+import { DetailsSummary } from '@tiptap/extension-details-summary';
+import { Youtube } from '@tiptap/extension-youtube';
+import { Callout } from './extensions/Callout';
+import { Audio } from './extensions/Audio';
+import { File } from './extensions/File';
+import { PageLink } from './extensions/PageLink';
+import { Comment } from './extensions/Comment';
+import { Mention, mentionSuggestion } from './extensions/Mention';
 import { BlockType } from '@nexus/api/schema';
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { syncBlocks, updateYjsSnapshot } from '@/app/(dashboard)/w/[workspace_slug]/actions';
@@ -25,7 +35,8 @@ import { createClient } from '@/lib/supabase/client';
 import { SupabaseYjsProvider } from '@/lib/realtime/SupabaseYjsProvider';
 import AIBubbleMenu from './AIBubbleMenu';
 import AIPromptBar from './AIPromptBar';
-import { Bold, Italic, Strikethrough, Code } from 'lucide-react';
+import BlockPickerPanel from './BlockPickerPanel';
+import { Bold, Italic, Strikethrough, Code, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NexusEditorProps {
@@ -54,6 +65,9 @@ export default function NexusEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const [isAIPromptOpen, setIsAIPromptOpen] = useState(false);
   const [toolbarPos, setToolbarPos] = useState<ToolbarPosition | null>(null);
+  const [blockHandleTop, setBlockHandleTop] = useState<number | null>(null);
+  const [blockPickerOpen, setBlockPickerOpen] = useState(false);
+  const hoveredBlockEl = useRef<HTMLElement | null>(null);
   
   // 1. Initialize Yjs Doc and Provider
   const ydoc = useMemo(() => {
@@ -88,8 +102,12 @@ export default function NexusEditor({
 
   // 4. Build the editor first so effects can reference it
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ history: false } as any),
+      StarterKit.configure({ 
+        history: false,
+        heading: { levels: [1, 2, 3, 4] }
+      } as any),
       Placeholder.configure({
         placeholder: ({ node }) => {
           if (node.type.name === 'heading') return `Heading ${node.attrs.level}`;
@@ -102,8 +120,53 @@ export default function NexusEditor({
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      Details,
+      DetailsSummary,
+      DetailsContent,
+      Callout,
+      Audio,
+      File,
+      PageLink,
+      Comment.configure({
+        HTMLAttributes: {
+          onClick: (e: any) => {
+             const threadId = e.target.getAttribute('data-thread-id');
+             if (threadId) {
+                // We'll dispatch a custom event that NodePage can listen to
+                window.dispatchEvent(new CustomEvent('nexus:open-comment', { detail: { threadId } }));
+             }
+          }
+        }
+      }),
+      Mention.configure({
+        suggestion: {
+          ...mentionSuggestion,
+          char: '@',
+          items: async ({ query }: { query: string }) => {
+             const businessIdMatch = window.location.pathname.match(/\/w\/([^\/]+)/);
+             if (!businessIdMatch) return [];
+             try {
+               const { getTeamMembers } = require('@/app/(dashboard)/w/[workspace_slug]/actions');
+               const { data } = await getTeamMembers(businessIdMatch[1]);
+               const items = data || [];
+               // Add a fallback for testing if no members
+               if (items.length === 0) {
+                 items.push({ id: 'nexus-ai', name: 'Nexus AI', email: 'ai@nexus.so' });
+               }
+               return items.filter((item: any) => item.name.toLowerCase().startsWith(query.toLowerCase()));
+             } catch (err) {
+               console.error('Error fetching members:', err);
+               return [{ id: 'nexus-ai', name: 'Nexus AI', email: 'ai@nexus.so' }];
+             }
+          }
+        }
+      }),
+      Youtube.configure({
+        controls: false,
+        nocookie: true,
+      }),
       SlashCommand.configure({ suggestion }),
-      Table.configure({ resizable: true }),
+      TiptapTable.configure({ resizable: true }),
       TableRow,
       TableHeader,
       TableCell,
@@ -114,8 +177,6 @@ export default function NexusEditor({
       }),
       // @ts-ignore — Tiptap v2/v3 peer mismatch; works correctly at runtime
       Collaboration.configure({ document: ydoc }),
-      // @ts-ignore
-      CollaborationCursor.configure({ provider, user: { name: userName, color: userColor } }),
     ],
     editorProps: {
       attributes: {
@@ -159,26 +220,129 @@ export default function NexusEditor({
     return () => { editor.off('selectionUpdate', updateToolbar); };
   }, [editor]);
 
-  // 7. Cmd+J to toggle AI Prompt Bar
+  // 7. Cmd+J to toggle AI Prompt Bar / Cmd+S to force-save
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
       e.preventDefault();
       setIsAIPromptOpen(prev => !prev);
     }
-  }, []);
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent('nexus:saving'));
+      debouncedSnapshotSave.flush();
+    }
+  }, [debouncedSnapshotSave]);
 
   useEffect(() => {
+    const handleApplyComment = (e: any) => {
+      const { threadId } = e.detail;
+      if (threadId && editor) {
+        editor.chain().focus().setComment({ threadId }).run();
+      }
+    };
+    window.addEventListener('nexus:apply-comment', handleApplyComment);
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+    return () => {
+      window.removeEventListener('nexus:apply-comment', handleApplyComment);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [editor, handleKeyDown]);
 
   // 8. Cleanup
   useEffect(() => {
     return () => { provider.destroy(); };
   }, [provider]);
 
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!editorRef.current) return;
+    const proseMirror = editorRef.current.querySelector('.ProseMirror');
+    if (!proseMirror) return;
+
+    let el = e.target as HTMLElement;
+    while (el && el !== proseMirror) {
+      if (el.parentElement === proseMirror) {
+        const containerRect = editorRef.current.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        setBlockHandleTop(elRect.top - containerRect.top + elRect.height / 2 - 10);
+        hoveredBlockEl.current = el;
+        return;
+      }
+      el = el.parentElement as HTMLElement;
+    }
+    // Mouse is over the ProseMirror padding/margin — keep the last handle position.
+    // Only onMouseLeave clears it when the cursor fully exits the editor area.
+  }, []);
+
+  const handleBlockAdd = useCallback(() => {
+    if (!editor) return;
+    const view = editor.view;
+
+    if (hoveredBlockEl.current) {
+      try {
+        const elRect = hoveredBlockEl.current.getBoundingClientRect();
+        const posInfo = view.posAtCoords({ left: elRect.left + 2, top: elRect.bottom - 2 });
+        if (posInfo) {
+          const $pos = view.state.doc.resolve(posInfo.pos);
+          const nodeEnd = $pos.end($pos.depth);
+          const insertAt = Math.min(nodeEnd + 1, view.state.doc.content.size);
+          editor.chain()
+            .focus()
+            .insertContentAt(insertAt, { type: 'paragraph' })
+            .setTextSelection(insertAt + 1)
+            .run();
+        }
+      } catch {
+        // fall through to simple insert
+        editor.chain().focus().insertContent({ type: 'paragraph' }).run();
+      }
+    } else {
+      editor.chain().focus().insertContent({ type: 'paragraph' }).run();
+    }
+    setBlockPickerOpen(true);
+  }, [editor]);
+
   return (
-    <div className="w-full relative" ref={editorRef}>
+    <div
+      className="w-full relative"
+      // Bleed 48px left: the layout box extends into the left margin so the
+      // "+" button lives inside the hit-region and onMouseLeave only fires
+      // when the cursor truly exits the entire zone.
+      style={{ paddingLeft: 48, marginLeft: -48 }}
+      ref={editorRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => {
+        setBlockHandleTop(null);
+        hoveredBlockEl.current = null;
+      }}
+    >
+      {/* Block add handle — appears on hover to the left of any block */}
+      {blockHandleTop !== null && (
+        <button
+          data-block-handle
+          style={{ top: blockHandleTop, left: 8 }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            handleBlockAdd();
+          }}
+          className="absolute flex items-center justify-center w-5 h-5 rounded text-foreground/30 hover:text-foreground/70 hover:bg-hover transition-colors z-10"
+          title="Click to add a block below"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      )}
+
+      {/* Block picker panel — opens when "+" is clicked */}
+      {blockPickerOpen && (
+        <BlockPickerPanel
+          style={{ position: 'absolute', top: (blockHandleTop ?? 0) + 24, left: 32, zIndex: 50 }}
+          onSelect={(apply) => {
+            setBlockPickerOpen(false);
+            if (editor) apply(editor);
+          }}
+          onClose={() => setBlockPickerOpen(false)}
+        />
+      )}
+
       {/* Custom Floating Toolbar (shown when text is selected) */}
       {editor && toolbarPos && (
         <div

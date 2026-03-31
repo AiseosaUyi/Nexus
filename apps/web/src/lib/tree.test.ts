@@ -3,24 +3,25 @@ import { buildTree } from './tree';
 import { Node } from '@nexus/api/schema';
 
 describe('buildTree', () => {
+  const base = { name: null, is_name_custom: false, is_public: false, public_slug: null, yjs_snapshot: null, teamspace_id: null };
   const mockNodes: Node[] = [
-    { 
-      id: '1', business_id: 'b1', parent_id: null, type: 'folder', title: 'Folder 1', 
+    {
+      ...base, id: '1', business_id: 'b1', parent_id: null, type: 'folder', title: 'Folder 1',
       position: 0, is_archived: false, icon: null, cover_url: null, created_by: null,
       created_at: '', updated_at: ''
     },
-    { 
-      id: '2', business_id: 'b1', parent_id: '1', type: 'document', title: 'Doc 1.1', 
+    {
+      ...base, id: '2', business_id: 'b1', parent_id: '1', type: 'document', title: 'Doc 1.1',
       position: 1, is_archived: false, icon: null, cover_url: null, created_by: null,
       created_at: '', updated_at: ''
     },
-    { 
-      id: '3', business_id: 'b1', parent_id: '1', type: 'document', title: 'Doc 1.0', 
+    {
+      ...base, id: '3', business_id: 'b1', parent_id: '1', type: 'document', title: 'Doc 1.0',
       position: 0, is_archived: false, icon: null, cover_url: null, created_by: null,
       created_at: '', updated_at: ''
     },
-    { 
-      id: '4', business_id: 'b1', parent_id: null, type: 'document', title: 'Doc 2', 
+    {
+      ...base, id: '4', business_id: 'b1', parent_id: null, type: 'document', title: 'Doc 2',
       position: 1, is_archived: false, icon: null, cover_url: null, created_by: null,
       created_at: '', updated_at: ''
     },

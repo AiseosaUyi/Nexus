@@ -1,10 +1,8 @@
 import React from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getBlocks } from '../../actions';
-import NexusEditor from '@/components/editor/NexusEditor';
-import { BlockType } from '@nexus/api/schema';
-import PageHeader from '@/components/dashboard/PageHeader';
+import NodePageClient from '@/components/dashboard/NodePageClient';
 
 interface NodePageProps {
   params: Promise<{
@@ -25,7 +23,7 @@ export default async function NodePage({ params }: NodePageProps) {
     .single();
 
   if (nodeError || !node) {
-    return notFound();
+    redirect(`/w/${workspace_slug}/dashboard`);
   }
 
   // 2. Fetch User Profile for Presence
@@ -34,11 +32,22 @@ export default async function NodePage({ params }: NodePageProps) {
   // Simple deterministic color based on user ID
   const userColor = `hsl(${parseInt((user?.id || '0').substring(0, 8), 16) % 360}, 70%, 50%)`;
 
-  // 3. Prepare initial content (Snapshots take precedence over blocks in collaboration)
+  // 3. Fetch teamspace and calendar entry for breadcrumb
+  let teamspace: { id: string; name: string } | null = null;
+  const [teamspaceResult, calendarEntry] = await Promise.all([
+    node.teamspace_id 
+      ? supabase.from('teamspaces').select('id, name').eq('id', node.teamspace_id).single()
+      : Promise.resolve({ data: null }),
+    import('../../actions').then(m => m.getCalendarEntryByNodeId(node_id))
+  ]);
+
+  if (teamspaceResult.data) teamspace = teamspaceResult.data;
+
+  // 4. Prepare initial content (Snapshots take precedence over blocks in collaboration)
   const blocks = await getBlocks(node_id);
   const initialContent = {
     type: 'doc',
-    content: blocks.length > 0 
+    content: blocks.length > 0
       ? blocks.map(b => ({
           type: b.type,
           attrs: b.content.attrs || {},
@@ -47,29 +56,14 @@ export default async function NodePage({ params }: NodePageProps) {
       : [{ type: 'paragraph' }]
   };
 
-  return (
-    <div className="flex flex-col h-full bg-background overflow-hidden selection:bg-accent/30">
-      {/* Scrollable Content Container */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
-        {/* Page Header (Cover & Title & Props) */}
-        <PageHeader 
-          title={node.title || "Untitled"} 
-          icon={node.icon} 
-          nodeId={node_id} 
-          updatedAt={node.updated_at}
-        />
-        
-        {/* Tiptap Editor */}
-        <div className="w-full max-w-4xl mx-auto px-12 md:px-24 py-8">
-          <NexusEditor 
-            nodeId={node_id}
-            initialContent={initialContent}
-            initialSnapshot={node.yjs_snapshot as any}
-            userName={userName}
-            userColor={userColor}
-          />
-        </div>
-      </div>
-    </div>
-  );
+  return <NodePageClient
+    node={node}
+    initialContent={initialContent}
+    nodeId={node_id}
+    userName={userName}
+    userColor={userColor}
+    teamspace={teamspace}
+    workspaceSlug={workspace_slug}
+    isCalendarEntry={!!calendarEntry}
+  />;
 }

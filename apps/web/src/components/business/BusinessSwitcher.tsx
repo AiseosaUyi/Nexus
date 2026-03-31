@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useTransition, useState } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronsUpDown, Check, Plus, Settings, Building2 } from "lucide-react";
+import { ChevronsUpDown, Check, Plus, Settings, Building2, LogOut } from "lucide-react";
 import { Business } from "@nexus/api";
 import CreateBusinessModal from "./CreateBusinessModal";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { signOut } from "@/app/(auth)/actions";
 
 interface BusinessSwitcherProps {
   initialBusinesses: Business[];
@@ -15,6 +16,7 @@ interface BusinessSwitcherProps {
 export default function BusinessSwitcher({ initialBusinesses }: BusinessSwitcherProps) {
   const params = useParams();
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [businesses, setBusinesses] = useState<Business[]>(initialBusinesses);
   
   // Find the active business based on the URL slug
@@ -87,9 +89,26 @@ export default function BusinessSwitcher({ initialBusinesses }: BusinessSwitcher
               }
             />
             
-            <DropdownMenu.Item className="flex items-center gap-2 px-2 py-1.5 text-[13px] rounded-md cursor-pointer hover:bg-hover outline-none text-muted hover:text-foreground">
+            <DropdownMenu.Item
+              onSelect={() => {
+                const slug = params.workspace_slug as string;
+                router.push(`/w/${slug}/settings`);
+              }}
+              className="flex items-center gap-2 px-2 py-1.5 text-[13px] rounded-md cursor-pointer hover:bg-hover outline-none text-muted hover:text-foreground"
+            >
               <Settings className="w-3.5 h-3.5" strokeWidth={2} />
               Settings
+            </DropdownMenu.Item>
+
+            <DropdownMenu.Separator className="h-px bg-border my-1" />
+
+            <DropdownMenu.Item
+              onSelect={() => startTransition(() => signOut())}
+              disabled={isPending}
+              className="flex items-center gap-2 px-2 py-1.5 text-[13px] rounded-md cursor-pointer hover:bg-red-500/10 outline-none text-red-500"
+            >
+              <LogOut className="w-3.5 h-3.5" strokeWidth={2} />
+              Sign out
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>

@@ -1,2 +1,12 @@
 .vercel
 node_modules
+.next
+playwright-report/
+test-results/
+supabase/.temp/
+.env*
+!.env.example
+dist/
+build/
+.pnpm-debug.log*
+.DS_Store

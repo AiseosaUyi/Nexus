@@ -6,12 +6,6 @@ project_id = "nexus"
 enabled = true
 # Port to use for the API URL.
 port = 54321
-# Port to use for Postgres.
-db_port = 54322
-# Port to use for the Realtime service.
-realtime_port = 54323
-# Port to use for the Auth service.
-auth_port = 54324
 
 [db]
 # Port to use for the local database URL.

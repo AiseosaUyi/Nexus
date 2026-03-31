@@ -1,5 +1,5 @@
 import React from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import PageHeader from '@/components/dashboard/PageHeader';
 import { 
   Sparkles, 
@@ -80,7 +80,9 @@ export default async function HandbookArticlePage({ params }: ArticlePageProps) 
   const { workspace_slug, article_id } = await params;
   const article = ARTICLE_CONTENT[article_id];
 
-  if (!article) return notFound();
+  if (!article) {
+    redirect(`/w/${workspace_slug}/dashboard`);
+  }
 
   return (
     <div className="flex flex-col h-full bg-background overflow-y-auto selection:bg-accent/30 custom-scrollbar">

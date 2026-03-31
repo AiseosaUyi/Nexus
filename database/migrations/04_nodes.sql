@@ -18,6 +18,7 @@ create table if not exists public.nodes (
   cover_url    text,           -- banner image
   position     int not null default 0,  -- ordering among siblings
   is_archived  boolean not null default false,
+  teamspace_id uuid references public.teamspaces (id) on delete set null,
   created_by   uuid references public.users (id) on delete set null,
   created_at   timestamp with time zone default now() not null,
   updated_at   timestamp with time zone default now() not null

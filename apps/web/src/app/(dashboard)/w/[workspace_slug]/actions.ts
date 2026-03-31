@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { Node, NodeType, CreateNodePayload, Block, BlockType } from '@nexus/api/schema';
+import { Node, NodeType, CreateNodePayload, Block, BlockType, Teamspace } from '@nexus/api/schema';
 
 /**
  * Updates a node's Yjs binary snapshot for real-time synchronization.
@@ -34,6 +34,7 @@ export async function createNode(payload: {
   business_id: string;
   type: NodeType;
   parent_id?: string | null;
+  teamspace_id?: string | null;
   title?: string;
 }) {
   const supabase = await createClient();
@@ -63,7 +64,10 @@ export async function createNode(payload: {
         business_id: payload.business_id,
         type: payload.type,
         parent_id: payload.parent_id || null,
+        teamspace_id: payload.teamspace_id || null,
         title: payload.title || 'Untitled',
+        name: payload.title || 'Untitled', // Sync name by default
+        is_name_custom: false,
         position: nextPosition,
         created_by: user.id,
       },
@@ -73,6 +77,16 @@ export async function createNode(payload: {
 
   if (error) {
     console.error(`[BACKEND] Error creating node for user ${user.id}:`, error);
+    if (error.message.includes("teamspace_id")) {
+      return { 
+        error: "Database column 'teamspace_id' missing. Please run: database/migrations/10_teamspaces.sql" 
+      };
+    }
+    if (error.message.includes("is_name_custom")) {
+      return { 
+        error: "Database column 'is_name_custom' missing. Please run: database/migrations/12_add_custom_name_to_nodes.sql" 
+      };
+    }
     return { error: error.message };
   }
 
@@ -86,7 +100,7 @@ export async function createNode(payload: {
  */
 export async function updateNode(
   nodeId: string,
-  updates: Partial<Pick<Node, 'title' | 'icon' | 'parent_id' | 'position' | 'is_archived'>>
+  updates: Partial<Pick<Node, 'title' | 'name' | 'is_name_custom' | 'icon' | 'parent_id' | 'position' | 'is_archived' | 'teamspace_id' | 'is_public' | 'public_slug'>>
 ) {
   const supabase = await createClient();
 
@@ -251,4 +265,450 @@ export async function getUserNodes(businessId: string) {
   }
 
   return data as Node[];
+}
+
+/**
+ * Creates a new teamspace within a business.
+ */
+export async function createTeamspace(payload: {
+  business_id: string;
+  name: string;
+  icon?: string;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  // Get next position
+  const { data: siblings } = await supabase
+    .from('teamspaces')
+    .select('position')
+    .eq('business_id', payload.business_id)
+    .order('position', { ascending: false })
+    .limit(1);
+  
+  const nextPosition = (siblings?.[0]?.position ?? -1) + 1;
+
+  const { data, error } = await supabase
+    .from('teamspaces')
+    .insert([{
+      business_id: payload.business_id,
+      name: payload.name,
+      icon: payload.icon || null,
+      position: nextPosition,
+      created_by: user.id
+    }])
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+  revalidatePath('/', 'layout');
+  return { data };
+}
+
+/**
+ * Fetches all teamspaces for a business.
+ */
+export async function getTeamspaces(businessId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('teamspaces')
+    .select('*')
+    .eq('business_id', businessId)
+    .order('position', { ascending: true });
+
+  if (error) return [];
+  return data as Teamspace[];
+}
+
+/**
+ * Updates a teamspace.
+ */
+export async function updateTeamspace(id: string, updates: Partial<Teamspace>) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('teamspaces')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+  revalidatePath('/', 'layout');
+  return { data };
+}
+
+/**
+ * Deletes a teamspace.
+ */
+export async function deleteTeamspace(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('teamspaces').delete().eq('id', id);
+  if (error) return { error: error.message };
+  revalidatePath('/', 'layout');
+  return { success: true };
+}
+
+/**
+ * Toggles public sharing for a node.
+ * When enabling, sets is_public = true.
+ * When disabling, sets is_public = false.
+ */
+export async function toggleNodePublic(nodeId: string, isPublic: boolean) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  // Generate a slug when publishing; clear it when unpublishing.
+  const public_slug = isPublic ? nodeId : null;
+
+  const { data, error } = await supabase
+    .from('nodes')
+    .update({ is_public: isPublic, public_slug })
+    .eq('id', nodeId)
+    .select('id, is_public, public_slug')
+    .single();
+
+  if (error) {
+    console.error(`[BACKEND] Error toggling public for node ${nodeId}:`, error);
+    return { error: error.message };
+  }
+
+  console.log(`[BACKEND] Node ${nodeId} is_public set to ${isPublic}`);
+  revalidatePath('/', 'layout');
+  return { data };
+}
+
+// ─── Comment Actions ─────────────────────────────────────────────────────────
+
+export async function createCommentThread(nodeId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('comment_threads')
+    .insert({ node_id: nodeId })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[Comment] Error creating thread:', error);
+    return { data: null, error: error.message };
+  }
+
+  return { data, error: null };
+}
+
+export async function addComment(threadId: string, content: any) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { data: null, error: 'Unauthorized' };
+
+  const { data, error } = await supabase
+    .from('comments')
+    .insert({
+      thread_id: threadId,
+      user_id: user.id,
+      content
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[Comment] Error adding comment:', error);
+    return { data: null, error: error.message };
+  }
+
+  return { data, error: null };
+}
+
+export async function getCommentsForNode(nodeId: string) {
+  const supabase = await createClient();
+  const { data: threads, error: threadError } = await supabase
+    .from('comment_threads')
+    .select('*, comments(*)')
+    .eq('node_id', nodeId);
+
+  if (threadError) {
+    console.error('[Comment] Error fetching threads:', threadError);
+    return { data: [], error: threadError.message };
+  }
+
+  // Manually fetch user info for comments (Supabase join can be tricky with auth.users)
+  const userIds = Array.from(new Set(threads.flatMap(t => t.comments.map((c: any) => c.user_id))));
+  const { data: users } = await supabase.from('users').select('id, full_name, avatar_url').in('id', userIds);
+  const userMap = Object.fromEntries((users || []).map(u => [u.id, u]));
+
+  const data = threads.map(t => ({
+    ...t,
+    comments: t.comments.map((c: any) => ({
+      ...c,
+      author: userMap[c.user_id] || { full_name: 'Unknown User' }
+    })).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+  }));
+
+  return { data, error: null };
+}
+
+export async function getTeamMembers(businessId: string) {
+  const supabase = await createClient();
+  const { data: members, error } = await supabase
+    .from('business_members')
+    .select('user_id, role, users:user_id(id, full_name, email)')
+    .eq('business_id', businessId);
+
+  if (error) {
+    console.error('[Comment] Error fetching members:', error);
+    return { data: [], error: error.message };
+  }
+
+  return {
+    data: members.map((m: any) => ({
+      id: m.users.id,
+      name: m.users.full_name || m.users.email?.split('@')[0] || 'Unknown',
+      email: m.users.email
+    })),
+    error: null
+  };
+}
+
+// ─── Calendar Actions ─────────────────────────────────────────────────────────
+
+/**
+ * Fetches all calendar entries for a business in a given month.
+ * Returns entries joined with their linked node (title, icon).
+ */
+export async function getCalendarEntries(businessId: string, year: number, month: number) {
+  const supabase = await createClient();
+
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+  const { data, error } = await supabase
+    .from('calendar_entries')
+    .select('*, node:nodes(id, title, icon, type)')
+    .eq('business_id', businessId)
+    .gte('publish_date', startDate)
+    .lte('publish_date', endDate)
+    .order('publish_date', { ascending: true });
+
+  if (error) {
+    console.error('[Calendar] Error fetching entries:', error);
+    return { data: [], error: error.message };
+  }
+  return { data: data ?? [], error: null };
+}
+
+/**
+ * Creates a new document node and links it to a calendar entry on the given date.
+ */
+export async function createCalendarEntry(payload: {
+  business_id: string;
+  title: string;
+  publish_date: string; // 'YYYY-MM-DD'
+  teamspace_id?: string | null;
+  status?: 'draft' | 'scheduled' | 'published' | 'cancelled';
+  platform?: string | null;
+  notes?: string | null;
+  properties?: Record<string, unknown>;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  try {
+    // Step 1 – create the backing document node
+    const { data: node, error: nodeError } = await supabase
+      .from('nodes')
+      .insert({
+        business_id: payload.business_id,
+        type: 'document',
+        title: payload.title || 'Untitled',
+        name: payload.title || 'Untitled',
+        is_name_custom: false,
+        position: 0,
+        created_by: user.id,
+        teamspace_id: payload.teamspace_id ?? null,
+      })
+      .select('id, title, icon, type')
+      .single();
+
+    if (nodeError || !node) {
+      console.error('[Calendar] Error creating node:', nodeError);
+      return { error: nodeError?.message ?? 'Failed to create backing page node' };
+    }
+
+    // Step 2 – create the calendar entry linked to the new node
+    const { data: entry, error: entryError } = await supabase
+      .from('calendar_entries')
+      .insert({
+        node_id: node.id,
+        business_id: payload.business_id,
+        publish_date: payload.publish_date,
+        status: payload.status ?? 'draft',
+        platform: payload.platform ?? null,
+        notes: payload.notes ?? null,
+        properties: payload.properties ?? {},
+      })
+      .select('*, node:nodes(id, title, icon, type)')
+      .single();
+
+    if (entryError || !entry) {
+      console.error('[Calendar] Error creating calendar entry:', entryError);
+      // Clean up the node if entry creation fails to prevent orphaned nodes
+      await supabase.from('nodes').delete().eq('id', node.id);
+      return { error: entryError?.message ?? 'Failed to create calendar entry' };
+    }
+
+    console.log(`[Calendar] Entry created: ${entry.id} → node ${node.id}`);
+    revalidatePath('/', 'layout');
+    return { data: entry };
+  } catch (err: any) {
+    console.error('[Calendar] Unexpected error during creation:', err);
+    return { error: err.message || 'An unexpected error occurred' };
+  }
+}
+
+
+/**
+ * Updates fields of a calendar entry (status, platform, notes, publish_date, properties).
+ */
+export async function updateCalendarEntry(
+  id: string,
+  updates: {
+    publish_date?: string;
+    status?: 'draft' | 'scheduled' | 'published' | 'cancelled';
+    platform?: string | null;
+    notes?: string | null;
+    properties?: Record<string, unknown>;
+  }
+) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('calendar_entries')
+    .update(updates)
+    .eq('id', id)
+    .select('*, node:nodes(id, title, icon, type)')
+    .single();
+
+  if (error) {
+    console.error('[Calendar] Error updating entry:', error);
+    return { error: error.message };
+  }
+  return { data };
+}
+
+/**
+ * Deletes a calendar entry (does NOT delete the backing node).
+ */
+export async function deleteCalendarEntry(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('calendar_entries')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('[Calendar] Error deleting entry:', error);
+    return { error: error.message };
+  }
+  return { success: true };
+}
+
+/**
+ * Fetches a calendar entry by its node ID to determine if it's a calendar-type page.
+ */
+export async function getCalendarEntryByNodeId(nodeId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('calendar_entries')
+    .select('id, publish_date')
+    .eq('node_id', nodeId)
+    .maybeSingle();
+
+  if (error) return null;
+  return data;
+}
+
+// ─── Import Actions ───────────────────────────────────────────────────────────
+
+/**
+ * Fetches a web page server-side (avoids CORS) and returns the cleaned HTML
+ * along with the page title. The client parses the HTML into Tiptap JSON.
+ */
+export async function importFromURL(url: string): Promise<{
+  title: string;
+  html: string;
+  error?: string;
+}> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Nexus/1.0; +https://nexus.so)',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return { title: '', html: '', error: `HTTP ${response.status}: ${response.statusText}` };
+    }
+
+    const raw = await response.text();
+
+    // Initial title extraction from HTML (fallback)
+    const titleMatch = raw.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    let title = titleMatch
+      ? titleMatch[1].replace(/<[^>]*>/g, '').trim().slice(0, 200)
+      : 'Imported Page';
+
+    // Special handling for Notion links
+    let html = '';
+    const isNotion = url.includes('notion.site') || url.includes('notion.so');
+
+    if (isNotion) {
+      const { parseNotionPage } = await import('@/lib/notion-parser');
+      const result = parseNotionPage(raw);
+      // Use parsed title if it's meaningful
+      if (result.title && result.title !== 'Imported Page') {
+        title = result.title;
+      }
+      // Use parsed HTML only if it contains real body content (not just a title tag)
+      const strippedLen = result.html.replace(/<[^>]+>/g, '').trim().length;
+      if (strippedLen > title.length + 10) {
+        html = result.html;
+      } else {
+        // Fallback: strip the raw HTML ourselves for client-side parsing
+        html = raw
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[\s\S]*?<\/style>/gi, '')
+          .replace(/<!--[\s\S]*?-->/g, '')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>');
+      }
+    } else {
+      // Strip heavyweight noise before sending to client for generic pages
+      html = raw
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>');
+    }
+
+    return { title, html, error: undefined };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[Import] importFromURL error:', message);
+    return { title: '', html: '', error: message };
+  }
 }
