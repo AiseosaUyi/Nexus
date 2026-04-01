@@ -1,0 +1,97 @@
+import React from 'react';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import AcceptInviteClient from './AcceptInviteClient';
+
+interface InvitePageProps {
+  params: Promise<{ token: string }>;
+}
+
+export default async function InviteAcceptPage({ params }: InvitePageProps) {
+  const { token } = await params;
+  const supabase = await createClient();
+
+  // Check if user is logged in
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Fetch invitation details
+  const { data: invitation } = await supabase
+    .from('invitations')
+    .select('id, email, role, business_id, accepted_at, expires_at, businesses(name, slug)')
+    .eq('token', token)
+    .single();
+
+  if (!invitation) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md mx-4">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Invalid Invitation</h1>
+          <p className="text-muted">This invitation link is invalid or has expired.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (invitation.accepted_at) {
+    // Already accepted — redirect to workspace
+    const business = invitation.businesses as any;
+    redirect(`/w/${business?.slug || 'dashboard'}/dashboard`);
+  }
+
+  const isExpired = new Date(invitation.expires_at) < new Date();
+  if (isExpired) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md mx-4">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Invitation Expired</h1>
+          <p className="text-muted">This invitation has expired. Ask the workspace owner to send a new one.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const business = invitation.businesses as any;
+  const roleLabel = invitation.role === 'ADMIN' ? 'Admin' : invitation.role === 'EDITOR' ? 'Member' : 'Guest';
+
+  // If logged in, show accept button. If not, redirect to auth with callback.
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md mx-4">
+          <div className="w-16 h-16 rounded-2xl bg-foreground/[0.06] flex items-center justify-center mx-auto mb-6">
+            <span className="text-2xl font-bold text-foreground">N</span>
+          </div>
+          <h1 className="text-xl font-bold text-foreground mb-2">
+            Join {business?.name || 'a workspace'}
+          </h1>
+          <p className="text-[14px] text-muted mb-6">
+            You've been invited as a <strong>{roleLabel}</strong>. Sign in or create an account to accept.
+          </p>
+          <a
+            href={`/auth?redirect=/invite/${token}`}
+            className="inline-block px-6 py-3 bg-accent text-white rounded-lg font-medium hover:bg-accent/90 transition-colors"
+          >
+            Sign in to accept
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center max-w-md mx-4">
+        <div className="w-16 h-16 rounded-2xl bg-foreground/[0.06] flex items-center justify-center mx-auto mb-6">
+          <span className="text-2xl font-bold text-foreground">N</span>
+        </div>
+        <h1 className="text-xl font-bold text-foreground mb-2">
+          Join {business?.name || 'a workspace'}
+        </h1>
+        <p className="text-[14px] text-muted mb-6">
+          You've been invited as a <strong>{roleLabel}</strong>.
+        </p>
+        <AcceptInviteClient token={token} workspaceSlug={business?.slug} />
+      </div>
+    </div>
+  );
+}

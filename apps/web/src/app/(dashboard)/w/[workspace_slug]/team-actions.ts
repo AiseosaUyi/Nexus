@@ -153,7 +153,28 @@ export async function inviteMember(
     return { error: error.message };
   }
 
-  // TODO: Send invitation email with data.token via Resend in a future phase
+  // Send invitation email via Resend
+  try {
+    const { sendTeamInviteEmail } = await import('@/lib/email');
+
+    // Fetch workspace name and inviter name
+    const { data: business } = await supabase.from('businesses').select('name').eq('id', businessId).single();
+    const inviterName = user.user_metadata?.full_name || user.email || 'Someone';
+    const workspaceName = business?.name || 'a workspace';
+
+    const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invite/${data.token}`;
+
+    await sendTeamInviteEmail({
+      to: email.trim().toLowerCase(),
+      inviterName,
+      workspaceName,
+      role,
+      acceptUrl,
+    });
+  } catch (emailErr) {
+    console.error('[BACKEND] Email send failed (invite still created):', emailErr);
+  }
+
   console.log(`[BACKEND] Invitation created for ${email} | token: ${data.token}`);
 
   revalidatePath('/', 'layout');

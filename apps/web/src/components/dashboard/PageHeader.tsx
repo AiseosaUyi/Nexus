@@ -350,6 +350,7 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-[13px] text-foreground truncate">{share.email}</p>
+                            <p className="text-[10px] text-amber-400/70">Invited</p>
                           </div>
                           <span className="text-[11px] text-muted capitalize shrink-0">Can {share.permission}</span>
                           <button

@@ -412,6 +412,24 @@ export async function inviteToNode(nodeId: string, email: string, permission: st
     return { error: error.message };
   }
 
+  // Send page share email via Resend
+  try {
+    const { sendPageShareEmail } = await import('@/lib/email');
+    const { data: node } = await supabase.from('nodes').select('title').eq('id', nodeId).single();
+    const inviterName = user.user_metadata?.full_name || user.email || 'Someone';
+    const pageTitle = node?.title || 'Untitled';
+    const pageUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/p/${nodeId}`;
+
+    await sendPageShareEmail({
+      to: email.toLowerCase().trim(),
+      inviterName,
+      pageTitle,
+      pageUrl,
+    });
+  } catch (emailErr) {
+    console.error('[Share] Email send failed (share still created):', emailErr);
+  }
+
   return { data };
 }
 
