@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import {
   createNode,
   updateYjsSnapshot,
+  syncBlocks,
   importFromURL,
   createTeamspace,
 } from '@/app/(dashboard)/w/[workspace_slug]/actions';
@@ -31,7 +32,7 @@ import { useRouter } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = 'file' | 'url';
+type Tab = 'file' | 'url' | 'paste';
 
 interface QueuedFile {
   id: string;
@@ -65,6 +66,24 @@ function extractFirstH1(html: string): string {
   return match[1].replace(/<[^>]*>/g, '').trim();
 }
 
+/** Normalizes Tiptap node types to the BlockType DB enum values */
+function normalizeBlockType(tiptapType: string): string {
+  const map: Record<string, string> = {
+    bulletList: 'list',
+    orderedList: 'list',
+    taskList: 'list',
+    listItem: 'list',
+    taskItem: 'list',
+    blockquote: 'quote',
+    codeBlock: 'code',
+    horizontalRule: 'divider',
+    tableRow: 'table',
+    tableCell: 'table',
+    tableHeader: 'table',
+  };
+  return map[tiptapType] || tiptapType;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ImportModal({
@@ -83,6 +102,7 @@ export default function ImportModal({
   const [isFetching, startFetch] = useTransition();
   const [urlError, setUrlError] = useState<string | null>(null);
   const [urlPreview, setUrlPreview] = useState<{ title: string; html: string } | null>(null);
+  const [pasteContent, setPasteContent] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -184,6 +204,19 @@ export default function ImportModal({
     setTab('file');
   }, [urlPreview, urlInput]);
 
+  const handleAddPaste = useCallback(() => {
+    const content = pasteContent.trim();
+    if (!content) return;
+    const title = extractMarkdownTitle(content) || 'Pasted Content';
+    const tiptapJson = markdownToTiptap(content);
+    setQueue((prev) => [
+      ...prev,
+      { id: uid(), name: 'Pasted content', title, tiptapJson, status: 'pending' },
+    ]);
+    setPasteContent('');
+    setTab('file');
+  }, [pasteContent]);
+
   // ── Teamspace creation ───────────────────────────────────────────────────
 
   const handleCreateTeamspace = useCallback(() => {
@@ -204,6 +237,7 @@ export default function ImportModal({
 
   const handleClose = useCallback(() => {
     setQueue([]); setUrlInput(''); setUrlPreview(null); setUrlError(null);
+    setPasteContent('');
     setIsCreatingTeamspace(false); setNewTeamspaceName('');
     onClose();
   }, [onClose]);
@@ -234,13 +268,31 @@ export default function ImportModal({
 
         if (!nodeResult.data) throw new Error(nodeResult.error ?? 'Failed to create node');
 
-        // Step 3: Generating Snapshot
+        // Step 3: Generate snapshot + save
         setQueue((prev) => prev.map((f) => f.id === item.id ? {
-          ...f, statusLabel: 'Syncing content...', progress: 70
+          ...f, statusLabel: 'Syncing content...', progress: 60
         } : f));
 
         const snapshot = generateYjsSnapshot(item.tiptapJson as Record<string, unknown>);
-        await updateYjsSnapshot(nodeResult.data.id, snapshot);
+        const snapshotResult = await updateYjsSnapshot(nodeResult.data.id, snapshot);
+        if (snapshotResult.error) {
+          console.error('[Import] Snapshot save failed:', snapshotResult.error);
+        }
+
+        // Step 3b: Also save blocks for search indexing and as content fallback
+        setQueue((prev) => prev.map((f) => f.id === item.id ? {
+          ...f, statusLabel: 'Indexing content...', progress: 85
+        } : f));
+
+        const topLevelNodes = (item.tiptapJson as any).content || [];
+        const blockPayloads = topLevelNodes
+          .filter((node: any) => node.type !== 'listItem' && node.type !== 'taskItem' && node.type !== 'tableRow' && node.type !== 'tableCell' && node.type !== 'tableHeader')
+          .map((node: any, index: number) => ({
+            type: normalizeBlockType(node.type) as any,
+            content: { attrs: node.attrs || {}, content: node.content || [] },
+            position: index,
+          }));
+        await syncBlocks(nodeResult.data.id, blockPayloads);
 
         // Step 4: Done
         window.dispatchEvent(new CustomEvent('nexus:node-created', { detail: { node: nodeResult.data } }));
@@ -295,7 +347,7 @@ export default function ImportModal({
 
         {/* ── Tabs ── */}
         <div className="flex border-b border-border shrink-0">
-          {(['file', 'url'] as Tab[]).map((t) => (
+          {(['file', 'url', 'paste'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -304,7 +356,7 @@ export default function ImportModal({
                 tab === t ? 'text-foreground border-b-2 border-cta -mb-px' : 'text-muted hover:text-foreground/70'
               )}
             >
-              {t === 'file' ? 'File Upload' : 'Web URL'}
+              {t === 'file' ? 'File' : t === 'url' ? 'Web URL' : 'Paste Text'}
             </button>
           ))}
         </div>
@@ -470,10 +522,52 @@ export default function ImportModal({
                 </div>
               )}
 
+              {(urlInput.includes('notion.site') || urlInput.includes('notion.so')) && (
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.04] px-3 py-2.5">
+                  <p className="text-[12px] text-amber-400/90 leading-relaxed">
+                    Notion pages use JavaScript rendering — URL import may produce incomplete results.
+                    For reliable imports, use <button onClick={() => setTab('paste')} className="underline cursor-pointer">Paste Text</button> or export your Notion page as Markdown and upload it via File.
+                  </p>
+                </div>
+              )}
+
               <p className="text-[11px] text-muted/60 leading-relaxed">
-                Nexus fetches the page server-side and converts it to a Nexus document.
-                Best results with articles and blog posts.
+                Nexus fetches the page server-side. Best results with articles and blog posts.
               </p>
+            </div>
+          )}
+
+          {tab === 'paste' && (
+            <div className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-medium text-foreground/60">
+                  Paste markdown or plain text
+                </label>
+                <textarea
+                  autoFocus
+                  value={pasteContent}
+                  onChange={(e) => setPasteContent(e.target.value)}
+                  placeholder={"# Page title\n\nPaste any markdown or plain text here…\n\nWorks with content copied from Notion, Google Docs, or any text editor."}
+                  className="w-full h-52 px-3 py-2.5 rounded-lg bg-foreground/[0.04] border border-border focus:border-cta/40 text-[13px] text-foreground placeholder:text-muted/30 outline-none resize-none font-mono leading-relaxed transition-colors"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] text-muted/60">
+                  Supports headings, bold, italic, lists, tables, and code blocks.
+                </p>
+                <button
+                  onClick={handleAddPaste}
+                  disabled={!pasteContent.trim()}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors cursor-pointer',
+                    pasteContent.trim()
+                      ? 'bg-white text-black hover:bg-white/90'
+                      : 'bg-foreground/[0.06] text-foreground/30 cursor-not-allowed'
+                  )}
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />Add to queue
+                </button>
+              </div>
             </div>
           )}
 

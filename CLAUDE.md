@@ -99,6 +99,18 @@ Hierarchy: `Business → Teamspace → Node (tree via parent_id)`
 
 When creating a node programmatically with content (e.g., import), generate the snapshot client-side via `src/lib/generateYjsSnapshot.ts`, then save via `updateYjsSnapshot`.
 
+**Snapshot serialization details:**
+- `generateYjsSnapshot(tiptapJson)` returns `number[]` — binary bytes
+- `updateYjsSnapshot(nodeId, snapshot)` converts to hex string and calls RPC: `save_yjs_snapshot(nodeId, Buffer.from(snapshot).toString('hex'))`
+- PostgreSQL `decode(hex_string, 'hex')` converts hex back to bytea in the database
+- NexusEditor's `initialSnapshot` comes from Supabase as `\xHEXDATA` string — decoded back to `Uint8Array` before `Y.applyUpdate()`
+- If snapshot is null/empty, NexusEditor falls back to `initialContent` (reconstructed from blocks table)
+
+**Common issues:**
+- **Missing `yjs_snapshot` column**: When `ALTER TABLE nodes ADD COLUMN yjs_snapshot bytea` hasn't been run, imports appear to succeed but content is never saved (no error thrown). Check DB schema.
+- **BlockType mismatch**: Tiptap produces `bulletList`, `orderedList`, `blockquote`, `codeBlock`, etc. but DB enum expects `list`, `quote`, `code`. Import normalizes these types before syncing to blocks table.
+- **Schema mismatch in snapshots**: `generateYjsSnapshot` uses subset of extensions (StarterKit, TaskList, TaskItem, Link, Tables). Custom extensions like YouTube, Callout, Details won't survive snapshot roundtrip. Content survives via blocks fallback if snapshot fails.
+
 ### Server actions
 
 All server-side mutations live in **`actions.ts` files co-located with the route**:
@@ -111,7 +123,14 @@ Each action creates a fresh Supabase server client via `createClient()` (from `@
 
 `/dashboard` redirects to `/w/<slug>/dashboard` (the first business the user belongs to).
 
-`(dashboard)/w/[workspace_slug]/layout.tsx` is the shell — it server-renders the sidebar with initial nodes/teamspaces and passes them as props to `SidebarTree`. The sidebar holds its own state and syncs back from server on `router.refresh()`.
+`(dashboard)/w/[workspace_slug]/layout.tsx` is the shell — it server-renders the sidebar with initial nodes/teamspaces and passes them as props to `SidebarTree`. The sidebar holds its own state and syncs back from server on `router.refresh()`. The layout also mounts `NavigationProgress` (a thin top-of-screen progress bar that listens for internal `<a>` clicks globally and completes when `usePathname` changes).
+
+**Dashboard routes under `/w/[workspace_slug]/`:**
+- `dashboard/` — workspace home
+- `n/[node_id]/` — document/folder editor page
+- `t/[teamspace_id]/` — teamspace overview (card grid of root pages)
+- `calendar/` — content calendar
+- `updates/` — activity feed
 
 ### Component patterns
 
@@ -119,6 +138,15 @@ Each action creates a fresh Supabase server client via `createClient()` (from `@
 - Modals manage their own open/close state in the parent; they are never portaled to a separate route
 - `SidebarTree` owns sidebar state (nodes, teamspaces) and passes callbacks to children
 - All Radix UI dropdown items that trigger server actions use `onSelect`, not `onClick`
+
+**Breadcrumb prop chain** — `PageHeader` shows a contextual breadcrumb but has no direct DB access. The server page (`n/[node_id]/page.tsx`) fetches the node's teamspace and passes `teamspace: { id, name }`, `workspaceSlug`, and `isCalendarEntry` down through `NodePageClient` → `PageHeader`. When `isCalendarEntry` is true the breadcrumb shows `Home / Calendar / Page`; otherwise `Home / [Teamspace] / Page`.
+
+**Cross-component communication via custom events** — use `window.dispatchEvent` for decoupled updates rather than prop drilling:
+- `nexus:saving` — triggers save indicator in `PageHeader`
+- `nexus:node-created` — optimistically adds a node to `SidebarTree` state (avoids the `router.push` + `router.refresh` conflict where refresh cancels navigation)
+- `nexus:apply-comment` / `nexus:open-comment` — wires editor comment marks to `CommentSidebar`
+
+**`router.push` + `router.refresh` conflict** — calling both in the same tick causes the refresh to override the push in Next.js App Router's action queue. Pattern: dispatch `nexus:node-created` for optimistic sidebar update instead of `router.refresh()` after `router.push()`.
 
 ### Editor extensions
 
@@ -133,9 +161,19 @@ Custom Tiptap extensions in `src/components/editor/extensions/`:
 Three client-side utilities for the import feature:
 - `markdownToTiptap.ts` — pure string parser: Markdown → Tiptap JSON
 - `htmlToTiptap.ts` — browser DOMParser: cleaned HTML → Tiptap JSON
-- `generateYjsSnapshot.ts` — headless Tiptap `Editor` with `Collaboration` extension → Yjs binary
+- `generateYjsSnapshot.ts` — DOM-free: uses `getSchema` + `Node.fromJSON` (from `@tiptap/pm/model`) + `prosemirrorToYDoc` (from `y-prosemirror`) to convert Tiptap JSON → Yjs binary snapshot
 
 Server action `importFromURL` in `actions.ts` fetches URLs server-side (avoids CORS) and has special handling for `notion.site` / `notion.so` URLs via `src/lib/notion-parser.ts`.
+
+**Import pipeline data flow:**
+1. ImportModal converts content to Tiptap JSON via markdown/HTML parsers
+2. `generateYjsSnapshot()` converts JSON → binary snapshot
+3. `updateYjsSnapshot()` saves snapshot via RPC `save_yjs_snapshot(node_id, hex_string)`
+4. `syncBlocks()` also saves blocks with type normalization (e.g., `bulletList` → `list`)
+5. On page load, NexusEditor reads snapshot from `node.yjs_snapshot` and applies it to Y.Doc
+6. If snapshot is missing/null, NexusEditor falls back to reconstructing from blocks via `initialContent`
+
+**BlockType normalization:** Tiptap produces node types like `bulletList`, `orderedList`, `blockquote`, `codeBlock`, but the DB `block_type` enum only accepts `list`, `quote`, `code`, etc. ImportModal and NexusEditor both normalize types during block sync.
 
 ---
 
@@ -147,13 +185,28 @@ Migrations are plain SQL files in `database/migrations/` and must be applied in 
 3. Update `packages/api/schema.ts` to match
 4. Update RLS policies if needed (check `11_fix_nodes_rls.sql` for the pattern)
 
-**All migrations through `15_calendar_properties.sql` must be applied for the current codebase.**
+**All migrations through `16_save_snapshot_rpc.sql` must be applied for the current codebase.**
+
+**Critical migrations:**
+- `08_realtime.sql` — adds `yjs_snapshot bytea` column to nodes (required for snapshot storage)
+- `16_save_snapshot_rpc.sql` — adds `save_yjs_snapshot(p_node_id uuid, p_snapshot_hex text)` RPC function that uses `decode(p_snapshot_hex, 'hex')` to bypass PostgREST JSON encoding issues with bytea columns
+
+> When querying nullable FK columns in Supabase (e.g. `parent_id`, `teamspace_id`), use `.is('col', null)` not `.eq('col', null)` — the latter silently returns no rows.
+
+> **Bytea column serialization**: PostgREST cannot serialize `Uint8Array` to bytea correctly (JSON.stringify produces `{"0":1,"1":2,...}` which the database rejects). Always use the RPC function with hex encoding instead of direct `.update()`.
 
 ---
 
 ## Testing
 
 **Unit tests** (Vitest): co-located with source files as `*.test.ts`. Mock Supabase via `vi.mock('@/lib/supabase/server', ...)` — see `actions.test.ts` for the chained mock pattern.
+
+**Import pipeline tests** (`src/lib/import-pipeline.test.ts`): End-to-end tests validating:
+- Markdown parsing and Tiptap JSON structure
+- `generateYjsSnapshot` produces valid binary snapshots
+- Snapshots survive hex round-trip (encode/decode via `updateYjsSnapshot` and `NexusEditor`)
+- Snapshots survive base64 round-trip (if Supabase returns base64 format)
+- Yjs snapshots reconstruct Y.Doc with correct content at `'default'` fragment
 
 **E2E tests** (Playwright): in `apps/web/e2e/`. Three Playwright projects:
 - `setup` — auth only (runs once)

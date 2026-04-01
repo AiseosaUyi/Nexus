@@ -6,17 +6,17 @@ import { Node, NodeType, CreateNodePayload, Block, BlockType, Teamspace } from '
 
 /**
  * Updates a node's Yjs binary snapshot for real-time synchronization.
+ * Uses an RPC function with PostgreSQL decode() to bypass PostgREST bytea encoding issues.
  */
 export async function updateYjsSnapshot(nodeId: string, snapshot: number[]) {
   const supabase = await createClient();
 
-  const { error } = await supabase
-    .from('nodes')
-    .update({ 
-      yjs_snapshot: Uint8Array.from(snapshot),
-      updated_at: new Date().toISOString()
-    } as any)
-    .eq('id', nodeId);
+  const hexString = Buffer.from(snapshot).toString('hex');
+
+  const { error } = await supabase.rpc('save_yjs_snapshot', {
+    p_node_id: nodeId,
+    p_snapshot_hex: hexString,
+  });
 
   if (error) {
     console.error(`[BACKEND] Error updating Yjs snapshot for node ${nodeId}:`, error);
@@ -674,16 +674,16 @@ export async function importFromURL(url: string): Promise<{
     if (isNotion) {
       const { parseNotionPage } = await import('@/lib/notion-parser');
       const result = parseNotionPage(raw);
-      // Use parsed title if it's meaningful
-      if (result.title && result.title !== 'Imported Page') {
+      const parsedSuccessfully = result.title && result.title !== 'Imported Page';
+      if (parsedSuccessfully) {
+        // Parser found the Notion data structure — trust its output completely.
+        // Even if body is empty (partial SSR), the parsed HTML is better than
+        // the raw JS-shell which would produce "Notion" as the title.
         title = result.title;
-      }
-      // Use parsed HTML only if it contains real body content (not just a title tag)
-      const strippedLen = result.html.replace(/<[^>]+>/g, '').trim().length;
-      if (strippedLen > title.length + 10) {
         html = result.html;
       } else {
-        // Fallback: strip the raw HTML ourselves for client-side parsing
+        // Parser found nothing useful — strip the raw HTML and let the
+        // client-side htmlToTiptap handle whatever is there.
         html = raw
           .replace(/<script[\s\S]*?<\/script>/gi, '')
           .replace(/<style[\s\S]*?<\/style>/gi, '')

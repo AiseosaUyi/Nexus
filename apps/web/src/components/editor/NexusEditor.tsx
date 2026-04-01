@@ -72,8 +72,41 @@ export default function NexusEditor({
   // 1. Initialize Yjs Doc and Provider
   const ydoc = useMemo(() => {
     const doc = new Y.Doc();
-    if (initialSnapshot && initialSnapshot.length > 0) {
-      Y.applyUpdate(doc, initialSnapshot);
+    if (initialSnapshot) {
+      try {
+        const raw: unknown = initialSnapshot;
+        let bytes: Uint8Array | null = null;
+
+        if (typeof raw === 'string' && raw.length > 0) {
+          // Try hex format first: \x010203... (PostgreSQL hex output)
+          const hexCandidate = raw.startsWith('\\x') ? raw.slice(2) : raw;
+          if (hexCandidate.length > 0 && hexCandidate.length % 2 === 0 && /^[0-9a-f]+$/i.test(hexCandidate)) {
+            bytes = new Uint8Array(hexCandidate.length / 2);
+            for (let i = 0; i < bytes.length; i++) {
+              bytes[i] = parseInt(hexCandidate.slice(i * 2, i * 2 + 2), 16);
+            }
+          } else {
+            // Try base64 (PostgREST may return bytea as base64)
+            try {
+              const binary = atob(raw);
+              bytes = new Uint8Array(binary.length);
+              for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            } catch {
+              // Not base64 either — ignore
+            }
+          }
+        } else if (raw instanceof Uint8Array) {
+          bytes = raw;
+        } else if (Array.isArray(raw)) {
+          bytes = new Uint8Array(raw as number[]);
+        }
+
+        if (bytes && bytes.length > 0) {
+          Y.applyUpdate(doc, bytes);
+        }
+      } catch (e) {
+        console.error('[NexusEditor] Failed to decode snapshot:', e);
+      }
     }
     return doc;
   }, [initialSnapshot]);
@@ -92,11 +125,18 @@ export default function NexusEditor({
 
   // 3. Debounced Block Sync (every 30s for search indexing)
   const debouncedBlockSync = useDebouncedCallback(async (json: any) => {
-    const blockPayloads = (json.content || []).map((node: any, index: number) => ({
-      type: node.type as BlockType,
-      content: { attrs: node.attrs || {}, content: node.content || [] },
-      position: index,
-    }));
+    const typeMap: Record<string, string> = {
+      bulletList: 'list', orderedList: 'list', taskList: 'list',
+      blockquote: 'quote', codeBlock: 'code', horizontalRule: 'divider',
+    };
+    const skipTypes = new Set(['listItem', 'taskItem', 'tableRow', 'tableCell', 'tableHeader']);
+    const blockPayloads = (json.content || [])
+      .filter((node: any) => !skipTypes.has(node.type))
+      .map((node: any, index: number) => ({
+        type: (typeMap[node.type] || node.type) as BlockType,
+        content: { attrs: node.attrs || {}, content: node.content || [] },
+        position: index,
+      }));
     await syncBlocks(nodeId, blockPayloads);
   }, 30000);
 
@@ -191,7 +231,32 @@ export default function NexusEditor({
     },
   }, [ydoc]);
 
-  // 5. Presence Tracking
+  // 5. Fallback: if Y.Doc is empty but we have initialContent, populate via setContent.
+  // The Collaboration ySyncPlugin will sync the PM transaction into the Y.Doc automatically.
+  const didApplyFallback = useRef(false);
+  useEffect(() => {
+    if (!editor || didApplyFallback.current) return;
+    const fragment = ydoc.getXmlFragment('default');
+    if (fragment.length === 0 && initialContent?.content?.length > 0) {
+      // Check if initialContent has actual nodes (not just an empty paragraph)
+      const hasRealContent = initialContent.content.some(
+        (n: any) => n.type !== 'paragraph' || (n.content && n.content.length > 0)
+      );
+      if (hasRealContent) {
+        didApplyFallback.current = true;
+        // Use requestAnimationFrame to ensure the editor + ySyncPlugin is fully mounted
+        requestAnimationFrame(() => {
+          if (!editor.isDestroyed) {
+            editor.commands.setContent(initialContent);
+            // Trigger a snapshot save so the content persists
+            debouncedSnapshotSave();
+          }
+        });
+      }
+    }
+  }, [editor, ydoc, initialContent, debouncedSnapshotSave]);
+
+  // 6. Presence Tracking
   useEffect(() => {
     if (provider) {
       provider.setPresence({ userId: 'temp-id', name: userName, color: userColor });
