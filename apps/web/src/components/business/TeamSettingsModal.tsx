@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { 
-  X, 
-  Users, 
-  Mail, 
+import {
+  X,
+  Users,
+  Mail,
   ChevronDown,
   UserX,
   Shield,
@@ -18,8 +18,8 @@ import {
   Trash2,
   Settings
 } from 'lucide-react';
-import { 
-  getWorkspaceMembers, 
+import {
+  getWorkspaceMembers,
   getWorkspaceInvitations,
   inviteMember,
   revokeInvitation,
@@ -30,9 +30,9 @@ import {
 type MemberRole = 'ADMIN' | 'EDITOR' | 'VIEWER';
 
 const ROLE_CONFIG = {
-  ADMIN: { label: 'Admin', icon: <Shield className="w-3.5 h-3.5" />, description: 'Full control' },
-  EDITOR: { label: 'Editor', icon: <Edit3 className="w-3.5 h-3.5" />, description: 'Can edit' },
-  VIEWER: { label: 'Viewer', icon: <Eye className="w-3.5 h-3.5" />, description: 'Read only' },
+  ADMIN: { label: 'Admin', icon: <Shield className="w-3.5 h-3.5" />, description: 'Full control, can invite and manage members' },
+  EDITOR: { label: 'Member', icon: <Edit3 className="w-3.5 h-3.5" />, description: 'Can create, edit, and delete content' },
+  VIEWER: { label: 'Guest', icon: <Eye className="w-3.5 h-3.5" />, description: 'View only, cannot edit' },
 };
 
 interface TeamSettingsModalProps {
@@ -42,11 +42,11 @@ interface TeamSettingsModalProps {
   trigger?: React.ReactNode;
 }
 
-export default function TeamSettingsModal({ 
-  businessId, 
+export default function TeamSettingsModal({
+  businessId,
   businessName,
   currentUserRole,
-  trigger 
+  trigger
 }: TeamSettingsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [members, setMembers] = useState<any[]>([]);
@@ -79,11 +79,11 @@ export default function TeamSettingsModal({
     setSuccess(null);
 
     startTransition(async () => {
-      const result = await inviteMember(businessId, inviteEmail, inviteRole);
+      const result = await inviteMember(businessId, inviteEmail.trim(), inviteRole);
       if (result.error) {
         setError(result.error);
       } else {
-        setSuccess(`Invite sent to ${inviteEmail}`);
+        setSuccess(`Invitation sent to ${inviteEmail}`);
         setInviteEmail('');
         loadData();
       }
@@ -123,21 +123,21 @@ export default function TeamSettingsModal({
       </Dialog.Trigger>
 
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 animate-in fade-in" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white rounded-xl shadow-2xl z-50 animate-in zoom-in-95 fade-in duration-200 focus:outline-none overflow-hidden">
-          
+        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-in fade-in" />
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-background border border-border rounded-xl shadow-2xl z-50 animate-in zoom-in-95 fade-in duration-200 focus:outline-none overflow-hidden">
+
           {/* Header */}
-          <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
+          <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border/50">
             <div>
-              <Dialog.Title className="text-lg font-semibold text-[#37352f]">
+              <Dialog.Title className="text-lg font-semibold text-foreground">
                 Settings & Members
               </Dialog.Title>
-              <Dialog.Description className="text-sm text-slate-500 mt-0.5">
-                Manage your <span className="font-medium text-[#37352f]">{businessName}</span> workspace
+              <Dialog.Description className="text-sm text-muted mt-0.5">
+                Manage your <span className="font-medium text-foreground">{businessName}</span> workspace
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
-              <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600 cursor-pointer">
+              <button className="p-1.5 hover:bg-hover rounded-lg transition-colors text-muted hover:text-foreground cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </Dialog.Close>
@@ -148,7 +148,7 @@ export default function TeamSettingsModal({
             {/* Invite Member Section */}
             {isAdmin && (
               <section>
-                <h3 className="text-[13px] font-semibold text-[#37352f]/50 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <h3 className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-3 flex items-center gap-2">
                   <Mail className="w-3.5 h-3.5" />
                   Invite Member
                 </h3>
@@ -158,30 +158,33 @@ export default function TeamSettingsModal({
                     value={inviteEmail}
                     onChange={e => setInviteEmail(e.target.value)}
                     placeholder="colleague@company.com"
-                    className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#37352f]/20 bg-transparent text-[#37352f] placeholder:text-slate-400"
+                    className="flex-1 px-3 py-2 text-sm rounded-lg border border-border bg-foreground/[0.04] text-foreground placeholder:text-muted/50 outline-none focus:border-accent/40"
                     required
                   />
                   {/* Role Picker */}
                   <DropdownMenu.Root>
                     <DropdownMenu.Trigger asChild>
-                      <button type="button" className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors whitespace-nowrap text-[#37352f]">
+                      <button type="button" className="flex items-center gap-1.5 px-3 py-2 text-sm border border-border rounded-lg hover:bg-hover transition-colors whitespace-nowrap text-foreground/70 cursor-pointer">
                         {ROLE_CONFIG[inviteRole].icon}
                         {ROLE_CONFIG[inviteRole].label}
                         <ChevronDown className="w-3.5 h-3.5 opacity-50" />
                       </button>
                     </DropdownMenu.Trigger>
                     <DropdownMenu.Portal>
-                      <DropdownMenu.Content className="bg-white rounded-lg shadow-xl border border-slate-100 p-1 z-[100] w-40" sideOffset={4}>
+                      <DropdownMenu.Content className="bg-background rounded-lg shadow-popover border border-border p-1 z-[100] w-52" sideOffset={4}>
                         {(Object.keys(ROLE_CONFIG) as MemberRole[]).map(role => (
                           <DropdownMenu.Item
                             key={role}
                             onSelect={() => setInviteRole(role)}
-                            className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-slate-50 outline-none text-[#37352f]"
+                            className="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md cursor-pointer hover:bg-hover outline-none text-foreground"
                           >
-                            {inviteRole === role && <Check className="w-3 h-3 text-emerald-500" />}
+                            {inviteRole === role && <Check className="w-3 h-3 text-green-400" />}
                             {inviteRole !== role && <span className="w-3" />}
                             {ROLE_CONFIG[role].icon}
-                            <span>{ROLE_CONFIG[role].label}</span>
+                            <div>
+                              <div className="font-medium">{ROLE_CONFIG[role].label}</div>
+                              <div className="text-[10px] text-muted">{ROLE_CONFIG[role].description}</div>
+                            </div>
                           </DropdownMenu.Item>
                         ))}
                       </DropdownMenu.Content>
@@ -191,20 +194,20 @@ export default function TeamSettingsModal({
                   <button
                     type="submit"
                     disabled={isPending || !inviteEmail.trim()}
-                    className="px-4 py-2 text-sm font-medium bg-[#37352f] text-white rounded-lg hover:bg-[#37352f]/90 disabled:opacity-50 transition-colors flex items-center gap-2 cursor-pointer"
+                    className="px-4 py-2 text-sm font-medium bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors flex items-center gap-2 cursor-pointer"
                   >
                     {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                     Invite
                   </button>
                 </form>
-                {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-                {success && <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1"><Check className="w-3 h-3" />{success}</p>}
+                {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+                {success && <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><Check className="w-3 h-3" />{success}</p>}
               </section>
             )}
 
             {/* Members List */}
             <section>
-              <h3 className="text-[13px] font-semibold text-[#37352f]/50 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <h3 className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Users className="w-3.5 h-3.5" />
                 Members ({members.length})
               </h3>
@@ -213,61 +216,62 @@ export default function TeamSettingsModal({
                   const user = member.users;
                   const initials = (user?.full_name || user?.email || '?').substring(0, 2).toUpperCase();
                   return (
-                    <div key={member.id} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50 group">
+                    <div key={member.id} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-hover group">
                       <div className="flex items-center gap-3">
                         {user?.avatar_url ? (
-                          <img src={user.avatar_url} alt={user.full_name} className="w-8 h-8 rounded-full" />
+                          <img src={user.avatar_url} alt={user.full_name} className="w-8 h-8 rounded-full object-cover" />
                         ) : (
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center text-white text-[11px] font-bold">
+                          <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent text-[11px] font-bold">
                             {initials}
                           </div>
                         )}
                         <div>
-                          <div className="text-sm font-medium text-[#37352f]">{user?.full_name || user?.email}</div>
-                          {user?.full_name && <div className="text-xs text-slate-400">{user.email}</div>}
+                          <div className="text-sm font-medium text-foreground">{user?.full_name || user?.email}</div>
+                          {user?.full_name && <div className="text-xs text-muted">{user.email}</div>}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
-                        {/* Role Badge / Changer */}
                         {isAdmin ? (
                           <DropdownMenu.Root>
                             <DropdownMenu.Trigger asChild>
-                              <button className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-slate-200 rounded-md hover:bg-slate-100 transition-colors text-[#37352f]/70 cursor-pointer">
+                              <button className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-border rounded-md hover:bg-hover transition-colors text-foreground/70 cursor-pointer">
                                 {ROLE_CONFIG[member.role as MemberRole]?.icon}
-                                {member.role}
+                                {ROLE_CONFIG[member.role as MemberRole]?.label}
                                 <ChevronDown className="w-3 h-3 opacity-50" />
                               </button>
                             </DropdownMenu.Trigger>
                             <DropdownMenu.Portal>
-                              <DropdownMenu.Content className="bg-white rounded-lg shadow-xl border border-slate-100 p-1 z-[100] w-40" sideOffset={4}>
+                              <DropdownMenu.Content className="bg-background rounded-lg shadow-popover border border-border p-1 z-[100] w-52" sideOffset={4}>
                                 {(Object.keys(ROLE_CONFIG) as MemberRole[]).map(role => (
                                   <DropdownMenu.Item
                                     key={role}
                                     onSelect={() => handleRoleChange(member.id, role)}
-                                    className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-slate-50 outline-none text-[#37352f]"
+                                    className="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md cursor-pointer hover:bg-hover outline-none text-foreground"
                                   >
-                                    {member.role === role && <Check className="w-3 h-3 text-emerald-500" />}
+                                    {member.role === role && <Check className="w-3 h-3 text-green-400" />}
                                     {member.role !== role && <span className="w-3" />}
                                     {ROLE_CONFIG[role].icon}
-                                    <span>{ROLE_CONFIG[role].label}</span>
+                                    <div>
+                                      <div className="font-medium">{ROLE_CONFIG[role].label}</div>
+                                      <div className="text-[10px] text-muted">{ROLE_CONFIG[role].description}</div>
+                                    </div>
                                   </DropdownMenu.Item>
                                 ))}
                               </DropdownMenu.Content>
                             </DropdownMenu.Portal>
                           </DropdownMenu.Root>
                         ) : (
-                          <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-slate-100 rounded-md text-[#37352f]/50">
+                          <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-border rounded-md text-muted">
                             {ROLE_CONFIG[member.role as MemberRole]?.icon}
-                            {member.role}
+                            {ROLE_CONFIG[member.role as MemberRole]?.label}
                           </span>
                         )}
 
-                        {/* Remove Member */}
                         {isAdmin && (
                           <button
                             onClick={() => handleRemoveMember(member.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all cursor-pointer"
+                            className="opacity-0 group-hover:opacity-100 p-1.5 text-muted hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all cursor-pointer"
                             title="Remove member"
                           >
                             <UserX className="w-3.5 h-3.5" />
@@ -283,28 +287,28 @@ export default function TeamSettingsModal({
             {/* Pending Invitations */}
             {isAdmin && invitations.length > 0 && (
               <section>
-                <h3 className="text-[13px] font-semibold text-[#37352f]/50 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <h3 className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-3 flex items-center gap-2">
                   <Clock className="w-3.5 h-3.5" />
                   Pending Invitations ({invitations.length})
                 </h3>
                 <div className="space-y-1">
                   {invitations.map(inv => (
-                    <div key={inv.id} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50 group">
+                    <div key={inv.id} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-hover group">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                        <div className="w-8 h-8 rounded-full bg-foreground/[0.06] flex items-center justify-center text-muted">
                           <Mail className="w-3.5 h-3.5" />
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-[#37352f]/70">{inv.email}</div>
-                          <div className="text-xs text-slate-400 flex items-center gap-1">
-                            <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] font-medium">{inv.role}</span>
+                          <div className="text-sm font-medium text-foreground/70">{inv.email}</div>
+                          <div className="text-xs text-muted flex items-center gap-1">
+                            <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[10px] font-medium">{ROLE_CONFIG[inv.role as MemberRole]?.label || inv.role}</span>
                             <span>· expires {new Date(inv.expires_at).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </div>
                       <button
                         onClick={() => handleRevokeInvite(inv.id)}
-                        className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all cursor-pointer"
+                        className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 text-xs text-muted hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all cursor-pointer"
                       >
                         <Trash2 className="w-3 h-3" />
                         Revoke
