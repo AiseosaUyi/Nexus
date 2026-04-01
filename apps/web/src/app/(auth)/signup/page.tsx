@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { signUp } from '../actions';
-import { Sparkles, Mail, AlertCircle, ArrowRight } from 'lucide-react';
+import { Mail, AlertCircle, ArrowRight } from 'lucide-react';
 
-export default function SignupPage() {
+function SignupForm() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
   const message = searchParams.get('message');
@@ -108,5 +109,13 @@ export default function SignupPage() {
         </p>
       )}
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="w-full max-w-sm mx-auto h-64" />}>
+      <SignupForm />
+    </Suspense>
   );
 }
