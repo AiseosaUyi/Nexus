@@ -84,7 +84,7 @@ export default function WorkspaceDashboardClient({
   return (
     <>
       <div className="h-full w-full overflow-y-auto custom-scrollbar">
-        <div className="max-w-3xl mx-auto px-8 py-16 space-y-14">
+        <div className="max-w-3xl mx-auto px-6 py-8 md:py-16 space-y-8 md:space-y-14">
 
           {/* Greeting */}
           <div
@@ -101,7 +101,7 @@ export default function WorkspaceDashboardClient({
                 day: 'numeric',
               })}
             </p>
-            <h1 className="text-4xl font-bold text-foreground tracking-tight">
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight">
               {mounted ? getGreeting() : 'Hello'} 👋
             </h1>
             <p className="text-foreground/50 text-base leading-relaxed mt-2 max-w-lg">
@@ -120,7 +120,7 @@ export default function WorkspaceDashboardClient({
             <p className="text-[10px] font-bold uppercase tracking-widest text-foreground/35 mb-4">
               Quick Actions
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3">
               {quickActions.map((action) => (
                 <button
                   key={action.label}
@@ -137,7 +137,7 @@ export default function WorkspaceDashboardClient({
                       strokeWidth={1.8}
                     />
                   </div>
-                  <div>
+                  <div className="flex flex-col items-start">
                     <div className="text-sm font-semibold text-foreground">
                       {action.label}
                     </div>

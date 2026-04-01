@@ -138,6 +138,110 @@ function makeTaskItem(innerText: string, checked: boolean): TiptapNode {
   };
 }
 
+// ─── List helpers ─────────────────────────────────────────────────────────────
+
+function getIndent(line: string): number {
+  return line.match(/^(\s*)/)?.[1].length ?? 0;
+}
+
+function isBulletLine(line: string): boolean {
+  return /^[ \t]*[-*+]\s/.test(line);
+}
+
+function isOrderedLine(line: string): boolean {
+  return /^[ \t]*\d+\.\s/.test(line);
+}
+
+function isListLine(line: string): boolean {
+  return isBulletLine(line) || isOrderedLine(line);
+}
+
+/**
+ * Recursively parse a list starting at `lines[i]` with base indentation `baseIndent`.
+ * Returns the parsed Tiptap list node and the index after the last consumed line.
+ */
+function parseList(
+  lines: string[],
+  i: number,
+  baseIndent: number
+): { node: TiptapNode; endI: number } {
+  const firstLine = lines[i];
+  const listType = isBulletLine(firstLine) ? 'bullet' : 'ordered';
+  const items: TiptapNode[] = [];
+  let isTaskList = false;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.trim() === '') { i++; continue; }
+
+    const indent = getIndent(line);
+    if (indent < baseIndent) break;
+    if (indent > baseIndent) { i++; continue; } // orphaned indented line — skip
+
+    if (!isListLine(line)) break;
+
+    // Extract item text
+    const itemText = isBulletLine(line)
+      ? line.replace(/^[ \t]*[-*+]\s/, '')
+      : line.replace(/^[ \t]*\d+\.\s/, '');
+    i++;
+
+    // Collect continuation lines (same or higher indent, non-list)
+    const continuationLines: string[] = [];
+    while (i < lines.length && lines[i].trim() !== '' && !isListLine(lines[i])) {
+      const nextIndent = getIndent(lines[i]);
+      if (nextIndent <= baseIndent) break;
+      continuationLines.push(lines[i].trim());
+      i++;
+    }
+
+    const fullText = continuationLines.length
+      ? itemText + ' ' + continuationLines.join(' ')
+      : itemText;
+
+    // Check for a nested sub-list
+    let subList: TiptapNode | null = null;
+    if (i < lines.length && isListLine(lines[i])) {
+      const subIndent = getIndent(lines[i]);
+      if (subIndent > baseIndent) {
+        const { node, endI } = parseList(lines, i, subIndent);
+        subList = node;
+        i = endI;
+      }
+    }
+
+    // Task item detection: - [ ] text  or  - [x] text
+    const taskMatch = fullText.match(/^\[( |x|X)\]\s+(.*)/);
+    if (taskMatch) {
+      isTaskList = true;
+      const taskContent: TiptapNode[] = [{ type: 'paragraph', content: parseInline(taskMatch[2]) }];
+      if (subList) taskContent.push(subList);
+      items.push({ type: 'taskItem', attrs: { checked: taskMatch[1].toLowerCase() === 'x' }, content: taskContent });
+    } else {
+      const liContent: TiptapNode[] = [{ type: 'paragraph', content: parseInline(fullText) }];
+      if (subList) liContent.push(subList);
+      items.push({ type: 'listItem', content: liContent });
+    }
+  }
+
+  const nodeType = isTaskList ? 'taskList' : listType === 'bullet' ? 'bulletList' : 'orderedList';
+  const node: TiptapNode = nodeType === 'orderedList'
+    ? { type: nodeType, attrs: { start: 1 }, content: items }
+    : { type: nodeType, content: items };
+
+  return { node, endI: i };
+}
+
+// ─── Table parser ─────────────────────────────────────────────────────────────
+
+function parseTableRow(line: string): string[] {
+  return line.split('|').slice(1, -1).map((c) => c.trim());
+}
+
+function isSeparatorRow(line: string): boolean {
+  return /^\|?[\s|:-]+\|?$/.test(line.trim());
+}
+
 export function markdownToTiptap(markdown: string): { type: 'doc'; content: TiptapNode[] } {
   const lines = markdown.split('\n');
   const nodes: TiptapNode[] = [];
@@ -200,34 +304,46 @@ export function markdownToTiptap(markdown: string): { type: 'doc'; content: Tipt
       continue;
     }
 
-    // Unordered list / task list: - / * / +
-    if (/^[-*+]\s/.test(trimmed)) {
-      const items: TiptapNode[] = [];
-      let isTaskList = false;
-      while (i < lines.length && /^[ \t]*[-*+]\s/.test(lines[i])) {
-        const itemText = lines[i].replace(/^[ \t]*[-*+]\s/, '');
-        const taskMatch = itemText.match(/^\[( |x|X)\]\s(.*)/);
-        if (taskMatch) {
-          isTaskList = true;
-          items.push(makeTaskItem(taskMatch[2], taskMatch[1].toLowerCase() === 'x'));
-        } else {
-          items.push(makeListItem(itemText));
-        }
+    // Pipe table: | col | col |
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        tableLines.push(lines[i]);
         i++;
       }
-      nodes.push({ type: isTaskList ? 'taskList' : 'bulletList', content: items });
+      if (tableLines.length >= 2 && isSeparatorRow(tableLines[1])) {
+        const headerCells = parseTableRow(tableLines[0]);
+        const dataRows = tableLines.slice(2).map(parseTableRow);
+
+        const tableRows: TiptapNode[] = [
+          {
+            type: 'tableRow',
+            content: headerCells.map((cell) => ({
+              type: 'tableHeader',
+              attrs: { colspan: 1, rowspan: 1, colwidth: null },
+              content: [{ type: 'paragraph', content: parseInline(cell) }],
+            })),
+          },
+          ...dataRows.map((cells) => ({
+            type: 'tableRow',
+            content: cells.map((cell) => ({
+              type: 'tableCell',
+              attrs: { colspan: 1, rowspan: 1, colwidth: null },
+              content: [{ type: 'paragraph', content: parseInline(cell) }],
+            })),
+          })),
+        ];
+        nodes.push({ type: 'table', content: tableRows });
+      }
       continue;
     }
 
-    // Ordered list: 1. / 2. etc.
-    if (/^[ \t]*\d+\.\s/.test(trimmed)) {
-      const items: TiptapNode[] = [];
-      while (i < lines.length && /^[ \t]*\d+\.\s/.test(lines[i])) {
-        const itemText = lines[i].replace(/^[ \t]*\d+\.\s/, '');
-        items.push(makeListItem(itemText));
-        i++;
-      }
-      nodes.push({ type: 'orderedList', attrs: { start: 1 }, content: items });
+    // Unordered list / task list / ordered list — unified nested parser
+    if (isListLine(line)) {
+      const baseIndent = getIndent(line);
+      const { node, endI } = parseList(lines, i, baseIndent);
+      nodes.push(node);
+      i = endI;
       continue;
     }
 
@@ -236,7 +352,7 @@ export function markdownToTiptap(markdown: string): { type: 'doc'; content: Tipt
     while (
       i < lines.length &&
       lines[i].trim() !== '' &&
-      !/^[ \t]*(#{1,6}\s|[-*+]\s|\d+\.\s|>|```|---|___|\*\*\*)/.test(lines[i])
+      !/^[ \t]*(#{1,6}\s|[-*+]\s|\d+\.\s|>|```|---|___|\*\*\*|\|)/.test(lines[i])
     ) {
       paraLines.push(lines[i].trimEnd());
       i++;

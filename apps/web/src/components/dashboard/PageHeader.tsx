@@ -178,8 +178,8 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
            </div>
         </div>
       ) : (
-        <div className="w-full h-12 flex items-center justify-between px-4 text-foreground/60 text-[13px] font-medium border-b border-border/5 mb-8">
-          <div className="flex items-center gap-2">
+        <div className="w-full h-12 flex items-center justify-between px-3 md:px-4 text-foreground/60 text-[11px] md:text-[13px] font-medium border-b border-border/5 mb-4 md:mb-8 bg-background/50 backdrop-blur-sm sticky top-0 z-30 md:relative md:bg-transparent md:backdrop-none">
+          <div className="flex items-center gap-1.5 md:gap-2 overflow-hidden">
             <Link
               href={`/w/${resolvedSlug}/dashboard`}
               className="hover:text-foreground transition-colors"
@@ -212,20 +212,15 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
               </>
             )}
             
-            <span className="text-foreground/90 font-bold truncate max-w-[200px]">{title || "Untitled"}</span>
+            <span className="text-foreground/90 font-bold truncate max-w-[100px] md:max-w-[200px]">{title || "Untitled"}</span>
             {saveStatus !== 'idle' && (
-              <span className="flex items-center gap-1 text-[11px] text-foreground/40 font-normal ml-1">
+              <span className="flex items-center gap-1 text-[10px] md:text-[11px] text-foreground/40 font-normal ml-0.5 md:ml-1 shrink-0">
                 {saveStatus === 'saving' ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Saving...
-                  </>
+                  <Loader2 className="w-2.5 h-2.5 md:w-3 h-3 animate-spin" />
                 ) : (
-                  <>
-                    <Check className="w-3 h-3" />
-                    Saved
-                  </>
+                  <Check className="w-2.5 h-2.5 md:w-3 h-3 text-green-500" />
                 )}
+                <span className="hidden xs:inline">{saveStatus === 'saving' ? 'Saving...' : 'Saved'}</span>
               </span>
             )}
           </div>
@@ -256,11 +251,11 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
                 )}
               >
                 {isPublic ? <Globe className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5 opacity-80" />}
-                <span>{isPublic ? "Published" : "Share"}</span>
+                <span className="hidden xs:inline">{isPublic ? "Published" : "Share"}</span>
               </button>
 
               {isShareMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-72 bg-background border border-border rounded-xl shadow-popover p-3 z-50 animate-in zoom-in-95 duration-150 ring-1 ring-black/5">
+                <div className="absolute right-0 top-full mt-2 w-[calc(100vw-32px)] xs:w-72 bg-background border border-border rounded-xl shadow-popover p-3 z-50 animate-in zoom-in-95 duration-150 ring-1 ring-black/5">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-bold text-foreground">Share to web</span>
                     <button onClick={() => setIsShareMenuOpen(false)} className="p-1 rounded hover:bg-hover text-muted cursor-pointer">
@@ -370,7 +365,7 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
         </div>
       )}
 
-      <div className="w-full max-w-4xl mx-auto px-12 md:px-24 flex flex-col relative">
+      <div className="w-full max-w-4xl mx-auto px-6 flex flex-col relative">
         {/* Buttons appearing on hover (or persistent if icon missing) */}
         {!icon && !coverUrl && (
           <div className="flex items-center gap-3 opacity-0 group-hover/header:opacity-100 transition-opacity mb-4 -ml-1">
@@ -443,7 +438,7 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
           suppressContentEditableWarning
           onInput={handleTitleChange}
           data-placeholder="Untitled"
-          className="text-5xl font-black font-display tracking-tight leading-tight text-foreground outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-foreground/25 empty:before:font-normal break-words mb-4"
+          className="text-3xl md:text-5xl font-black font-display tracking-tight leading-tight text-foreground outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-foreground/25 empty:before:font-normal break-words mb-4"
         >
           {initialTitle === "Untitled" ? "" : initialTitle}
         </h1>

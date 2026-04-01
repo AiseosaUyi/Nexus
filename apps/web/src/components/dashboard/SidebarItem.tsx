@@ -136,7 +136,7 @@ export default function SidebarItem({ node, level = 0 }: SidebarItemProps) {
               }}
               className={cn(
                 "w-5 h-5 flex items-center justify-center hover:bg-foreground/5 rounded-sm transition-colors text-muted hover:text-foreground shrink-0",
-                !isFolder && !hasChildren && "opacity-0 group-hover:opacity-100 pointer-events-none"
+                !isFolder && !hasChildren && "opacity-0 md:group-hover:opacity-100 pointer-events-none"
               )}
             >
               {(isFolder || hasChildren) && (
@@ -178,8 +178,8 @@ export default function SidebarItem({ node, level = 0 }: SidebarItemProps) {
               )}
             </Link>
 
-            {/* Hover Actions */}
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Mobile-friendly Actions (Always visible or easier to trigger on touch) */}
+            <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
               <button 
                 onClick={handleAddChild}
                 className="w-5 h-5 flex items-center justify-center hover:bg-foreground/10 rounded-sm text-muted hover:text-foreground transition-colors"

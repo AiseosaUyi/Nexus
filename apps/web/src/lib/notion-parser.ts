@@ -8,6 +8,10 @@ export interface NotionImportResult {
   html: string;
 }
 
+function normalizeId(id: string): string {
+  return typeof id === 'string' ? id.replace(/-/g, '') : id;
+}
+
 function findRecordMap(obj: any, depth = 0): any {
   if (depth > 8 || !obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
   if (obj.recordMap?.block) return obj.recordMap;
@@ -154,20 +158,46 @@ function blockToHtml(blockId: string, blocks: any): string {
  * Converts a Notion recordMap into a flat HTML representation that Nexus can import.
  */
 function convertRecordMapToHtml(recordMap: any): NotionImportResult {
-  const blocks = recordMap.block;
-  if (!blocks) return { title: 'Imported Page', html: '' };
+  const rawBlocks = recordMap.block;
+  if (!rawBlocks) return { title: 'Imported Page', html: '' };
 
-  const rootBlockId = Object.keys(blocks).find(id => blocks[id]?.value?.type === 'page');
+  // Normalize all block IDs to strip hyphens — Notion uses both formats
+  // across different fields (content[] may use hyphens, block keys may not, or vice versa)
+  const blocks: any = {};
+  for (const [key, value] of Object.entries(rawBlocks)) {
+    const normKey = normalizeId(key);
+    const entry = value as any;
+    // Deep-clone the content array with normalized IDs so lookups always match
+    if (entry?.value?.content && Array.isArray(entry.value.content)) {
+      blocks[normKey] = {
+        ...entry,
+        value: { ...entry.value, content: entry.value.content.map(normalizeId) },
+      };
+    } else {
+      blocks[normKey] = entry;
+    }
+  }
+
+  // Find the TRUE root page block: the page-type block that is not
+  // referenced as a child by any other block (i.e., the document root).
+  const allChildIds = new Set<string>(
+    Object.values(blocks).flatMap((b: any) => b?.value?.content || [])
+  );
+  const rootBlockId =
+    Object.keys(blocks).find(id => blocks[id]?.value?.type === 'page' && !allChildIds.has(id)) ??
+    Object.keys(blocks).find(id => blocks[id]?.value?.type === 'page');
+
   const rootBlock = rootBlockId ? blocks[rootBlockId].value : null;
   const title = rootBlock
     ? parseRichText(rootBlock.properties?.title || [], true)
     : 'Imported Page';
 
-  // Only include children that actually exist in the blocks map
+  // Filter children to only those present in the normalized blocks map
   const childIds = (rootBlock?.content || []).filter((id: string) => !!blocks[id]);
 
-  if (!childIds.length && !rootBlockId) {
-    // Fall back to iterating all non-page blocks
+  if (!childIds.length) {
+    // Root block has no resolvable children (partial SSR / lazy-loaded page).
+    // Fall back to processing every non-page block available in the record map.
     const allIds = Object.keys(blocks).filter(id => blocks[id]?.value?.type !== 'page');
     return { title, html: `<h1>${title}</h1>` + processBlocks(allIds, blocks) };
   }

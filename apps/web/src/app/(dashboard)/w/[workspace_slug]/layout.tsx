@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation";
 import { getUserBusinesses } from "@/app/(auth)/actions";
-import BusinessSwitcher from "@/components/business/BusinessSwitcher";
 import { createClient } from "@/lib/supabase/server";
 import { getUserNodes, getTeamspaces } from "./actions";
-import SidebarTree from "@/components/dashboard/SidebarTree";
-import NavigationProgress from "@/components/dashboard/NavigationProgress";
+import DashboardLayoutWrapper from "@/components/dashboard/DashboardLayoutWrapper";
 
 export default async function DashboardLayout({
   children,
@@ -39,29 +37,15 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground font-sans selection:bg-accent/30 overflow-hidden">
-      <NavigationProgress />
-      {/* Sidebar */}
-      <aside className="w-64 h-full bg-sidebar flex flex-col border-r border-border group/sidebar shrink-0">
-        <BusinessSwitcher initialBusinesses={initialBusinesses} />
-
-        {/* Main Navigation */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col min-h-0">
-          <SidebarTree
-            initialNodes={initialNodes}
-            initialTeamspaces={initialTeamspaces}
-            businessId={activeBusiness?.id}
-            businessName={activeBusiness?.name || "Workspace"}
-            workspaceSlug={workspace_slug}
-            currentUserRole={currentUserRole}
-          />
-        </div>
-      </aside>
-
-      {/* Main Content Area */}
-      <main className="flex-1 relative overflow-hidden bg-background flex flex-col">
-        {children}
-      </main>
-    </div>
+    <DashboardLayoutWrapper
+      initialNodes={initialNodes}
+      initialTeamspaces={initialTeamspaces}
+      initialBusinesses={initialBusinesses}
+      activeBusiness={activeBusiness}
+      workspaceSlug={workspace_slug}
+      currentUserRole={currentUserRole}
+    >
+      {children}
+    </DashboardLayoutWrapper>
   );
 }

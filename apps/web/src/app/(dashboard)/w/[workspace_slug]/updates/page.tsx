@@ -71,7 +71,7 @@ export default async function UpdatesPage({ params }: UpdatesProps) {
 
   return (
     <div className="flex flex-col h-full bg-background overflow-y-auto selection:bg-accent/30 custom-scrollbar">
-      <div className="w-full max-w-3xl mx-auto px-12 py-20 pb-40">
+      <div className="w-full max-w-3xl mx-auto px-6 py-8 md:py-20 pb-40">
         
         {/* Header Section */}
         <div className="space-y-2 mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -104,7 +104,7 @@ export default async function UpdatesPage({ params }: UpdatesProps) {
         {/* Activity Timeline */}
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
            {ACTIVITIES.map((activity, idx) => (
-             <div key={activity.id} className="relative pl-10 pb-8 group last:pb-0">
+             <div key={activity.id} className="relative pl-14 pb-8 group last:pb-0">
                 {/* Connector Line */}
                 {idx !== ACTIVITIES.length - 1 && (
                   <div className="absolute left-[19px] top-10 bottom-0 w-[1.5px] bg-border/10 group-hover:bg-border/20 transition-colors" />
