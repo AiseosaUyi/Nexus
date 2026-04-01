@@ -22,15 +22,20 @@ import {
   ArrowRight,
   Clock,
   User,
+  Expand,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useDebouncedCallback } from 'use-debounce';
+import dynamic from 'next/dynamic';
 import {
   createCalendarEntry,
   updateCalendarEntry,
 } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import type { CalendarEntryWithNode } from './ContentCalendar';
+
+const MiniEditor = dynamic(() => import('@/components/editor/MiniEditor'), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,6 +101,7 @@ export default function CalendarEntryModal({
   onCreated,
   onUpdated,
 }: Props) {
+  const router = useRouter();
   const isEditMode = !!entry;
 
   const [title, setTitle]           = useState(entry?.node?.title ?? '');
@@ -190,7 +196,7 @@ export default function CalendarEntryModal({
 
   // ── Handlers ──
 
-  const handleCreate = () => {
+  const handleCreate = (openFullPage = false) => {
     startTransition(async () => {
       const result = await createCalendarEntry({
         business_id: businessId,
@@ -205,6 +211,9 @@ export default function CalendarEntryModal({
       if (result.data) {
         onCreated(result.data as CalendarEntryWithNode);
         onClose();
+        if (openFullPage && result.data.node_id) {
+          router.push(`/w/${workspaceSlug}/n/${result.data.node_id}`);
+        }
       } else if (result.error) {
         setError(result.error);
       }
@@ -261,18 +270,21 @@ export default function CalendarEntryModal({
       >
         {/* Top bar */}
         <div className="flex items-center justify-between px-5 py-2.5 border-b border-border/50 shrink-0">
-          {isEditMode && entry ? (
-            <Link
-              href={`/w/${workspaceSlug}/n/${entry.node_id}`}
-              className="flex items-center gap-1.5 text-[12px] text-muted hover:text-foreground transition-colors group"
-              onClick={onClose}
-            >
-              <ArrowUpRight className="w-3.5 h-3.5 group-hover:text-cta transition-colors" />
-              Open full page
-            </Link>
-          ) : (
-            <span className="text-[12px] text-muted/60">New calendar entry</span>
-          )}
+          <div className="flex items-center gap-2">
+            {isEditMode && entry ? (
+              <Link
+                href={`/w/${workspaceSlug}/n/${entry.node_id}`}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[12px] text-muted hover:text-foreground hover:bg-hover transition-colors group"
+                onClick={onClose}
+                title="Open as full page"
+              >
+                <Expand className="w-3.5 h-3.5" />
+                <span>Open full page</span>
+              </Link>
+            ) : (
+              <span className="text-[12px] text-muted/60">New calendar entry</span>
+            )}
+          </div>
           <div className="flex items-center gap-1.5 min-w-[80px] justify-end">
             {isEditMode && saveStatus !== 'idle' && (
               <span className="flex items-center gap-1 text-[11px] text-foreground/40 font-normal animate-in fade-in duration-300">
@@ -318,7 +330,7 @@ export default function CalendarEntryModal({
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !isEditMode) {
                   e.preventDefault();
-                  handleCreate();
+                  handleCreate(false);
                 }
               }}
               placeholder="New page"
@@ -351,7 +363,7 @@ export default function CalendarEntryModal({
                     setSelectedDate(e.target.value);
                     update('publish_date', e.target.value);
                   }}
-                  className="flex-1 bg-transparent text-[13px] text-foreground outline-none cursor-pointer [color-scheme:dark]"
+                  className="bg-transparent text-[13px] text-foreground outline-none cursor-pointer [color-scheme:dark]"
                 />
               </div>
 
@@ -529,47 +541,56 @@ export default function CalendarEntryModal({
           {/* Divider */}
           <div className="h-px bg-border/50 mx-6 my-2" />
 
-          {/* Notes / content area */}
-          <div className="px-8 py-4">
-            <textarea
-              value={notes}
-              onChange={(e) => {
-                setNotes(e.target.value);
-                update('notes', e.target.value || null);
-              }}
+          {/* Rich editor area */}
+          <div className="px-8 py-4 flex-1">
+            <MiniEditor
+              content={notes || ''}
               placeholder={
                 isEditMode
-                  ? 'Add notes or content…'
-                  : "Press Enter to create the page, or add notes below."
+                  ? "Add notes or content… Type '/' for commands"
+                  : "Type '/' for commands, or add notes below."
               }
-              rows={4}
-              className="w-full bg-transparent text-[14px] text-foreground/75 placeholder:text-foreground/22 outline-none resize-none leading-relaxed"
+              onChange={(text) => {
+                setNotes(text);
+                update('notes', text || null);
+              }}
             />
           </div>
         </div>
 
         {/* Footer (creation mode only) */}
         {!isEditMode && (
-          <div className="flex items-center justify-end gap-2 px-6 py-3.5 border-t border-border/50 shrink-0">
+          <div className="flex items-center justify-between px-6 py-3.5 border-t border-border/50 shrink-0">
             <button
-              onClick={onClose}
-              className="px-4 py-2 text-[13px] font-medium text-muted hover:text-foreground hover:bg-hover rounded-xl transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleCreate}
+              onClick={() => handleCreate(true)}
               disabled={isSubmitting}
-              className={cn(
-                'flex items-center gap-2 px-5 py-2 rounded-xl text-[13px] font-bold transition-all',
-                isSubmitting
-                  ? 'bg-cta/50 text-white cursor-not-allowed'
-                  : 'bg-white text-black hover:bg-white/90 shadow-sm cursor-pointer'
-              )}
+              className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium text-muted hover:text-foreground hover:bg-hover rounded-lg transition-colors cursor-pointer"
+              title="Create and open as full page"
             >
-              {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Create page
+              <Expand className="w-3.5 h-3.5" />
+              Open as page
             </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-[13px] font-medium text-muted hover:text-foreground hover:bg-hover rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleCreate(false)}
+                disabled={isSubmitting}
+                className={cn(
+                  'flex items-center gap-2 px-5 py-2 rounded-xl text-[13px] font-bold transition-all',
+                  isSubmitting
+                    ? 'bg-cta/50 text-white cursor-not-allowed'
+                    : 'bg-white text-black hover:bg-white/90 shadow-sm cursor-pointer'
+                )}
+              >
+                {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Create page
+              </button>
+            </div>
           </div>
         )}
       </div>

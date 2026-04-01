@@ -103,6 +103,12 @@ export default function NexusEditor({
 
         if (bytes && bytes.length > 0) {
           Y.applyUpdate(doc, bytes);
+          // Log the structure of the loaded content for debugging
+          const frag = doc.getXmlFragment('default');
+          const nodeNames: string[] = [];
+          const walk = (el: any) => { if (el.nodeName) nodeNames.push(el.nodeName); if (el.toArray) el.toArray().forEach(walk); };
+          walk(frag);
+          console.log('[NexusEditor] Snapshot loaded:', { bytes: bytes.length, fragmentLength: frag.length, nodeNames });
         }
       } catch (e) {
         console.error('[NexusEditor] Failed to decode snapshot:', e);
@@ -134,7 +140,7 @@ export default function NexusEditor({
       .filter((node: any) => !skipTypes.has(node.type))
       .map((node: any, index: number) => ({
         type: (typeMap[node.type] || node.type) as BlockType,
-        content: { attrs: node.attrs || {}, content: node.content || [] },
+        content: { tiptapType: node.type, attrs: node.attrs || {}, content: node.content || [] },
         position: index,
       }));
     await syncBlocks(nodeId, blockPayloads);
@@ -156,6 +162,7 @@ export default function NexusEditor({
       }),
       Link.configure({
         openOnClick: false,
+        autolink: true,
         HTMLAttributes: { class: 'text-[#2383e2] hover:underline cursor-pointer' },
       }),
       TaskList,
@@ -345,19 +352,28 @@ export default function NexusEditor({
     if (hoveredBlockEl.current) {
       try {
         const elRect = hoveredBlockEl.current.getBoundingClientRect();
-        const posInfo = view.posAtCoords({ left: elRect.left + 2, top: elRect.bottom - 2 });
+        const posInfo = view.posAtCoords({ left: elRect.left + 2, top: elRect.top + 2 });
         if (posInfo) {
           const $pos = view.state.doc.resolve(posInfo.pos);
-          const nodeEnd = $pos.end($pos.depth);
-          const insertAt = Math.min(nodeEnd + 1, view.state.doc.content.size);
-          editor.chain()
-            .focus()
-            .insertContentAt(insertAt, { type: 'paragraph' })
-            .setTextSelection(insertAt + 1)
-            .run();
+          const node = $pos.node($pos.depth);
+          const isBlockEmpty = node.content.size === 0;
+
+          if (isBlockEmpty) {
+            // Block is empty — just place cursor there so the picker converts it
+            const start = $pos.start($pos.depth);
+            editor.chain().focus().setTextSelection(start).run();
+          } else {
+            // Block has content — insert a new empty paragraph below
+            const nodeEnd = $pos.end($pos.depth);
+            const insertAt = Math.min(nodeEnd + 1, view.state.doc.content.size);
+            editor.chain()
+              .focus()
+              .insertContentAt(insertAt, { type: 'paragraph' })
+              .setTextSelection(insertAt + 1)
+              .run();
+          }
         }
       } catch {
-        // fall through to simple insert
         editor.chain().focus().insertContent({ type: 'paragraph' }).run();
       }
     } else {

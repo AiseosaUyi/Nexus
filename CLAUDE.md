@@ -123,7 +123,12 @@ Each action creates a fresh Supabase server client via `createClient()` (from `@
 
 `/dashboard` redirects to `/w/<slug>/dashboard` (the first business the user belongs to).
 
-`(dashboard)/w/[workspace_slug]/layout.tsx` is the shell — it server-renders the sidebar with initial nodes/teamspaces and passes them as props to `SidebarTree`. The sidebar holds its own state and syncs back from server on `router.refresh()`. The layout also mounts `NavigationProgress` (a thin top-of-screen progress bar that listens for internal `<a>` clicks globally and completes when `usePathname` changes).
+`(dashboard)/w/[workspace_slug]/layout.tsx` is the shell — it server-renders the sidebar with initial nodes/teamspaces and passes them to `DashboardLayoutWrapper`. The layout also mounts `NavigationProgress` (a thin top-of-screen progress bar that listens for internal `<a>` clicks globally and completes when `usePathname` changes).
+
+**Mobile responsive layout** — `DashboardLayoutWrapper` orchestrates the desktop/mobile split:
+- Desktop: renders the sidebar `<aside>` inline with a `<main>` content area
+- Mobile (`md:` breakpoint): hides the sidebar, shows `MobileHeader` (sticky top bar with hamburger menu + workspace breadcrumb) and `MobileSidebar` (Radix Dialog slide-in drawer with the full `SidebarTree`)
+- Mobile-safe CSS utilities in `globals.css`: `.mobile-safe-top` / `.mobile-safe-bottom` use `env(safe-area-inset-*)` for notch support
 
 **Dashboard routes under `/w/[workspace_slug]/`:**
 - `dashboard/` — workspace home
@@ -214,6 +219,12 @@ Migrations are plain SQL files in `database/migrations/` and must be applied in 
 - `chromium-auth` — authenticated flows (`create-page`, `sidebar`, `import`, etc.)
 
 New E2E spec files must be added to the `testMatch` regex in `apps/web/playwright.config.ts`.
+
+---
+
+## Deployment
+
+No `vercel.json` — Vercel auto-detects Next.js from `apps/web/package.json`. Set **Root Directory** to `apps/web` in Vercel project settings and leave all Framework Settings at defaults (no overrides). Environment variables must be configured in Vercel dashboard (see below).
 
 ---
 

@@ -1,8 +1,8 @@
 import React from 'react';
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import ReadOnlyEditor from '@/components/editor/ReadOnlyEditor';
+import RequestAccessForm from './RequestAccessForm';
 
 interface PublicPageProps {
   params: Promise<{ node_id: string }>;
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: PublicPageProps): Promise<Met
     .eq('is_public', true)
     .single();
 
-  if (!node) return { title: 'Not Found' };
+  if (!node) return { title: 'Request Access — Nexus' };
 
   const title = node.title || 'Untitled';
   const displayTitle = node.icon ? `${node.icon} ${title}` : title;
@@ -39,52 +39,73 @@ export default async function PublicNodePage({ params }: PublicPageProps) {
   const { node_id } = await params;
   const supabase = await createClient();
 
-  // Fetch node — anon RLS policy returns it only when is_public = true.
-  const { data: node, error: nodeError } = await supabase
+  // First check: is the node public?
+  const { data: node } = await supabase
     .from('nodes')
     .select('id, title, icon, is_public')
     .eq('id', node_id)
     .eq('is_public', true)
     .single();
 
-  if (nodeError || !node) {
-    return notFound();
+  // If not public, show request access page
+  if (!node) {
+    // Verify the node exists at all (without RLS filter)
+    const { data: existsCheck } = await supabase
+      .from('nodes')
+      .select('id')
+      .eq('id', node_id)
+      .maybeSingle();
+
+    if (!existsCheck) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-foreground mb-2">Page not found</h1>
+            <p className="text-muted">This page doesn't exist or has been deleted.</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border/10 px-6 py-3 flex items-center">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-white rounded flex items-center justify-center">
+              <span className="text-black text-xs font-bold">N</span>
+            </div>
+            <span className="text-foreground/60 text-sm font-medium">Nexus</span>
+          </div>
+        </header>
+        <main className="flex items-center justify-center min-h-[80vh]">
+          <div className="w-full max-w-md mx-4 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-foreground/[0.06] flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-foreground/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+            </div>
+            <h1 className="text-xl font-bold text-foreground mb-2">You need access</h1>
+            <p className="text-[14px] text-muted mb-8 leading-relaxed">
+              This page is restricted to invited people only. Request access and the owner will be notified.
+            </p>
+            <RequestAccessForm nodeId={node_id} />
+          </div>
+        </main>
+      </div>
+    );
   }
 
-  // Fetch blocks — anon RLS policy allows SELECT when node is public.
-  const { data: blocks, error: blocksError } = await supabase
-    .from('blocks')
-    .select('type, content, position')
-    .eq('node_id', node_id)
-    .order('position', { ascending: true });
+  // Fetch the Yjs snapshot (canonical content)
+  const { data: nodeWithSnapshot } = await supabase
+    .from('nodes')
+    .select('yjs_snapshot')
+    .eq('id', node_id)
+    .single();
 
-  if (blocksError) {
-    console.error('[Public] Error fetching blocks for node', node_id, blocksError.message);
-  }
-
-  // Safely map DB blocks to Tiptap JSON nodes, skipping malformed entries.
-  const tiptapNodes =
-    blocks && blocks.length > 0
-      ? blocks
-          .map((b) => {
-            if (!b?.type || typeof b.content !== 'object' || b.content === null) return null;
-            return {
-              type: b.type,
-              attrs: (b.content as any).attrs ?? {},
-              content: (b.content as any).content ?? [],
-            };
-          })
-          .filter(Boolean)
-      : [];
-
-  const content = {
-    type: 'doc',
-    content: tiptapNodes.length > 0 ? tiptapNodes : [{ type: 'paragraph' }],
-  };
+  const snapshot = nodeWithSnapshot?.yjs_snapshot as string | null;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Minimal public header */}
       <header className="border-b border-border/10 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 bg-white rounded flex items-center justify-center">
@@ -97,7 +118,6 @@ export default async function PublicNodePage({ params }: PublicPageProps) {
         </span>
       </header>
 
-      {/* Page content */}
       <main className="w-full max-w-4xl mx-auto px-12 md:px-24 py-12">
         {node.icon && (
           <div className="text-7xl mb-4">{node.icon}</div>
@@ -105,7 +125,7 @@ export default async function PublicNodePage({ params }: PublicPageProps) {
         <h1 className="text-5xl font-black font-display tracking-tight leading-tight text-foreground mb-8">
           {node.title || 'Untitled'}
         </h1>
-        <ReadOnlyEditor content={content} />
+        <ReadOnlyEditor snapshot={snapshot} />
       </main>
     </div>
   );

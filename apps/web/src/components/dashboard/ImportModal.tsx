@@ -187,6 +187,7 @@ export default function ImportModal({
     setUrlPreview(null);
     startFetch(async () => {
       const result = await importFromURL(url);
+      console.log('[Import] Server returned:', { title: result.title, htmlLength: result.html?.length, error: result.error, hasOl: result.html?.includes('<ol>'), hasUl: result.html?.includes('<ul>'), htmlPreview: result.html?.substring(0, 300) });
       if (result.error) { setUrlError(result.error); return; }
       setUrlPreview({ title: result.title, html: result.html });
     });
@@ -196,6 +197,8 @@ export default function ImportModal({
     if (!urlPreview) return;
     const pageTitle = extractFirstH1(urlPreview.html) || urlPreview.title || 'Imported Page';
     const tiptapJson = htmlToTiptap(urlPreview.html);
+    const nodeTypes = tiptapJson.content?.map((n: any) => n.type) || [];
+    console.log('[Import] htmlToTiptap produced:', { nodeTypes, hasOrderedList: nodeTypes.includes('orderedList'), hasBulletList: nodeTypes.includes('bulletList'), totalNodes: nodeTypes.length });
     setQueue((prev) => [
       ...prev,
       { id: uid(), name: urlInput.trim(), title: pageTitle, tiptapJson, status: 'pending' },
@@ -274,9 +277,12 @@ export default function ImportModal({
         } : f));
 
         const snapshot = generateYjsSnapshot(item.tiptapJson as Record<string, unknown>);
+        console.log('[Import] Snapshot generated:', { bytes: snapshot.length, nodeId: nodeResult.data.id });
         const snapshotResult = await updateYjsSnapshot(nodeResult.data.id, snapshot);
         if (snapshotResult.error) {
           console.error('[Import] Snapshot save failed:', snapshotResult.error);
+        } else {
+          console.log('[Import] Snapshot saved successfully');
         }
 
         // Step 3b: Also save blocks for search indexing and as content fallback
@@ -289,7 +295,7 @@ export default function ImportModal({
           .filter((node: any) => node.type !== 'listItem' && node.type !== 'taskItem' && node.type !== 'tableRow' && node.type !== 'tableCell' && node.type !== 'tableHeader')
           .map((node: any, index: number) => ({
             type: normalizeBlockType(node.type) as any,
-            content: { attrs: node.attrs || {}, content: node.content || [] },
+            content: { tiptapType: node.type, attrs: node.attrs || {}, content: node.content || [] },
             position: index,
           }));
         await syncBlocks(nodeResult.data.id, blockPayloads);

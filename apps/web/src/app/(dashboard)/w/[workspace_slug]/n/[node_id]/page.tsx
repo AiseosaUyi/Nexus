@@ -4,6 +4,35 @@ import { createClient } from '@/lib/supabase/server';
 import { getBlocks } from '../../actions';
 import NodePageClient from '@/components/dashboard/NodePageClient';
 
+/**
+ * Reverse-maps normalized DB block types back to valid Tiptap node types.
+ * The DB uses a simplified enum (list, quote, code, divider) while Tiptap
+ * needs specific types (bulletList, orderedList, blockquote, codeBlock, etc.).
+ */
+function dbTypeToTiptapType(dbType: string, content: any): string {
+  // If the block content stores the original Tiptap type, use it directly
+  if (content?.tiptapType) return content.tiptapType;
+
+  switch (dbType) {
+    case 'list': {
+      // Ordered lists have a start attribute
+      if (content?.attrs?.start !== undefined) return 'orderedList';
+      // Task lists have taskItem children
+      if (content?.content?.[0]?.type === 'taskItem') return 'taskList';
+      // Default to bullet list
+      return 'bulletList';
+    }
+    case 'quote':
+      return 'blockquote';
+    case 'code':
+      return 'codeBlock';
+    case 'divider':
+      return 'horizontalRule';
+    default:
+      return dbType;
+  }
+}
+
 interface NodePageProps {
   params: Promise<{
     workspace_slug: string;
@@ -49,7 +78,7 @@ export default async function NodePage({ params }: NodePageProps) {
     type: 'doc',
     content: blocks.length > 0
       ? blocks.map(b => ({
-          type: b.type,
+          type: dbTypeToTiptapType(b.type, b.content),
           attrs: b.content.attrs || {},
           content: b.content.content || []
         }))

@@ -130,6 +130,29 @@ export interface CalendarEntry {
   updated_at: string;
 }
 
+export type SharePermission = 'view' | 'comment' | 'edit' | 'full';
+export type AccessRequestStatus = 'pending' | 'approved' | 'denied';
+
+export interface NodeShare {
+  id: string;
+  node_id: string;
+  email: string;
+  permission: SharePermission;
+  invited_by: string | null;
+  created_at: string;
+}
+
+export interface AccessRequest {
+  id: string;
+  node_id: string;
+  requester_email: string;
+  requester_name: string | null;
+  status: AccessRequestStatus;
+  resolved_by: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
 // ─── API Payloads ─────────────────────────────────────────────────────────────
 
 export interface CreateBusinessPayload {

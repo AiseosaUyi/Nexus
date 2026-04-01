@@ -186,7 +186,7 @@ export default function ContentCalendar({
         </div>
 
         {/* Grid */}
-        <div className="flex-1 overflow-auto custom-scrollbar">
+        <div className="flex-1 flex flex-col overflow-auto custom-scrollbar">
           {/* Day headers */}
           <div className="grid grid-cols-7 border-b border-border sticky top-0 bg-background z-10">
             {DAY_NAMES.map((d) => (
@@ -200,7 +200,7 @@ export default function ContentCalendar({
           </div>
 
           {/* Date cells */}
-          <div className="grid grid-cols-7" style={{ gridAutoRows: 'minmax(130px, auto)' }}>
+          <div className="grid grid-cols-7 flex-1" style={{ gridAutoRows: '1fr' }}>
             {cells.map((day, idx) => {
               const dateStr = day ? getDateStr(day) : '';
               const isToday = dateStr === todayStr;
@@ -222,7 +222,7 @@ export default function ContentCalendar({
                           className={cn(
                             'text-[13px] font-semibold w-6 h-6 flex items-center justify-center rounded-full transition-colors leading-none',
                             isToday
-                              ? 'bg-cta text-white'
+                              ? 'bg-cta text-cta-foreground'
                               : 'text-foreground/55 group-hover/cell:text-foreground'
                           )}
                         >
@@ -251,7 +251,7 @@ export default function ContentCalendar({
                             <button
                               key={entry.id}
                               onClick={() => openEdit(entry)}
-                              className="w-full text-left px-2 py-1.5 rounded-md bg-sidebar hover:bg-hover border border-border/40 transition-colors"
+                              className="w-full text-left px-2 py-1.5 rounded-md bg-foreground/[0.06] hover:bg-foreground/[0.1] border border-border/30 transition-colors"
                             >
                               <div className="flex items-center gap-1.5 mb-0.5">
                                 {entry.node?.icon && (

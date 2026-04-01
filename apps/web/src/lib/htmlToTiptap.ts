@@ -25,7 +25,8 @@ function nodeToInline(el: Node): TiptapNode[] {
 
     if (child.nodeType !== Node.ELEMENT_NODE) return;
 
-    const tag = (child as Element).tagName.toLowerCase();
+    const childEl = child as Element;
+    const tag = childEl.tagName.toLowerCase();
     const inner = nodeToInline(child);
 
     const applyMark = (markType: string, attrs?: Record<string, unknown>) => {
@@ -57,12 +58,48 @@ function nodeToInline(el: Node): TiptapNode[] {
       case 'br':
         nodes.push({ type: 'hardBreak' });
         break;
-      default:
-        nodes.push(...inner);
+      default: {
+        // Handle Notion's inline style-based formatting (font-weight:600 = bold, font-style:italic)
+        const style = childEl.getAttribute('style') || '';
+        if (tag === 'span' && /font-weight\s*:\s*(600|700|bold)/i.test(style)) {
+          applyMark('bold');
+        } else if (tag === 'span' && /font-style\s*:\s*italic/i.test(style)) {
+          applyMark('italic');
+        } else {
+          nodes.push(...inner);
+        }
+        break;
+      }
     }
   });
 
   return nodes;
+}
+
+// ─── List item helper ─────────────────────────────────────────────────────────
+
+/**
+ * Extract inline content and nested lists from a <li> element.
+ * Returns [paragraph, ...nestedLists] — the structure Tiptap expects for listItem.
+ */
+function parseLiContent(li: Element): TiptapNode[] {
+  // Find nested <ul> or <ol> directly inside this <li>
+  const nestedLists = li.querySelectorAll(':scope > ul, :scope > ol');
+
+  // Clone the <li> and remove nested lists so nodeToInline only sees inline text
+  const clone = li.cloneNode(true) as Element;
+  clone.querySelectorAll(':scope > ul, :scope > ol').forEach((n) => n.remove());
+
+  const inline = nodeToInline(clone);
+  const result: TiptapNode[] = [{ type: 'paragraph', content: inline }];
+
+  // Recursively convert each nested list
+  nestedLists.forEach((nestedList) => {
+    const block = elementToBlock(nestedList);
+    if (block) result.push(block);
+  });
+
+  return result;
 }
 
 // ─── Block converter ──────────────────────────────────────────────────────────
@@ -134,11 +171,8 @@ function elementToBlock(el: Element): TiptapNode | null {
           content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
         });
       } else {
-        const content = nodeToInline(li);
-        items.push({
-          type: 'listItem',
-          content: [{ type: 'paragraph', content }],
-        });
+        const liContent = parseLiContent(li);
+        items.push({ type: 'listItem', content: liContent });
       }
     });
     if (!items.length) return null;
@@ -150,8 +184,8 @@ function elementToBlock(el: Element): TiptapNode | null {
   if (tag === 'ol') {
     const items: TiptapNode[] = [];
     el.querySelectorAll(':scope > li').forEach((li) => {
-      const content = nodeToInline(li);
-      items.push({ type: 'listItem', content: [{ type: 'paragraph', content }] });
+      const liContent = parseLiContent(li);
+      items.push({ type: 'listItem', content: liContent });
     });
     if (!items.length) return null;
     return { type: 'orderedList', attrs: { start: 1 }, content: items };
@@ -220,6 +254,18 @@ function getNotionBlockType(el: Element): string | null {
   return m ? m[1] : null;
 }
 
+/**
+ * Find the text element within a Notion block div.
+ * Notion has used different selectors across versions:
+ * - Old: .notranslate
+ * - New (2024+): [data-content-editable-leaf]
+ */
+function findNotionTextEl(blockEl: Element): Element {
+  return blockEl.querySelector('[data-content-editable-leaf]')
+    ?? blockEl.querySelector('.notranslate')
+    ?? blockEl;
+}
+
 function walkNotionContent(el: Element): TiptapNode[] {
   const children = Array.from(el.children);
   const nodes: TiptapNode[] = [];
@@ -232,7 +278,7 @@ function walkNotionContent(el: Element): TiptapNode[] {
     if (blockType === 'bulleted_list') {
       const items: TiptapNode[] = [];
       while (i < children.length && getNotionBlockType(children[i]) === 'bulleted_list') {
-        const textEl = children[i].querySelector('.notranslate') ?? children[i];
+        const textEl = findNotionTextEl(children[i]);
         items.push({ type: 'listItem', content: [{ type: 'paragraph', content: nodeToInline(textEl) }] });
         i++;
       }
@@ -240,7 +286,7 @@ function walkNotionContent(el: Element): TiptapNode[] {
     } else if (blockType === 'numbered_list') {
       const items: TiptapNode[] = [];
       while (i < children.length && getNotionBlockType(children[i]) === 'numbered_list') {
-        const textEl = children[i].querySelector('.notranslate') ?? children[i];
+        const textEl = findNotionTextEl(children[i]);
         items.push({ type: 'listItem', content: [{ type: 'paragraph', content: nodeToInline(textEl) }] });
         i++;
       }
@@ -249,13 +295,13 @@ function walkNotionContent(el: Element): TiptapNode[] {
       const items: TiptapNode[] = [];
       while (i < children.length && getNotionBlockType(children[i]) === 'to_do') {
         const cb = children[i].querySelector('input[type="checkbox"]') as HTMLInputElement | null;
-        const textEl = children[i].querySelector('.notranslate') ?? children[i];
+        const textEl = findNotionTextEl(children[i]);
         items.push({ type: 'taskItem', attrs: { checked: cb?.checked ?? false }, content: [{ type: 'paragraph', content: nodeToInline(textEl) }] });
         i++;
       }
       if (items.length) nodes.push({ type: 'taskList', content: items });
     } else if (blockType) {
-      const textEl = child.querySelector('.notranslate') ?? child;
+      const textEl = findNotionTextEl(child);
       const inline = nodeToInline(textEl);
       const text = textEl.textContent?.trim() ?? '';
 
@@ -315,6 +361,24 @@ function walkNotionContent(el: Element): TiptapNode[] {
   return nodes;
 }
 
+/**
+ * On Notion public pages the document title often lives in `.notion-page-block`
+ * (with an `<h1>`) in a layout section *above* `.notion-page-content`, so it is
+ * not seen by `walkNotionContent` which only walks that inner container.
+ */
+function notionStandalonePageTitle(doc: Document): TiptapNode | null {
+  const candidates = doc.querySelectorAll('.notion-page-block');
+  for (const el of candidates) {
+    if (el.closest('.notion-page-content')) continue;
+    const textEl = findNotionTextEl(el);
+    const inline = nodeToInline(textEl);
+    const text = textEl.textContent?.trim() ?? '';
+    if (!text) continue;
+    return { type: 'heading', attrs: { level: 1 }, content: inline };
+  }
+  return null;
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export function htmlToTiptap(html: string): { type: 'doc'; content: TiptapNode[] } {
@@ -332,10 +396,12 @@ export function htmlToTiptap(html: string): { type: 'doc'; content: TiptapNode[]
     doc.querySelector('[class*="notion-frame"]');
 
   if (notionContentEl) {
+    const titleNode = notionStandalonePageTitle(doc);
     const notionNodes = walkNotionContent(notionContentEl);
-    const deduped = notionNodes.filter((n, idx) => {
+    const merged = titleNode ? [titleNode, ...notionNodes] : notionNodes;
+    const deduped = merged.filter((n, idx) => {
       if (n.type === 'paragraph' && !n.content?.length) {
-        return idx === 0 || notionNodes[idx - 1]?.type !== 'paragraph';
+        return idx === 0 || merged[idx - 1]?.type !== 'paragraph';
       }
       return true;
     });

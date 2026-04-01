@@ -123,7 +123,7 @@ export const suggestion = {
         group: 'Basic blocks',
         shortcut: '>',
         command: ({ editor, range }: any) => {
-          editor.chain().focus().deleteRange(range).setNode('details').run();
+          editor.chain().focus().deleteRange(range).setDetails().run();
         },
       },
       {

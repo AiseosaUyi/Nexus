@@ -116,6 +116,17 @@ a {
   outline-offset: 2px;
 }
 
+/* Suppress focus ring on editor, contenteditable, and form inputs */
+.tiptap:focus-visible,
+.tiptap:focus,
+[contenteditable]:focus-visible,
+[contenteditable]:focus,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none !important;
+}
+
 /* Animations */
 @keyframes slide-in-from-left-spring {
   from { transform: translateX(-100%); }
@@ -139,4 +150,229 @@ a {
 
 .animate-fade-in-up {
   animation: fade-in-up 0.45s var(--ease-in-out-smooth) forwards;
+}
+
+/* ── Tiptap / ProseMirror editor typography ────────────────────────────────── */
+
+/* Headings — Notion-like sizing */
+.tiptap h1 {
+  font-size: 1.875em !important;
+  font-weight: 700 !important;
+  line-height: 1.3;
+  margin: 1em 0 0.25em;
+}
+
+.tiptap h2 {
+  font-size: 1.5em !important;
+  font-weight: 600 !important;
+  line-height: 1.3;
+  margin: 0.85em 0 0.2em;
+}
+
+.tiptap h3 {
+  font-size: 1.25em !important;
+  font-weight: 600 !important;
+  line-height: 1.4;
+  margin: 0.75em 0 0.15em;
+}
+
+.tiptap h4 {
+  font-size: 1em !important;
+  font-weight: 600 !important;
+  line-height: 1.4;
+  margin: 0.65em 0 0.1em;
+}
+
+/* Paragraphs */
+.tiptap p {
+  margin: 0.15em 0;
+  line-height: 1.625;
+}
+
+/* Placeholder — shows "Heading 1", "Type '/' for commands", etc. */
+.tiptap p.is-editor-empty:first-child::before,
+.tiptap .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--muted);
+  opacity: 0.5;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Lists */
+.tiptap ol {
+  list-style-type: decimal !important;
+  padding-left: 1.625em !important;
+  margin: 0.5em 0;
+}
+
+.tiptap ul:not([data-type="taskList"]) {
+  list-style-type: disc !important;
+  padding-left: 1.625em !important;
+  margin: 0.5em 0;
+}
+
+.tiptap ul ul,
+.tiptap ol ul {
+  list-style-type: circle;
+}
+
+.tiptap ul ul ul,
+.tiptap ol ol ul,
+.tiptap ol ul ul,
+.tiptap ul ol ul {
+  list-style-type: square;
+}
+
+.tiptap li {
+  margin: 0.15em 0;
+}
+
+.tiptap li > p {
+  margin: 0;
+}
+
+/* Blockquote */
+.tiptap blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1em;
+  margin: 0.75em 0;
+  color: var(--muted);
+}
+
+/* Horizontal rule */
+.tiptap hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5em 0;
+}
+
+/* Task list */
+.tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tiptap ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+  margin: 0.15em 0;
+}
+
+.tiptap ul[data-type="taskList"] li > label {
+  margin-top: 0.3em;
+  flex-shrink: 0;
+}
+
+.tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--muted);
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  display: block;
+  position: relative;
+}
+
+.tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0px;
+  width: 6px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+/* Toggle / Details */
+.tiptap details {
+  margin: 0.35em 0;
+}
+
+.tiptap details summary {
+  cursor: pointer;
+  font-weight: 500;
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35em;
+}
+
+.tiptap details summary::before {
+  content: '▶';
+  font-size: 0.7em;
+  margin-top: 0.35em;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.tiptap details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.tiptap details summary::-webkit-details-marker {
+  display: none;
+}
+
+.tiptap details > div:not(:first-child) {
+  padding-left: 1.25em;
+  margin-top: 0.25em;
+}
+
+/* Code blocks */
+.tiptap pre {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.5em;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.tiptap pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.875em;
+}
+
+.tiptap code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.15em 0.35em;
+  border-radius: 0.25em;
+  font-size: 0.9em;
+}
+
+/* Tables */
+.tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75em 0;
+}
+
+.tiptap th,
+.tiptap td {
+  border: 1px solid var(--border);
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+
+.tiptap th {
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
 }

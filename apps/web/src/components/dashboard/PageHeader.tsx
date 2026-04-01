@@ -19,6 +19,8 @@ import {
   Trash2,
   FolderInput,
   Loader2,
+  Lock,
+  UserPlus,
 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import Link from 'next/link';
@@ -27,7 +29,8 @@ import AvatarStack from '@/components/editor/AvatarStack';
 import { createClient } from '@/lib/supabase/client';
 import { useDebouncedCallback } from 'use-debounce';
 import { useRouter, useParams } from 'next/navigation';
-import { updateNode, toggleNodePublic, createCommentThread, duplicateNode, deleteNode } from '@/app/(dashboard)/w/[workspace_slug]/actions';
+import { updateNode, toggleNodePublic, createCommentThread, duplicateNode, deleteNode, getNodeShares, inviteToNode, removeNodeShare } from '@/app/(dashboard)/w/[workspace_slug]/actions';
+import type { NodeShare } from '@nexus/api/schema';
 
 interface PageHeaderProps {
   title: string;
@@ -57,6 +60,10 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [isCopied, setIsCopied] = useState(false);
   const [isTogglingPublic, setIsTogglingPublic] = useState(false);
+  const [shares, setShares] = useState<NodeShare[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [isInviting, setIsInviting] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ email: string; name: string | null; avatar: string | null } | null>(null);
   const shareMenuRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
@@ -79,6 +86,27 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
   }, []);
+
+  // Load shares and current user when menu opens
+  useEffect(() => {
+    if (isShareMenuOpen) {
+      getNodeShares(nodeId).then((result) => {
+        if (result.data) setShares(result.data as NodeShare[]);
+      });
+      if (!currentUser) {
+        const supabase = createClient();
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (user) {
+            setCurrentUser({
+              email: user.email ?? '',
+              name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
+              avatar: user.user_metadata?.avatar_url ?? null,
+            });
+          }
+        });
+      }
+    }
+  }, [isShareMenuOpen, nodeId, currentUser]);
 
   // Close share menu on outside click
   useEffect(() => {
@@ -109,6 +137,23 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
     await navigator.clipboard.writeText(url);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const handleInvite = async () => {
+    const email = inviteEmail.trim();
+    if (!email || !email.includes('@')) return;
+    setIsInviting(true);
+    const result = await inviteToNode(nodeId, email, 'view');
+    if (result.data) {
+      setShares((prev) => [...prev.filter((s) => s.email !== email), result.data as NodeShare]);
+      setInviteEmail('');
+    }
+    setIsInviting(false);
+  };
+
+  const handleRemoveShare = async (email: string) => {
+    await removeNodeShare(nodeId, email);
+    setShares((prev) => prev.filter((s) => s.email !== email));
   };
 
   // Sync title and icon to database via Server Action
@@ -246,79 +291,118 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
               <button
                 onClick={() => setIsShareMenuOpen(prev => !prev)}
                 className={cn(
-                  "flex items-center gap-1.5 px-2 py-1 rounded hover:bg-hover text-foreground transition-colors cursor-pointer",
+                  "flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-hover text-foreground transition-colors cursor-pointer",
                   isPublic && "text-blue-500"
                 )}
               >
-                {isPublic ? <Globe className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5 opacity-80" />}
-                <span className="hidden xs:inline">{isPublic ? "Published" : "Share"}</span>
+                <Share2 className="w-3.5 h-3.5 opacity-80" />
+                <span>Share</span>
               </button>
 
               {isShareMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[calc(100vw-32px)] xs:w-72 bg-background border border-border rounded-xl shadow-popover p-3 z-50 animate-in zoom-in-95 duration-150 ring-1 ring-black/5">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-bold text-foreground">Share to web</span>
-                    <button onClick={() => setIsShareMenuOpen(false)} className="p-1 rounded hover:bg-hover text-muted cursor-pointer">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                <div className="absolute right-0 top-full mt-2 w-[360px] bg-background border border-border rounded-xl shadow-popover z-50 animate-in zoom-in-95 duration-150 ring-1 ring-black/5">
+                  {/* Invite row */}
+                  <div className="p-3 border-b border-border/40">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="email"
+                        placeholder="Email address"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleInvite(); }}
+                        className="flex-1 px-3 py-1.5 text-[13px] bg-foreground/[0.04] border border-border rounded-lg text-foreground placeholder:text-muted/50 outline-none focus:border-accent/40"
+                      />
+                      <button
+                        onClick={handleInvite}
+                        disabled={isInviting || !inviteEmail.trim()}
+                        className="px-3 py-1.5 text-[13px] font-medium bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0"
+                      >
+                        {isInviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Invite'}
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Toggle row */}
-                  <div className="flex items-center justify-between py-2 border-b border-border/30 mb-3">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-medium text-foreground">Publish page</span>
-                      <span className="text-xs text-muted">Anyone with the link can view</span>
+                  {/* People with access */}
+                  <div className="p-3 border-b border-border/40 max-h-[220px] overflow-y-auto custom-scrollbar">
+                    <div className="space-y-2">
+                      {currentUser && (
+                        <div className="flex items-center gap-2.5">
+                          {currentUser.avatar ? (
+                            <img src={currentUser.avatar} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
+                          ) : (
+                            <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-[11px] font-bold text-accent shrink-0 uppercase">
+                              {(currentUser.name || currentUser.email)[0]}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] text-foreground truncate">
+                              {currentUser.name || currentUser.email.split('@')[0]} <span className="text-muted">(You)</span>
+                            </p>
+                            <p className="text-[11px] text-muted truncate">{currentUser.email}</p>
+                          </div>
+                          <span className="text-[11px] text-muted shrink-0">Full access</span>
+                        </div>
+                      )}
+                      {shares.map((share) => (
+                        <div key={share.id} className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-foreground/10 flex items-center justify-center text-[11px] font-bold text-foreground/60 shrink-0 uppercase">
+                            {share.email[0]}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] text-foreground truncate">{share.email}</p>
+                          </div>
+                          <span className="text-[11px] text-muted capitalize shrink-0">Can {share.permission}</span>
+                          <button
+                            onClick={() => handleRemoveShare(share.email)}
+                            className="p-0.5 rounded hover:bg-hover text-muted hover:text-red-400 transition-colors cursor-pointer shrink-0"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
+                  </div>
+
+                  {/* General access */}
+                  <div className="p-3 border-b border-border/40">
+                    <p className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2">General access</p>
                     <button
                       onClick={handleTogglePublic}
                       disabled={isTogglingPublic}
-                      className={cn(
-                        "relative rounded-full transition-colors duration-200 cursor-pointer shrink-0",
-                        isPublic ? "bg-blue-500" : "bg-foreground/20",
-                        isTogglingPublic && "opacity-50 cursor-not-allowed"
-                      )}
-                      style={{ width: 40, height: 22, padding: 0 }}
+                      className="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-foreground/[0.03] transition-colors cursor-pointer"
                     >
-                      <span
-                        className="absolute bg-white rounded-full shadow-sm transition-all duration-200"
-                        style={{
-                          width: 16,
-                          height: 16,
-                          top: 3,
-                          left: isPublic ? 21 : 3,
-                        }}
-                      />
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                        isPublic ? "bg-green-500/10 text-green-500" : "bg-foreground/[0.06] text-muted"
+                      )}>
+                        {isPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="text-[13px] font-medium text-foreground">
+                          {isPublic ? 'Anyone with the link' : 'Only invited people'}
+                        </p>
+                        <p className="text-[11px] text-muted">
+                          {isPublic ? 'Anyone on the internet with the link can view' : 'Only people you invite can access this page'}
+                        </p>
+                      </div>
+                      {isTogglingPublic && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted shrink-0" />}
                     </button>
                   </div>
 
-                  {/* Link copy section (only shown when public) */}
-                  {isPublic && (
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 flex items-center gap-1.5 bg-sidebar/50 border border-border/40 rounded-lg px-2.5 py-1.5 overflow-hidden">
-                        <LinkIcon className="w-3 h-3 text-muted shrink-0" />
-                        <span className="text-xs text-muted truncate font-mono">
-                          {typeof window !== 'undefined' ? `${window.location.origin}/p/${nodeId}` : `/p/${nodeId}`}
-                        </span>
-                      </div>
-                      <button
-                        onClick={handleCopyLink}
-                        className={cn(
-                          "flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer shrink-0",
-                          isCopied
-                            ? "bg-green-500/10 text-green-500 border border-green-500/30"
-                            : "bg-blue-500 text-white hover:bg-blue-600"
-                        )}
-                      >
-                        {isCopied ? <><Check className="w-3 h-3" /> Copied</> : "Copy link"}
-                      </button>
-                    </div>
-                  )}
-
-                  {!isPublic && (
-                    <p className="text-xs text-muted text-center py-1">
-                      Toggle publish to generate a shareable link.
-                    </p>
-                  )}
+                  {/* Copy link */}
+                  <div className="p-3 flex items-center justify-end">
+                    <button
+                      onClick={handleCopyLink}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors cursor-pointer",
+                        isCopied
+                          ? "bg-green-500/10 text-green-500"
+                          : "bg-foreground/[0.06] text-foreground/70 hover:bg-foreground/[0.1]"
+                      )}
+                    >
+                      {isCopied ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><LinkIcon className="w-3.5 h-3.5" /> Copy link</>}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

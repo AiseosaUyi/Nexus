@@ -379,6 +379,107 @@ export async function toggleNodePublic(nodeId: string, isPublic: boolean) {
   return { data };
 }
 
+// ─── Share Actions ──────────────────────────────────────────────────────────
+
+export async function getNodeShares(nodeId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('node_shares')
+    .select('*')
+    .eq('node_id', nodeId)
+    .order('created_at', { ascending: true });
+
+  if (error) return { data: [], error: error.message };
+  return { data: data ?? [] };
+}
+
+export async function inviteToNode(nodeId: string, email: string, permission: string = 'view') {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data, error } = await supabase
+    .from('node_shares')
+    .upsert(
+      { node_id: nodeId, email: email.toLowerCase().trim(), permission, invited_by: user.id },
+      { onConflict: 'node_id,email' }
+    )
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[Share] Error inviting:', error);
+    return { error: error.message };
+  }
+
+  return { data };
+}
+
+export async function removeNodeShare(nodeId: string, email: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('node_shares')
+    .delete()
+    .eq('node_id', nodeId)
+    .eq('email', email);
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+export async function updateNodeSharePermission(nodeId: string, email: string, permission: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('node_shares')
+    .update({ permission })
+    .eq('node_id', nodeId)
+    .eq('email', email);
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+export async function getAccessRequests(nodeId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('access_requests')
+    .select('*')
+    .eq('node_id', nodeId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+
+  if (error) return { data: [], error: error.message };
+  return { data: data ?? [] };
+}
+
+export async function resolveAccessRequest(requestId: string, approve: boolean) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const status = approve ? 'approved' : 'denied';
+  const { data, error } = await supabase
+    .from('access_requests')
+    .update({ status, resolved_by: user.id, resolved_at: new Date().toISOString() })
+    .eq('id', requestId)
+    .select('*, node_id')
+    .single();
+
+  if (error) return { error: error.message };
+
+  // If approved, auto-create a share with view permission
+  if (approve && data) {
+    await supabase
+      .from('node_shares')
+      .upsert(
+        { node_id: data.node_id, email: data.requester_email, permission: 'view', invited_by: user.id },
+        { onConflict: 'node_id,email' }
+      );
+  }
+
+  return { data };
+}
+
 // ─── Comment Actions ─────────────────────────────────────────────────────────
 
 export async function createCommentThread(nodeId: string) {
@@ -634,6 +735,81 @@ export async function getCalendarEntryByNodeId(nodeId: string) {
 // ─── Import Actions ───────────────────────────────────────────────────────────
 
 /**
+ * Extracts a Notion page ID from a public Notion URL and fetches block data
+ * via Notion's internal /api/v3/loadPageChunk endpoint.
+ *
+ * This is the CRITICAL path for Notion imports — modern Notion pages are
+ * JS-rendered SPAs with no server-side content, so this API call is the only
+ * way to get the actual page content. We retry up to 2 times on failure.
+ */
+async function fetchNotionViaApi(
+  url: string,
+  convertRecordMapToHtml: (recordMap: any) => { title: string; html: string }
+): Promise<{ title: string; html: string } | null> {
+  // Extract the 32-char hex page ID from the URL (last segment after the final dash)
+  const idMatch = url.match(/([a-f0-9]{32})\s*$/i)
+    || url.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+  if (!idMatch) return null;
+
+  const rawId = idMatch[1].replace(/-/g, '');
+  const pageId = `${rawId.slice(0, 8)}-${rawId.slice(8, 12)}-${rawId.slice(12, 16)}-${rawId.slice(16, 20)}-${rawId.slice(20)}`;
+
+  // Derive the API base from the URL (works for both notion.site and notion.so)
+  const urlObj = new URL(url);
+  const apiUrl = `${urlObj.origin}/api/v3/loadPageChunk`;
+
+  const MAX_RETRIES = 2;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const controller = new AbortController();
+      // Use a generous timeout (15s) — Notion's API can be slow from some regions
+      const timeoutId = setTimeout(() => controller.abort(), 15_000);
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          page: { id: pageId },
+          limit: 100,
+          cursor: { stack: [] },
+          chunkNumber: 0,
+          verticalColumns: false,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        console.warn(`[Import] Notion API returned ${response.status} (attempt ${attempt + 1}/${MAX_RETRIES + 1})`);
+        if (attempt < MAX_RETRIES) continue;
+        return null;
+      }
+
+      const data = await response.json();
+      const recordMap = data?.recordMap;
+      if (!recordMap?.block) {
+        console.warn(`[Import] Notion API returned no blocks (attempt ${attempt + 1}/${MAX_RETRIES + 1})`);
+        if (attempt < MAX_RETRIES) continue;
+        return null;
+      }
+
+      const result = convertRecordMapToHtml(recordMap);
+      if (result.title && result.title !== 'Imported Page') return result;
+      if (result.html && result.html.length > 50) return result;
+
+      return null;
+    } catch (e) {
+      console.error(`[Import] Notion API attempt ${attempt + 1}/${MAX_RETRIES + 1} failed:`, e);
+      if (attempt < MAX_RETRIES) continue;
+      return null;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Fetches a web page server-side (avoids CORS) and returns the cleaned HTML
  * along with the page title. The client parses the HTML into Tiptap JSON.
  */
@@ -672,26 +848,40 @@ export async function importFromURL(url: string): Promise<{
     const isNotion = url.includes('notion.site') || url.includes('notion.so');
 
     if (isNotion) {
-      const { parseNotionPage } = await import('@/lib/notion-parser');
+      const { parseNotionPage, convertRecordMapToHtml } = await import('@/lib/notion-parser');
       const result = parseNotionPage(raw);
-      const parsedSuccessfully = result.title && result.title !== 'Imported Page';
+      const hasBodyContent = result.html.replace(/<h1>[\s\S]*?<\/h1>/, '').trim().length > 20;
+      const parsedSuccessfully = result.title && result.title !== 'Imported Page' && hasBodyContent;
+      console.log('[Import] parseNotionPage result:', { title: result.title, htmlLen: result.html.length, hasBodyContent, parsedSuccessfully });
       if (parsedSuccessfully) {
-        // Parser found the Notion data structure — trust its output completely.
-        // Even if body is empty (partial SSR), the parsed HTML is better than
-        // the raw JS-shell which would produce "Notion" as the title.
+        // Parser found the Notion data structure with actual content — trust its output.
         title = result.title;
         html = result.html;
       } else {
-        // Parser found nothing useful — strip the raw HTML and let the
-        // client-side htmlToTiptap handle whatever is there.
-        html = raw
-          .replace(/<script[\s\S]*?<\/script>/gi, '')
-          .replace(/<style[\s\S]*?<\/style>/gi, '')
-          .replace(/<!--[\s\S]*?-->/g, '')
-          .replace(/&nbsp;/g, ' ')
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>');
+        // SSR data not found or insufficient (modern Notion pages are JS-only).
+        // Try Notion's internal API to fetch the block data directly.
+        console.log('[Import] Falling through to fetchNotionViaApi for URL:', url);
+        const apiResult = await fetchNotionViaApi(url, convertRecordMapToHtml);
+        console.log('[Import] fetchNotionViaApi result:', apiResult ? { title: apiResult.title, htmlLen: apiResult.html.length, hasOl: apiResult.html.includes('<ol>'), hasUl: apiResult.html.includes('<ul>') } : 'null');
+        if (apiResult) {
+          title = apiResult.title;
+          html = apiResult.html;
+        } else {
+          // All Notion strategies failed. Modern Notion pages are JS-rendered
+          // SPAs — the raw HTML contains NO visible content (just an empty
+          // React shell). Stripping scripts from this produces garbage with no
+          // headings, lists, or paragraphs. Return an explicit error so the
+          // user can use the Paste or File import instead.
+          console.error('[Import] All Notion import strategies failed for URL:', url);
+          return {
+            title: '',
+            html: '',
+            error:
+              'Could not extract content from this Notion page. ' +
+              'Notion pages are JavaScript-rendered and may not be accessible from all servers. ' +
+              'Try exporting the page as Markdown from Notion and uploading the file instead.',
+          };
+        }
       }
     } else {
       // Strip heavyweight noise before sending to client for generic pages

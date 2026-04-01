@@ -14,6 +14,7 @@ import {
   Info,
   Quote,
   Code,
+  ImageIcon,
 } from 'lucide-react';
 import type { Editor } from '@tiptap/react';
 
@@ -83,7 +84,7 @@ const BLOCK_ITEMS: BlockItem[] = [
     title: 'Toggle list',
     shortcut: '>',
     icon: ChevronRight,
-    apply: (editor) => editor.chain().focus().setNode('details').run(),
+    apply: (editor) => editor.chain().focus().setDetails().run(),
   },
   {
     title: 'Callout',
@@ -102,6 +103,28 @@ const BLOCK_ITEMS: BlockItem[] = [
     shortcut: '```',
     icon: Code,
     apply: (editor) => editor.chain().focus().toggleCodeBlock().run(),
+  },
+  {
+    title: 'Image',
+    shortcut: '',
+    icon: ImageIcon,
+    apply: (editor) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            editor.chain().focus().setImage({ src: reader.result }).run();
+          }
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    },
   },
 ];
 
