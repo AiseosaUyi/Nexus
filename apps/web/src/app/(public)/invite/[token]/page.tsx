@@ -14,14 +14,14 @@ export default async function InviteAcceptPage({ params }: InvitePageProps) {
   // Check if user is logged in
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Fetch invitation details
-  const { data: invitation } = await supabase
-    .from('invitations')
-    .select('id, email, role, business_id, accepted_at, expires_at, businesses(name, slug)')
-    .eq('token', token)
+  // Fetch invitation details securely using the token
+  const { data, error } = await supabase
+    .rpc('get_invitation_by_token', { p_token: token })
     .single();
+    
+  const invitation = data as any;
 
-  if (!invitation) {
+  if (error || !invitation) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center max-w-md mx-4">
@@ -34,8 +34,7 @@ export default async function InviteAcceptPage({ params }: InvitePageProps) {
 
   if (invitation.accepted_at) {
     // Already accepted — redirect to workspace
-    const business = invitation.businesses as any;
-    redirect(`/w/${business?.slug || 'dashboard'}/dashboard`);
+    redirect(`/w/${invitation.business_slug || 'dashboard'}/dashboard`);
   }
 
   const isExpired = new Date(invitation.expires_at) < new Date();
@@ -50,7 +49,6 @@ export default async function InviteAcceptPage({ params }: InvitePageProps) {
     );
   }
 
-  const business = invitation.businesses as any;
   const roleLabel = invitation.role === 'ADMIN' ? 'Admin' : invitation.role === 'EDITOR' ? 'Member' : 'Guest';
 
   // If logged in, show accept button. If not, redirect to auth with callback.
@@ -62,7 +60,7 @@ export default async function InviteAcceptPage({ params }: InvitePageProps) {
             <span className="text-2xl font-bold text-foreground">N</span>
           </div>
           <h1 className="text-xl font-bold text-foreground mb-2">
-            Join {business?.name || 'a workspace'}
+            Join {invitation.business_name || 'a workspace'}
           </h1>
           <p className="text-[14px] text-muted mb-6">
             You've been invited as a <strong>{roleLabel}</strong>. Sign in or create an account to accept.
@@ -85,12 +83,12 @@ export default async function InviteAcceptPage({ params }: InvitePageProps) {
           <span className="text-2xl font-bold text-foreground">N</span>
         </div>
         <h1 className="text-xl font-bold text-foreground mb-2">
-          Join {business?.name || 'a workspace'}
+          Join {invitation.business_name || 'a workspace'}
         </h1>
         <p className="text-[14px] text-muted mb-6">
           You've been invited as a <strong>{roleLabel}</strong>.
         </p>
-        <AcceptInviteClient token={token} workspaceSlug={business?.slug} />
+        <AcceptInviteClient token={token} workspaceSlug={invitation.business_slug} />
       </div>
     </div>
   );
