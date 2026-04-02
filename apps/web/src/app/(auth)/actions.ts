@@ -111,65 +111,88 @@ export async function getUserBusinesses() {
  * Prevents forced personal workspace creation and drops user in the team workspace.
  */
 export async function authenticateAndAcceptInvite(formData: FormData) {
-  const supabase = await createClient();
-  
-  const email = (formData.get('email') as string)?.trim().toLowerCase();
-  const password = formData.get('password') as string;
-  const fullName = formData.get('full_name') as string; // Optional (only for signup)
-  const token = formData.get('token') as string;
-  const isExisting = formData.get('is_existing') === 'true';
-
-  if (!email || !password || !token) {
-    return { error: 'Missing required fields' };
-  }
-
-  // 1. Authenticate (Login or Signup)
-  if (isExisting) {
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError) return { error: signInError.message };
-  } else {
-    if (!fullName) return { error: 'Full name is required for new accounts' };
+  try {
+    const supabase = await createClient();
     
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
+    const email = (formData.get('email') as string)?.trim().toLowerCase();
+    const password = formData.get('password') as string;
+    const fullName = (formData.get('full_name') as string)?.trim();
+    const token = formData.get('token') as string;
+    const isExisting = formData.get('is_existing') === 'true';
 
-    if (signUpError) return { error: signUpError.message };
-
-    // Auto-confirm if needed (mirroring existing logic)
-    if (!signUpData.session && signUpData.user) {
-      const { createClient: createAdminClient } = await import('@supabase/supabase-js');
-      const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-      await admin.auth.admin.updateUserById(signUpData.user.id, { email_confirm: true });
-      await supabase.auth.signInWithPassword({ email, password });
+    if (!email || !password || !token) {
+      return { error: 'Missing required email, password, or invite token' };
     }
+
+    // 1. Authenticate (Login or Signup)
+    if (isExisting) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) return { error: signInError.message };
+    } else {
+      if (!fullName) return { error: 'Please provide your full name to create an account' };
+      
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } },
+      });
+
+      if (signUpError) return { error: signUpError.message };
+
+      // Auto-confirm logic for new accounts if no session was returned
+      if (!signUpData.session && signUpData.user) {
+        const { createClient: createAdminClient } = await import('@supabase/supabase-js');
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+        if (!serviceRoleKey || !supabaseUrl) {
+          return { error: 'Server configuration error: Missing API keys for auto-confirmation.' };
+        }
+
+        const admin = createAdminClient(supabaseUrl, serviceRoleKey);
+        await admin.auth.admin.updateUserById(signUpData.user.id, { email_confirm: true });
+        
+        // Final sign-in to establish session
+        const { error: finalSignInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (finalSignInError) return { error: 'Account created but could not sign in automatically: ' + finalSignInError.message };
+      }
+    }
+
+    // 2. Accept the Invitation using the RPC
+    const { data, error: inviteError } = await supabase.rpc('accept_invitation', { p_token: token });
+
+    const inviteData = data as any;
+
+    if (inviteError || inviteData?.error) {
+      return { error: inviteError?.message || inviteData?.error || 'Could not join workspace with that token.' };
+    }
+
+    if (!inviteData?.business_id) {
+      return { error: 'Invitation accepted but no workspace was returned.' };
+    }
+
+    // 3. Find the workspace slug for redirection
+    const { data: business, error: businessError } = await supabase
+      .from('businesses')
+      .select('slug, name')
+      .eq('id', inviteData.business_id)
+      .single();
+
+    if (businessError || !business) {
+      return { error: 'Joined workspace but could not retrieve its details for redirection.' };
+    }
+
+    revalidatePath('/', 'layout');
+
+    // Success!
+    return { 
+      success: true, 
+      businessSlug: business.slug, 
+      businessName: business.name 
+    };
+  } catch (err: any) {
+    console.error('[CRITICAL] authenticateAndAcceptInvite crash:', err);
+    return { error: 'An unexpected server error occurred. Please try again or contact support.' };
   }
-
-  // 2. Accept the Invitation using the RPC
-  const { data: inviteData, error: inviteError } = await supabase.rpc('accept_invitation', { p_token: token });
-
-  if (inviteError || inviteData?.error) {
-    // If auth worked but invite failed (maybe expired while typing?), we still have an account.
-    // We just return the error but they are logged in.
-    return { error: inviteError?.message || inviteData?.error || 'Account created, but could not join workspace.' };
-  }
-
-  // 3. Find the workspace slug for redirection
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('slug, name')
-    .eq('id', inviteData.business_id)
-    .single();
-
-  revalidatePath('/', 'layout');
-
-  // Success!
-  return { 
-    success: true, 
-    businessSlug: business?.slug, 
-    businessName: business?.name 
-  };
 }
 
