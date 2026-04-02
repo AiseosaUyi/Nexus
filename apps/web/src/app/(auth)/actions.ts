@@ -127,7 +127,30 @@ export async function authenticateAndAcceptInvite(formData: FormData) {
     // 1. Authenticate (Login or Signup)
     if (isExisting) {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) return { error: signInError.message };
+      
+      // Self-healing: If login fails due to unconfirmed email, try to confirm it now (since we have the key)
+      if (signInError?.message === 'Email not confirmed') {
+        const { data: userCheck } = await supabase.from('users').select('id').eq('email', email).single();
+        if (userCheck?.id) {
+          const { createClient: createAdminClient } = await import('@supabase/supabase-js');
+          const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+          if (serviceRoleKey && supabaseUrl) {
+            const admin = createAdminClient(supabaseUrl, serviceRoleKey);
+            await admin.auth.admin.updateUserById(userCheck.id, { email_confirm: true });
+            // Retry sign-in
+            const { error: retryError } = await supabase.auth.signInWithPassword({ email, password });
+            if (retryError) return { error: retryError.message };
+          } else {
+            return { error: 'Your email is not confirmed. Please check your inbox or contact the workspace owner.' };
+          }
+        } else {
+          return { error: 'Email not confirmed. Please check your inbox.' };
+        }
+      } else if (signInError) {
+        return { error: signInError.message };
+      }
     } else {
       if (!fullName) return { error: 'Please provide your full name to create an account' };
       
