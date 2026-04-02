@@ -1,6 +1,12 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[Email] RESEND_API_KEY not set — emails will not be sent');
+    return null;
+  }
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Nexus <onboarding@resend.dev>';
 
@@ -22,6 +28,9 @@ export async function sendTeamInviteEmail({
   const roleLabel = role === 'ADMIN' ? 'Admin' : role === 'EDITOR' ? 'Member' : 'Guest';
 
   try {
+    const resend = getResend();
+    if (!resend) return { error: 'Email not configured' };
+
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
@@ -72,6 +81,9 @@ export async function sendPageShareEmail({
   pageUrl: string;
 }) {
   try {
+    const resend = getResend();
+    if (!resend) return { error: 'Email not configured' };
+
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
