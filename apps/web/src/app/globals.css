@@ -127,6 +127,28 @@ select:focus-visible {
   outline: none !important;
 }
 
+/* ── Landing Page Animations ──────────────────────────────────────────────── */
+
+@keyframes hero-reveal {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-stagger-1 { opacity: 0; animation: hero-reveal 0.6s ease-out 0.1s both; }
+.hero-stagger-2 { opacity: 0; animation: hero-reveal 0.6s ease-out 0.25s both; }
+.hero-stagger-3 { opacity: 0; animation: hero-reveal 0.6s ease-out 0.4s both; }
+.hero-stagger-4 { opacity: 0; animation: hero-reveal 0.6s ease-out 0.55s both; }
+.hero-stagger-5 { opacity: 0; animation: hero-reveal 0.8s ease-out 0.75s both; }
+
+@keyframes glow-drift {
+  0%, 100% { opacity: 0.07; transform: translate(-50%, 0%) scale(1); }
+  50% { opacity: 0.13; transform: translate(-50%, -3%) scale(1.04); }
+}
+
+.animate-glow-drift {
+  animation: glow-drift 10s ease-in-out infinite;
+}
+
 /* Animations */
 @keyframes slide-in-from-left-spring {
   from { transform: translateX(-100%); }
@@ -375,4 +397,17 @@ select:focus-visible {
 .tiptap th {
   font-weight: 600;
   background: rgba(255, 255, 255, 0.04);
+}
+
+/* --- Editor Width Fix: Ensure full span and override prose defaults --- */
+.tiptap.prose,
+.ProseMirror.prose {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Ensure individual blocks also span the full width of the editor container */
+.tiptap.prose > *,
+.ProseMirror.prose > * {
+  max-width: none !important;
 }

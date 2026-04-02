@@ -23,14 +23,24 @@ export async function signUp(formData: FormData) {
     return redirect(`/signup?error=${encodeURIComponent(error.message)}`);
   }
 
-  revalidatePath('/', 'layout');
+  // Auto-confirm user if email confirmation is enabled and no session was returned
+  if (!data.session && data.user) {
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js');
+    const admin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+    await admin.auth.admin.updateUserById(data.user.id, { email_confirm: true });
 
-  // If email confirmation is enabled, session will be null
-  if (data.session) {
-    redirect('/dashboard');
-  } else {
-    redirect('/signup?message=Success! Please check your email to confirm your account.');
+    // Sign them in now that they're confirmed
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) {
+      return redirect(`/signup?error=${encodeURIComponent(signInError.message)}`);
+    }
   }
+
+  revalidatePath('/', 'layout');
+  redirect('/dashboard');
 }
 
 export async function signIn(formData: FormData) {
