@@ -51,8 +51,19 @@ export default function WorkspaceDashboardClient({
   const [mounted, setMounted] = useState(false);
   const [isNewPageOpen, setIsNewPageOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [showJoinedSuccess, setShowJoinedSuccess] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('joined') === 'true') {
+      setShowJoinedSuccess(true);
+      // Remove the param from URL without refreshing
+      window.history.replaceState({}, '', window.location.pathname);
+      // Auto-hide after some time
+      setTimeout(() => setShowJoinedSuccess(false), 5000);
+    }
+  }, []);
 
   const quickActions = [
     {
@@ -83,7 +94,29 @@ export default function WorkspaceDashboardClient({
 
   return (
     <>
-      <div className="h-full w-full overflow-y-auto custom-scrollbar">
+      <div className="h-full w-full overflow-y-auto custom-scrollbar relative">
+        {/* Joined Success Toast */}
+        {showJoinedSuccess && (
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-500">
+            <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-[#1a1a1a] border border-cta/30 shadow-2xl shadow-cta/10">
+              <div className="w-8 h-8 rounded-full bg-cta/10 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-cta" />
+              </div>
+              <div className="flex flex-col">
+                <p className="text-sm font-bold text-foreground">Welcome to the team!</p>
+                <p className="text-[11px] text-muted font-medium">You've successfully joined the workspace.</p>
+              </div>
+              <button 
+                onClick={() => setShowJoinedSuccess(false)}
+                className="ml-4 p-1 hover:bg-foreground/10 rounded-lg transition-colors"
+                aria-label="Close notification"
+              >
+                <Plus className="w-4 h-4 rotate-45 text-muted hover:text-foreground" />
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="max-w-3xl mx-auto px-6 py-8 md:py-16 space-y-8 md:space-y-14">
 
           {/* Greeting */}

@@ -2,6 +2,7 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AcceptInviteClient from './AcceptInviteClient';
+import InviteAuthForm from './InviteAuthForm';
 
 interface InvitePageProps {
   params: Promise<{ token: string }>;
@@ -51,26 +52,22 @@ export default async function InviteAcceptPage({ params }: InvitePageProps) {
 
   const roleLabel = invitation.role === 'ADMIN' ? 'Admin' : invitation.role === 'EDITOR' ? 'Member' : 'Guest';
 
-  // If logged in, show accept button. If not, redirect to auth with callback.
+  // If logged in, show accept button. If not, show the embedded Auth Form.
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center max-w-md mx-4">
+        <div className="text-center w-full max-w-sm mx-4">
           <div className="w-16 h-16 rounded-2xl bg-foreground/[0.06] flex items-center justify-center mx-auto mb-6">
             <span className="text-2xl font-bold text-foreground">N</span>
           </div>
           <h1 className="text-xl font-bold text-foreground mb-2">
             Join {invitation.business_name || 'a workspace'}
           </h1>
-          <p className="text-[14px] text-muted mb-6">
-            You've been invited as a <strong>{roleLabel}</strong>. Sign in or create an account to accept.
+          <p className="text-[14px] text-muted mb-8">
+            Enter your email to join as a <strong>{roleLabel}</strong>.
           </p>
-          <a
-            href={`/login?next=/invite/${token}`}
-            className="inline-block px-6 py-3 bg-[#37352f] text-white rounded-md font-medium hover:bg-[#37352f]/90 transition-colors"
-          >
-            Sign in to accept
-          </a>
+          
+          <InviteAuthForm token={token} businessName={invitation.business_name} />
         </div>
       </div>
     );
