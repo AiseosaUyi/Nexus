@@ -29,6 +29,9 @@ pnpm e2e:ui                       # Open Playwright UI mode
 # Type-check
 cd apps/web && npx tsc --noEmit
 
+# Test coverage
+cd apps/web && pnpm test:coverage   # Generate coverage report
+
 # Supabase local (from repo root)
 pnpm supabase start               # Start local Supabase stack
 pnpm supabase db reset            # Reset DB and replay migrations
@@ -114,12 +117,23 @@ When creating a node programmatically with content (e.g., import), generate the 
 ### Server actions
 
 All server-side mutations live in **`actions.ts` files co-located with the route**:
-- `apps/web/src/app/(auth)/actions.ts` — auth (signIn, signUp, getUserBusinesses)
-- `apps/web/src/app/(dashboard)/w/[workspace_slug]/actions.ts` — all workspace mutations (nodes, teamspaces, calendar, comments, import)
+- `apps/web/src/app/(auth)/actions.ts` — auth (signIn, signUp, signOut, createBusiness, getUserBusinesses)
+- `apps/web/src/app/(dashboard)/w/[workspace_slug]/actions.ts` — node/document mutations (CRUD, import, calendar, comments, sharing)
+- `apps/web/src/app/(dashboard)/w/[workspace_slug]/team-actions.ts` — team/workspace mutations (members, invitations, roles)
 
 Each action creates a fresh Supabase server client via `createClient()` (from `@/lib/supabase/server`). Client components use `createClient()` from `@/lib/supabase/client`.
 
-### Layout and auth flow
+### Middleware and auth flow
+
+`middleware.ts` refreshes the Supabase session on every request. Unauthenticated users hitting `/w/*` or `/dashboard` are redirected to `/login`; authenticated users on `/login` or `/signup` are redirected to `/dashboard`. The landing page (`/`) is unprotected.
+
+**Signup auto-confirms users** — the `signUp` action uses the Supabase admin API (`SUPABASE_SERVICE_ROLE_KEY`) to auto-confirm the user's email when Supabase doesn't return a session, then signs them in immediately. No email verification step.
+
+**Invitation flow** — team invitations use token-based acceptance:
+1. Admin invites via `TeamSettingsModal` → `inviteMember()` creates an `invitations` row with a unique token (7-day expiry)
+2. Invite link (`/invite/{token}`) is shown in the UI for the admin to copy and share manually
+3. Email is also sent via Resend if configured (optional — requires verified domain)
+4. Recipient visits `/invite/{token}` → `AcceptInviteClient` → `acceptInvitation()` calls the `accept_invitation` PostgreSQL function → creates `business_members` row
 
 `/dashboard` redirects to `/w/<slug>/dashboard` (the first business the user belongs to).
 
@@ -180,6 +194,10 @@ Server action `importFromURL` in `actions.ts` fetches URLs server-side (avoids C
 
 **BlockType normalization:** Tiptap produces node types like `bulletList`, `orderedList`, `blockquote`, `codeBlock`, but the DB `block_type` enum only accepts `list`, `quote`, `code`, etc. ImportModal and NexusEditor both normalize types during block sync.
 
+### Email (`src/lib/email.ts`)
+
+Uses Resend SDK. Two functions: `sendTeamInviteEmail()` and `sendPageShareEmail()`. Both are fire-and-forget — failures are caught and logged but don't block the invitation/share creation. Requires `RESEND_API_KEY`; falls back to `onboarding@resend.dev` as sender (sandbox mode — only delivers to the Resend account owner's email). For production delivery, set `RESEND_FROM_EMAIL` to a verified domain.
+
 ---
 
 ## Database migrations
@@ -190,11 +208,12 @@ Migrations are plain SQL files in `database/migrations/` and must be applied in 
 3. Update `packages/api/schema.ts` to match
 4. Update RLS policies if needed (check `11_fix_nodes_rls.sql` for the pattern)
 
-**All migrations through `16_save_snapshot_rpc.sql` must be applied for the current codebase.**
+**All migrations through `17_node_shares.sql` must be applied for the current codebase.**
 
 **Critical migrations:**
 - `08_realtime.sql` — adds `yjs_snapshot bytea` column to nodes (required for snapshot storage)
 - `16_save_snapshot_rpc.sql` — adds `save_yjs_snapshot(p_node_id uuid, p_snapshot_hex text)` RPC function that uses `decode(p_snapshot_hex, 'hex')` to bypass PostgREST JSON encoding issues with bytea columns
+- `17_node_shares.sql` — adds `node_shares` and `access_requests` tables with RLS policies for per-node sharing and access request workflow
 
 > When querying nullable FK columns in Supabase (e.g. `parent_id`, `teamspace_id`), use `.is('col', null)` not `.eq('col', null)` — the latter silently returns no rows.
 
@@ -230,11 +249,31 @@ No `vercel.json` — Vercel auto-detects Next.js from `apps/web/package.json`. S
 
 ## Environment variables
 
-Required in `apps/web/.env.local`:
+Copy `apps/web/.env.example` → `apps/web/.env.local` and fill in values.
+
+**Required:**
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-ANTHROPIC_API_KEY=          # AI bubble menu
-E2E_TEST_EMAIL=             # Playwright only
-E2E_TEST_PASSWORD=          # Playwright only
+SUPABASE_SERVICE_ROLE_KEY=
+ANTHROPIC_API_KEY=              # AI bubble menu
+```
+
+**Optional — email (Resend):**
+```
+RESEND_API_KEY=                 # Team invites & page sharing emails
+RESEND_FROM_EMAIL=              # Defaults to onboarding@resend.dev
+```
+
+**Optional — monitoring:**
+```
+SENTRY_DSN=
+NEXT_PUBLIC_POSTHOG_KEY=
+NEXT_PUBLIC_POSTHOG_HOST=       # Defaults to https://app.posthog.com
+```
+
+**Playwright only:**
+```
+E2E_TEST_EMAIL=
+E2E_TEST_PASSWORD=
 ```

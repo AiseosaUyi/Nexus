@@ -1,35 +1,41 @@
 
-
 > web@0.1.0 build /Users/aiseosauyi-idahor/Desktop/Development/Nexus/apps/web
 > next build
 
-[33m[1m⚠[22m[39m Warning: Next.js inferred your workspace root, but it may not be correct.
- We detected multiple lockfiles and selected the directory of /Users/aiseosauyi-idahor/Desktop/Development/Nexus/pnpm-workspace.yaml as the root directory.
- To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
-   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
- Detected additional lockfiles: 
-   * /Users/aiseosauyi-idahor/Desktop/Development/Nexus/apps/web/pnpm-workspace.yaml
-
-[1m[38;2;173;127;168m▲ Next.js 16.2.1[39m[22m (Turbopack)
+▲ Next.js 16.2.1 (Turbopack)
 - Environments: .env.local
 
-[33m[1m⚠[22m[39m The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
-[37m[1m [22m[39m Creating an optimized production build ...
-[32m[1m✓[22m[39m Compiled successfully in 5.0s
-[?25l[37m[1m [22m[39m Running TypeScript  [36m.[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m..[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m...[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m.[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m..[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m...[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m.[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m..[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m...[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m.[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m..[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m...[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m.[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m..[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m...[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m.[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m..[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m...[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m.[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m..[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Running TypeScript  [36m...[39m[2K[1G[1A[2K[1G[?25h[?25l[37m[1m [22m[39m Finished TypeScript in 4.1s  [36m.[39m[2K[1G[1A[2K[1G[?25h[37m[1m [22m[39m Finished TypeScript in 4.1s    [32m[1m✓[22m[39m Finished TypeScript in 4.1s 
-[?25l[37m[1m [22m[39m Collecting page data using 9 workers  [36m.[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Collecting page data using 9 workers  [36m..[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Collecting page data using 9 workers  [36m...[39m[2K[1G[1A[2K[1G[37m[1m [22m[39m Collecting page data using 9 workers  [36m.[39m[2K[1G[1A[2K[1G[?25h[37m[1m [22m[39m Collecting page data using 9 workers in 692ms    [32m[1m✓[22m[39m Collecting page data using 9 workers in 692ms 
-[?25l[37m[1m [22m[39m Generating static pages using 9 workers (0/8)  [36m[    ][39m[2K[1G[1A[2K[1G[1A[2K[1G[?25h[32m[1m✓[22m[39m Generating static pages using 9 workers (8/8) in 193ms
-[?25l[37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G[1A[2K[1G[?25h[37m[1m [22m[39m Finalizing page optimization in 10ms    [32m[1m✓[22m[39m Finalizing page optimization in 10ms 
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.6s
+  Running TypeScript ...
+  Finished TypeScript in 4.3s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/9) ...
+  Generating static pages using 9 workers (2/9) 
+  Generating static pages using 9 workers (4/9) 
+  Generating static pages using 9 workers (6/9) 
+✓ Generating static pages using 9 workers (9/9) in 197ms
+  Finalizing page optimization ...
 
-[4mRoute (app)[24m
+Route (app)
 ┌ ○ /
 ├ ○ /_not-found
 ├ ƒ /accept-invite
 ├ ƒ /api/ai/generate
-├ ƒ /login
-├ ƒ /signup
+├ ƒ /dashboard
+├ ƒ /invite/[token]
+├ ○ /login
+├ ƒ /p/[node_id]
+├ ○ /signup
+├ ƒ /w/[workspace_slug]/calendar
 ├ ƒ /w/[workspace_slug]/dashboard
-└ ƒ /w/[workspace_slug]/n/[node_id]
+├ ƒ /w/[workspace_slug]/get-started
+├ ƒ /w/[workspace_slug]/get-started/[article_id]
+├ ƒ /w/[workspace_slug]/n/[node_id]
+├ ƒ /w/[workspace_slug]/settings
+├ ƒ /w/[workspace_slug]/t/[teamspace_id]
+└ ƒ /w/[workspace_slug]/updates
 
 
 ƒ Proxy (Middleware)
@@ -37,4 +43,3 @@
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand
 
-[?25h

@@ -384,11 +384,7 @@ export default function NexusEditor({
 
   return (
     <div
-      className="w-full relative"
-      // Bleed 48px left: the layout box extends into the left margin so the
-      // "+" button lives inside the hit-region and onMouseLeave only fires
-      // when the cursor truly exits the entire zone.
-      style={{ paddingLeft: 48, marginLeft: -48 }}
+      className="w-full relative md:pl-[48px] md:-ml-[48px]"
       ref={editorRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => {
@@ -396,7 +392,7 @@ export default function NexusEditor({
         hoveredBlockEl.current = null;
       }}
     >
-      {/* Block add handle — appears on hover to the left of any block */}
+      {/* Block add handle — only on larger screens with hover */}
       {blockHandleTop !== null && (
         <button
           data-block-handle
@@ -405,7 +401,7 @@ export default function NexusEditor({
             e.preventDefault();
             handleBlockAdd();
           }}
-          className="absolute flex items-center justify-center w-5 h-5 rounded text-foreground/30 hover:text-foreground/70 hover:bg-hover transition-colors z-10"
+          className="absolute hidden md:flex items-center justify-center w-5 h-5 rounded text-foreground/30 hover:text-foreground/70 hover:bg-hover transition-colors z-10"
           title="Click to add a block below"
         >
           <Plus className="w-3.5 h-3.5" />

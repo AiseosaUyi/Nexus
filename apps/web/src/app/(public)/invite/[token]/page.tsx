@@ -66,8 +66,8 @@ export default async function InviteAcceptPage({ params }: InvitePageProps) {
             You've been invited as a <strong>{roleLabel}</strong>. Sign in or create an account to accept.
           </p>
           <a
-            href={`/auth?redirect=/invite/${token}`}
-            className="inline-block px-6 py-3 bg-accent text-white rounded-lg font-medium hover:bg-accent/90 transition-colors"
+            href={`/login?next=/invite/${token}`}
+            className="inline-block px-6 py-3 bg-[#37352f] text-white rounded-md font-medium hover:bg-[#37352f]/90 transition-colors"
           >
             Sign in to accept
           </a>

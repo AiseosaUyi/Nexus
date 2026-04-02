@@ -51,7 +51,7 @@ export default function NodePageClient({ node, initialContent, nodeId, userName,
         />
         
         {/* Tiptap Editor */}
-        <div className="w-full max-w-4xl mx-auto px-6">
+        <div className="w-full max-w-full md:max-w-4xl mx-auto px-6">
           <NexusEditor 
             nodeId={nodeId}
             initialContent={initialContent}

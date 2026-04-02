@@ -450,7 +450,7 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
         </div>
       )}
 
-      <div className="w-full max-w-4xl mx-auto px-6 flex flex-col relative">
+      <div className="w-full max-w-full md:max-w-4xl mx-auto px-6 flex flex-col relative">
         {/* Buttons appearing on hover (or persistent if icon missing) */}
         {!icon && !coverUrl && (
           <div className="flex items-center gap-3 opacity-0 group-hover/header:opacity-100 transition-opacity mb-4 -ml-1">
