@@ -16,7 +16,9 @@ import {
   Check,
   Clock,
   Trash2,
-  Settings
+  Settings,
+  Link2,
+  Copy
 } from 'lucide-react';
 import {
   getWorkspaceMembers,
@@ -55,6 +57,8 @@ export default function TeamSettingsModal({
   const [inviteRole, setInviteRole] = useState<MemberRole>('EDITOR');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const isAdmin = currentUserRole === 'ADMIN';
@@ -77,17 +81,26 @@ export default function TeamSettingsModal({
     if (!inviteEmail.trim()) return;
     setError(null);
     setSuccess(null);
+    setInviteLink(null);
 
     startTransition(async () => {
       const result = await inviteMember(businessId, inviteEmail.trim(), inviteRole);
       if (result.error) {
         setError(result.error);
       } else {
-        setSuccess(`Invitation sent to ${inviteEmail}`);
+        const link = `${window.location.origin}/invite/${result.token}`;
+        setSuccess(`Invitation created for ${inviteEmail}`);
+        setInviteLink(link);
         setInviteEmail('');
         loadData();
       }
     });
+  };
+
+  const copyToClipboard = async (text: string, id: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleRoleChange = async (memberId: string, role: MemberRole) => {
@@ -201,7 +214,25 @@ export default function TeamSettingsModal({
                   </button>
                 </form>
                 {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
-                {success && <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><Check className="w-3 h-3" />{success}</p>}
+                {success && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs text-green-400 flex items-center gap-1"><Check className="w-3 h-3" />{success}</p>
+                    {inviteLink && (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-foreground/[0.04] border border-border">
+                        <Link2 className="w-3.5 h-3.5 text-muted shrink-0" />
+                        <span className="text-xs text-foreground/70 truncate flex-1 select-all">{inviteLink}</span>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(inviteLink, 'new-invite')}
+                          className="shrink-0 flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-accent text-white hover:bg-accent/90 transition-colors cursor-pointer"
+                        >
+                          {copiedId === 'new-invite' ? <><Check className="w-3 h-3" />Copied</> : <><Copy className="w-3 h-3" />Copy link</>}
+                        </button>
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted">Share this link with the invitee so they can join.</p>
+                  </div>
+                )}
               </section>
             )}
 
@@ -306,13 +337,22 @@ export default function TeamSettingsModal({
                           </div>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleRevokeInvite(inv.id)}
-                        className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 text-xs text-muted hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all cursor-pointer"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Revoke
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => copyToClipboard(`${window.location.origin}/invite/${inv.token}`, inv.id)}
+                          className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 text-xs text-muted hover:text-accent hover:bg-accent/10 rounded-md transition-all cursor-pointer"
+                          title="Copy invite link"
+                        >
+                          {copiedId === inv.id ? <><Check className="w-3 h-3 text-green-400" /><span className="text-green-400">Copied</span></> : <><Link2 className="w-3 h-3" />Copy link</>}
+                        </button>
+                        <button
+                          onClick={() => handleRevokeInvite(inv.id)}
+                          className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 text-xs text-muted hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Revoke
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
