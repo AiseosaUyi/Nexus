@@ -155,9 +155,33 @@ function blockToHtml(blockId: string, blocks: any): string {
 }
 
 /**
+ * Normalizes a recordMap from the Notion API (/api/v3/loadPageChunk) which
+ * has a nested value.value structure, into the flat value structure expected
+ * by convertRecordMapToHtml.
+ */
+function normalizeRecordMap(recordMap: any): any {
+  const rawBlocks = recordMap?.block;
+  if (!rawBlocks) return recordMap;
+
+  // Check if blocks use the nested value.value format (API response)
+  const firstBlock = Object.values(rawBlocks)[0] as any;
+  if (firstBlock?.value?.value?.type) {
+    const normalized: any = {};
+    for (const [key, entry] of Object.entries(rawBlocks)) {
+      const e = entry as any;
+      normalized[key] = { value: e.value?.value || e.value };
+    }
+    return { ...recordMap, block: normalized };
+  }
+
+  return recordMap;
+}
+
+/**
  * Converts a Notion recordMap into a flat HTML representation that Nexus can import.
  */
-function convertRecordMapToHtml(recordMap: any): NotionImportResult {
+export function convertRecordMapToHtml(rawRecordMap: any): NotionImportResult {
+  const recordMap = normalizeRecordMap(rawRecordMap);
   const rawBlocks = recordMap.block;
   if (!rawBlocks) return { title: 'Imported Page', html: '' };
 
