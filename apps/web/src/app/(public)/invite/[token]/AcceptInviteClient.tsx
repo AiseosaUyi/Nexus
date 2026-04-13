@@ -28,7 +28,7 @@ export default function AcceptInviteClient({ token, workspaceSlug }: { token: st
       <button
         onClick={handleAccept}
         disabled={isPending}
-        className="px-6 py-3 bg-accent text-white rounded-lg font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors cursor-pointer"
+        className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors cursor-pointer"
       >
         {isPending ? 'Accepting...' : 'Accept Invitation'}
       </button>

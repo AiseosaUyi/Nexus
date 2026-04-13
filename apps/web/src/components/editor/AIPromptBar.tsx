@@ -115,7 +115,7 @@ export default function AIPromptBar({ editor, isOpen, onClose }: AIPromptBarProp
             <button
               onClick={handleSubmit}
               disabled={!prompt.trim()}
-              className="shrink-0 w-8 h-8 rounded-lg bg-accent text-white flex items-center justify-center hover:bg-accent/90 disabled:opacity-30 transition-all cursor-pointer"
+              className="shrink-0 w-8 h-8 rounded-lg bg-accent text-accent-foreground flex items-center justify-center hover:bg-accent/90 disabled:opacity-30 transition-all cursor-pointer"
             >
               <Send className="w-4 h-4" strokeWidth={2} />
             </button>

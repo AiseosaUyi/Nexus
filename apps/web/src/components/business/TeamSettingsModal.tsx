@@ -207,7 +207,7 @@ export default function TeamSettingsModal({
                   <button
                     type="submit"
                     disabled={isPending || !inviteEmail.trim()}
-                    className="px-4 py-2 text-sm font-medium bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors flex items-center gap-2 cursor-pointer"
+                    className="px-4 py-2 text-sm font-medium bg-accent text-accent-foreground rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors flex items-center gap-2 cursor-pointer"
                   >
                     {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                     Invite
@@ -224,7 +224,7 @@ export default function TeamSettingsModal({
                         <button
                           type="button"
                           onClick={() => copyToClipboard(inviteLink, 'new-invite')}
-                          className="shrink-0 flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-accent text-white hover:bg-accent/90 transition-colors cursor-pointer"
+                          className="shrink-0 flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer"
                         >
                           {copiedId === 'new-invite' ? <><Check className="w-3 h-3" />Copied</> : <><Copy className="w-3 h-3" />Copy link</>}
                         </button>

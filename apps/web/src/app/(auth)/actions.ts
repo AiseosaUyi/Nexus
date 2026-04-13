@@ -77,6 +77,26 @@ export async function signOut() {
   redirect('/login');
 }
 
+export async function resetPassword(formData: FormData) {
+  const supabase = await createClient();
+
+  const email = (formData.get('email') as string)?.trim().toLowerCase();
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return redirect(`/forgot-password?error=${encodeURIComponent('Please enter a valid email address')}`);
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login`,
+  });
+
+  if (error) {
+    return redirect(`/forgot-password?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect(`/forgot-password?success=${encodeURIComponent('Check your email for a reset link')}`);
+}
+
 export async function createBusiness(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

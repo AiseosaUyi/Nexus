@@ -315,7 +315,7 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
                       <button
                         onClick={handleInvite}
                         disabled={isInviting || !inviteEmail.trim()}
-                        className="px-3 py-1.5 text-[13px] font-medium bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0"
+                        className="px-3 py-1.5 text-[13px] font-medium bg-accent text-accent-foreground rounded-lg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0"
                       >
                         {isInviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Invite'}
                       </button>
