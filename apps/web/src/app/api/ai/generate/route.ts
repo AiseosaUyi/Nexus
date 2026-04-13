@@ -1,4 +1,4 @@
-import { anthropic } from '@ai-sdk/anthropic';
+import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now();
 
   const result = streamText({
-    model: anthropic('claude-3-5-sonnet-20241022'),
+    model: openai('gpt-4o'),
     system: systemPrompt,
     messages: [{ role: 'user', content: userMessage }],
     maxOutputTokens: 2048,

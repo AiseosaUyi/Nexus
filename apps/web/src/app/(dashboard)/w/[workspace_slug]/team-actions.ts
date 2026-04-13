@@ -136,6 +136,7 @@ export async function inviteMember(
   if (!user) return { error: 'Not authenticated' };
 
   if (!email?.trim()) return { error: 'Email is required' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return { error: 'Please enter a valid email address' };
 
   const { data, error } = await supabase
     .from('invitations')

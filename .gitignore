@@ -10,3 +10,4 @@ dist/
 build/
 .pnpm-debug.log*
 .DS_Store
+.gstack/

@@ -208,7 +208,7 @@ Migrations are plain SQL files in `database/migrations/` and must be applied in 
 3. Update `packages/api/schema.ts` to match
 4. Update RLS policies if needed (check `11_fix_nodes_rls.sql` for the pattern)
 
-**All migrations through `17_node_shares.sql` must be applied for the current codebase.**
+**All migrations through `20_users_workspace_visibility.sql` must be applied for the current codebase.**
 
 **Critical migrations:**
 - `08_realtime.sql` — adds `yjs_snapshot bytea` column to nodes (required for snapshot storage)
