@@ -100,7 +100,7 @@ export async function createNode(payload: {
  */
 export async function updateNode(
   nodeId: string,
-  updates: Partial<Pick<Node, 'title' | 'name' | 'is_name_custom' | 'icon' | 'parent_id' | 'position' | 'is_archived' | 'teamspace_id' | 'is_public' | 'public_slug'>>
+  updates: Partial<Pick<Node, 'title' | 'name' | 'is_name_custom' | 'icon' | 'cover_url' | 'parent_id' | 'position' | 'is_archived' | 'teamspace_id' | 'is_public' | 'public_slug'>>
 ) {
   const supabase = await createClient();
 

@@ -40,6 +40,7 @@ export default function NodePageClient({ node, initialContent, nodeId, userName,
         <PageHeader
           title={node.title || "Untitled"}
           icon={node.icon}
+          coverUrl={node.cover_url}
           nodeId={nodeId}
           isNameCustom={node.is_name_custom}
           isPublic={node.is_public}
