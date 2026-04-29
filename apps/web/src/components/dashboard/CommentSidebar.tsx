@@ -98,6 +98,9 @@ export default function CommentSidebar({
   // Per-thread resolve UX state. 'pending' = spinner; 'done' = green flash;
   // null/absent = idle. Drives the button label + the card transition.
   const [resolveStatus, setResolveStatus] = useState<Record<string, 'pending' | 'done'>>({});
+  // id → {name, email} for the workspace members. Used to render mention
+  // chips in legacy comments where the label wasn't saved.
+  const [members, setMembers] = useState<Record<string, { name: string; email: string | null }>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -134,6 +137,19 @@ export default function CommentSidebar({
         .single();
 
       if (!cancelled) setIsAdmin(membership?.role === 'ADMIN');
+
+      // Pre-fetch members so mention chips can resolve their label even when
+      // it wasn't persisted on the comment node.
+      const { getTeamMembers } = await import(
+        '@/app/(dashboard)/w/[workspace_slug]/actions'
+      );
+      const { data: memberList } = await getTeamMembers(node.business_id);
+      if (cancelled || !memberList) return;
+      const lookup: Record<string, { name: string; email: string | null }> = {};
+      for (const m of memberList as { id: string; name: string; email: string | null }[]) {
+        lookup[m.id] = { name: m.name, email: m.email };
+      }
+      setMembers(lookup);
     })();
     return () => {
       cancelled = true;
@@ -411,7 +427,7 @@ export default function CommentSidebar({
                                 </div>
                               </div>
                             ) : (
-                              <CommentBody content={comment.content} />
+                              <CommentBody content={comment.content} members={members} />
                             )}
                           </div>
                           {isOwn && !isEditing && (

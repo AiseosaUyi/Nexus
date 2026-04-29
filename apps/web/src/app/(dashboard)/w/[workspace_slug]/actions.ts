@@ -730,6 +730,7 @@ async function notifyMentions(opts: {
   const allMentions = extractMentions(opts.commentContent);
   const exclude = new Set([...(opts.excludeMentions || []), opts.commenterId]);
   const targets = allMentions.filter(id => !exclude.has(id));
+  console.log('[notifyMentions] mentions extracted:', allMentions, 'targets after exclude:', targets);
   if (targets.length === 0) return;
 
   const supabase = await createClient();
@@ -739,11 +740,17 @@ async function notifyMentions(opts: {
     .select('node_id, nodes:node_id(title, business_id, businesses:business_id(slug))')
     .eq('id', opts.threadId)
     .single();
-  if (!thread) return;
+  if (!thread) {
+    console.warn('[notifyMentions] thread not found:', opts.threadId);
+    return;
+  }
 
   const node = (thread as any).nodes;
   const business = node?.businesses;
-  if (!node || !business) return;
+  if (!node || !business) {
+    console.warn('[notifyMentions] thread missing node/business join:', { node, business });
+    return;
+  }
 
   const { data: commenter } = await supabase
     .from('users')
@@ -756,25 +763,35 @@ async function notifyMentions(opts: {
     .from('users')
     .select('id, email, full_name')
     .in('id', targets);
-  if (!recipients || recipients.length === 0) return;
+  if (!recipients || recipients.length === 0) {
+    console.warn('[notifyMentions] no recipient users found for ids:', targets);
+    return;
+  }
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || '';
   const commentUrl = `${baseUrl}/w/${business.slug}/n/${thread.node_id}?thread=${opts.threadId}`;
   const snippet = stringifyTiptap(opts.commentContent);
 
+  console.log('[notifyMentions] sending', recipients.length, 'emails from', commenterName, 're:', node.title);
+
   const { sendCommentNotificationEmail } = await import('@/lib/email');
 
   await Promise.all(
-    recipients.map(r =>
-      sendCommentNotificationEmail({
+    recipients.map(async r => {
+      const result = await sendCommentNotificationEmail({
         to: r.email,
         toName: r.full_name || undefined,
         commenterName,
         documentName: node.title || 'Untitled',
         commentSnippet: snippet,
         commentUrl,
-      }).catch(err => console.error('[Comment] notify email failed for', r.email, err))
-    )
+      });
+      if ('error' in result) {
+        console.error('[notifyMentions] email FAILED for', r.email, ':', result.error);
+      } else {
+        console.log('[notifyMentions] email sent to', r.email, 'id:', result.id);
+      }
+    })
   );
 }
 
