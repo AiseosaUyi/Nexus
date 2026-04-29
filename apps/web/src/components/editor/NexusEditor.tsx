@@ -33,10 +33,9 @@ import { syncBlocks, updateYjsSnapshot } from '@/app/(dashboard)/w/[workspace_sl
 import { useDebouncedCallback } from 'use-debounce';
 import { createClient } from '@/lib/supabase/client';
 import { SupabaseYjsProvider } from '@/lib/realtime/SupabaseYjsProvider';
-import AIBubbleMenu from './AIBubbleMenu';
 import AIPromptBar from './AIPromptBar';
 import BlockPickerPanel from './BlockPickerPanel';
-import { Bold, Italic, Strikethrough, Code, Plus } from 'lucide-react';
+import { Bold, Italic, Strikethrough, Code, Plus, MessageSquarePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Walks the editor doc, collects every threadId present on a Comment mark,
@@ -85,6 +84,10 @@ export default function NexusEditor({
   const [toolbarPos, setToolbarPos] = useState<ToolbarPosition | null>(null);
   const [blockHandleTop, setBlockHandleTop] = useState<number | null>(null);
   const [blockPickerOpen, setBlockPickerOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerText, setComposerText] = useState('');
+  const [composerSubmitting, setComposerSubmitting] = useState(false);
+  const composerInputRef = useRef<HTMLTextAreaElement>(null);
   const hoveredBlockEl = useRef<HTMLElement | null>(null);
   
   // 1. Initialize Yjs Doc and Provider
@@ -289,7 +292,8 @@ export default function NexusEditor({
     }
   }, [provider, userName, userColor]);
 
-  // 6. Track selection for floating toolbar position
+  // 6. Track selection for floating toolbar position. Anchored BELOW the
+  // selection so the menu doesn't cover the text the user is reading.
   useEffect(() => {
     if (!editor) return;
     const updateToolbar = () => {
@@ -302,14 +306,57 @@ export default function NexusEditor({
       if (!container) return;
       const containerRect = container.getBoundingClientRect();
       setToolbarPos({
-        top: rect.top - containerRect.top - 8,
+        top: rect.bottom - containerRect.top + 8,
         left: rect.left - containerRect.left + rect.width / 2,
       });
     };
     editor.on('selectionUpdate', updateToolbar);
-    editor.on('blur', () => setToolbarPos(null));
-    return () => { editor.off('selectionUpdate', updateToolbar); };
-  }, [editor]);
+    // Closing on blur is too aggressive once the composer is open — clicking
+    // into the textarea would dismiss the menu. Only blur-close when the
+    // composer is NOT active.
+    const onBlur = () => {
+      if (!composerOpen) setToolbarPos(null);
+    };
+    editor.on('blur', onBlur);
+    return () => {
+      editor.off('selectionUpdate', updateToolbar);
+      editor.off('blur', onBlur);
+    };
+  }, [editor, composerOpen]);
+
+  // Auto-focus the composer textarea once it opens.
+  useEffect(() => {
+    if (composerOpen) {
+      requestAnimationFrame(() => composerInputRef.current?.focus());
+    }
+  }, [composerOpen]);
+
+  // Submit the composer — create thread + first comment in one go, apply the
+  // Tiptap mark to the active selection, dispatch open-sidebar event.
+  const submitComment = useCallback(async () => {
+    if (!editor || !composerText.trim() || composerSubmitting) return;
+    setComposerSubmitting(true);
+    try {
+      const { createCommentThread, addComment } = await import(
+        '@/app/(dashboard)/w/[workspace_slug]/actions'
+      );
+      const { data, error } = await createCommentThread(nodeId);
+      if (error || !data) {
+        console.error('[Comment] create failed:', error);
+        return;
+      }
+      editor.chain().focus().setComment({ threadId: data.id }).run();
+      await addComment(data.id, { text: composerText.trim() });
+      window.dispatchEvent(
+        new CustomEvent('nexus:open-comment', { detail: { threadId: data.id } })
+      );
+      setComposerText('');
+      setComposerOpen(false);
+      setToolbarPos(null);
+    } finally {
+      setComposerSubmitting(false);
+    }
+  }, [editor, nodeId, composerText, composerSubmitting]);
 
   // 7. Cmd+J to toggle AI Prompt Bar / Cmd+S to force-save
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -468,19 +515,34 @@ export default function NexusEditor({
         />
       )}
 
-      {/* Custom Floating Toolbar (shown when text is selected) */}
-      {editor && toolbarPos && (
+      {/* Floating selection toolbar — anchored BELOW the highlighted range so
+          it doesn't cover the text being read. Comment is the prominent action;
+          formatting sits next to it as a secondary cluster. AI is intentionally
+          omitted here (still available via Cmd+J). When Comment is clicked,
+          the bubble morphs into an inline composer so the user types the first
+          comment immediately — no orphan threads. */}
+      {editor && toolbarPos && !composerOpen && (
         <div
           style={{ top: toolbarPos.top, left: toolbarPos.left }}
-          className="absolute z-50 flex items-center gap-0.5 bg-background rounded-lg shadow-popover border border-border p-0.5 -translate-x-1/2 -translate-y-full mb-2 animate-in fade-in zoom-in-95"
+          className="absolute z-50 flex items-center gap-0.5 bg-background rounded-lg shadow-popover border border-border p-0.5 -translate-x-1/2 mt-2 animate-in fade-in zoom-in-95"
           onMouseDown={e => e.preventDefault()}
         >
+          <button
+            onClick={() => setComposerOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 h-7 rounded text-foreground hover:bg-hover transition-colors text-[12px] font-semibold"
+            title="Comment on selection"
+          >
+            <MessageSquarePlus className="w-3.5 h-3.5" strokeWidth={2.2} />
+            Comment
+          </button>
+          <div className="w-px h-4 bg-border mx-0.5" />
           <button
             onClick={() => editor.chain().focus().toggleBold().run()}
             className={cn(
               "w-7 h-7 rounded flex items-center justify-center text-muted hover:bg-hover transition-colors",
               editor.isActive('bold') && "bg-active text-foreground font-bold"
             )}
+            title="Bold"
           >
             <Bold className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
@@ -490,6 +552,7 @@ export default function NexusEditor({
               "w-7 h-7 rounded flex items-center justify-center text-muted hover:bg-hover transition-colors",
               editor.isActive('italic') && "bg-active text-foreground"
             )}
+            title="Italic"
           >
             <Italic className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
@@ -499,6 +562,7 @@ export default function NexusEditor({
               "w-7 h-7 rounded flex items-center justify-center text-muted hover:bg-hover transition-colors",
               editor.isActive('strike') && "bg-active text-foreground"
             )}
+            title="Strikethrough"
           >
             <Strikethrough className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
@@ -508,11 +572,65 @@ export default function NexusEditor({
               "w-7 h-7 rounded flex items-center justify-center text-muted hover:bg-hover transition-colors",
               editor.isActive('code') && "bg-active text-foreground"
             )}
+            title="Inline code"
           >
             <Code className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
-          <div className="w-px h-4 bg-border mx-1" />
-          <AIBubbleMenu editor={editor} />
+        </div>
+      )}
+
+      {/* Inline comment composer — replaces the bubble when Comment is clicked.
+          On desktop sits next to / below the selection; on mobile takes the
+          full available width below the highlighted range. */}
+      {editor && toolbarPos && composerOpen && (
+        <div
+          style={{ top: toolbarPos.top, left: toolbarPos.left }}
+          className="absolute z-50 -translate-x-1/2 mt-2 w-[min(320px,calc(100vw-32px))] bg-background rounded-xl shadow-popover border border-border p-2 animate-in fade-in zoom-in-95"
+          onMouseDown={e => e.preventDefault()}
+        >
+          <textarea
+            ref={composerInputRef}
+            value={composerText}
+            onChange={e => setComposerText(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitComment();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                setComposerOpen(false);
+                setComposerText('');
+                setToolbarPos(null);
+              }
+            }}
+            placeholder="Add a comment…"
+            rows={2}
+            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted/60 outline-none resize-none px-2 py-1.5"
+          />
+          <div className="flex items-center justify-between gap-2 px-1 pt-1 border-t border-border/50">
+            <span className="text-[10px] text-muted/70 font-medium">Enter to send · Shift+Enter for newline</span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setComposerOpen(false);
+                  setComposerText('');
+                  setToolbarPos(null);
+                }}
+                className="px-2 py-1 text-[11px] font-bold text-muted hover:text-foreground rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitComment}
+                disabled={composerSubmitting || !composerText.trim()}
+                className="px-2.5 py-1 bg-cta text-cta-foreground rounded text-[11px] font-bold disabled:opacity-30 transition-opacity"
+              >
+                {composerSubmitting ? 'Sending…' : 'Comment'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

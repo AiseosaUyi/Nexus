@@ -351,18 +351,15 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
               <Clock className="w-3.5 h-3.5 opacity-60" />
               <span>Edited recently</span>
             </div>
-            <button 
-              onClick={async () => {
-                 const { data } = await createCommentThread(nodeId);
-                 if (data && onOpenComments) {
-                    window.dispatchEvent(new CustomEvent('nexus:apply-comment', { detail: { threadId: data.id } }));
-                    onOpenComments();
-                 }
-              }}
+            {/* Header button only opens the sidebar; new threads always come
+                from inline text-selection so every thread has an anchor. */}
+            <button
+              onClick={() => onOpenComments?.()}
               className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-hover text-foreground transition-colors cursor-pointer"
+              title="Show comments"
             >
               <MessageSquare className="w-3.5 h-3.5 opacity-60" />
-              <span className="hidden md:inline">Comment</span>
+              <span className="hidden md:inline">Comments</span>
             </button>
             <div className="relative" ref={shareMenuRef}>
               <button

@@ -73,7 +73,7 @@ function formatTime(iso: string): string {
 }
 
 function authorName(a: Author | null | undefined): string {
-  return a?.full_name || 'Unknown user';
+  return a?.full_name || 'Workspace member';
 }
 
 function authorInitial(a: Author | null | undefined): string {
@@ -257,7 +257,12 @@ export default function CommentSidebar({
   };
 
   const visibleThreads = useMemo(() => {
-    return threads.filter(t => showResolved || !t.is_resolved);
+    return threads
+      // Hide zombie threads — created without a comment ever being posted
+      // (e.g. old pre-migration-22 PageHeader-Comment-button bug). Showing them
+      // as "Unknown user" with no body confused users.
+      .filter(t => (t.comments && t.comments.length > 0) || t.created_by)
+      .filter(t => showResolved || !t.is_resolved);
   }, [threads, showResolved]);
 
   const activeCount = threads.filter(t => !t.is_resolved).length;
