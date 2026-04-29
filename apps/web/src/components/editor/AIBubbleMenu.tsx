@@ -177,7 +177,7 @@ export default function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
         <div className="flex items-center gap-1 bg-background border border-border p-0.5 rounded shadow-sm animate-in fade-in">
           <button
             onClick={handleAccept}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-accent text-white text-[12px] font-bold hover:bg-accent/90 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-accent text-accent-foreground text-[12px] font-bold hover:bg-accent/90 transition-colors cursor-pointer"
           >
             <CheckCircle className="w-3.5 h-3.5" />
             Accept

@@ -179,7 +179,7 @@ export default function NewPageModal({
               />
               <button
                 onClick={handleCreateTeamspace}
-                className="px-3 py-2 bg-cta text-white rounded-lg text-[13px] font-semibold cursor-pointer hover:opacity-90 transition-opacity"
+                className="px-3 py-2 bg-cta text-cta-foreground rounded-lg text-[13px] font-semibold cursor-pointer hover:opacity-90 transition-opacity"
               >
                 Create
               </button>
@@ -209,7 +209,7 @@ export default function NewPageModal({
             className={cn(
               'flex-1 py-2 rounded-xl text-[13px] font-bold transition-all flex items-center justify-center gap-2',
               selected && !isPending
-                ? 'bg-cta text-white hover:opacity-90 cursor-pointer'
+                ? 'bg-cta text-cta-foreground hover:opacity-90 cursor-pointer'
                 : 'bg-foreground/10 text-foreground/30 cursor-not-allowed'
             )}
           >

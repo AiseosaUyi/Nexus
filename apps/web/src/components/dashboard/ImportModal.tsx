@@ -669,7 +669,7 @@ export default function ImportModal({
               className={cn(
                 'flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all cursor-pointer',
                 pendingCount > 0 && !isImporting
-                  ? 'bg-cta text-white hover:bg-cta/90'
+                  ? 'bg-cta text-cta-foreground hover:bg-cta/90'
                   : 'bg-foreground/[0.06] text-foreground/30 cursor-not-allowed'
               )}
             >

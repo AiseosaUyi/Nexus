@@ -79,7 +79,7 @@ export default function RequestAccessForm({ nodeId }: { nodeId: string }) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-2.5 text-[14px] font-medium bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors cursor-pointer"
+        className="w-full py-2.5 text-[14px] font-medium bg-accent text-accent-foreground rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors cursor-pointer"
       >
         {loading ? 'Sending...' : 'Request access'}
       </button>

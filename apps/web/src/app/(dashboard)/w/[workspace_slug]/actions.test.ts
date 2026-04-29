@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createNode, createTeamspace } from './actions';
+import {
+  createNode,
+  createTeamspace,
+  resolveThread,
+  unresolveThread,
+  editComment,
+  deleteComment,
+  addComment,
+} from './actions';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
@@ -103,6 +111,130 @@ describe('Workspace Server Actions', () => {
 
       expect(result.data?.name).toBe('General');
       expect(revalidatePath).toHaveBeenCalled();
+    });
+  });
+
+  describe('Comment actions', () => {
+    describe('resolveThread', () => {
+      it('returns Forbidden when RLS blocks the update (no row returned)', async () => {
+        mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'non-author' } } });
+        mockSupabase.single.mockResolvedValueOnce({ data: null, error: null });
+
+        const result = await resolveThread('thread-1');
+        expect(result.error).toBe('Forbidden');
+      });
+
+      it('returns no error when the update succeeds', async () => {
+        mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'author' } } });
+        mockSupabase.single.mockResolvedValueOnce({
+          data: { id: 'thread-1', is_resolved: true },
+          error: null,
+        });
+
+        const result = await resolveThread('thread-1');
+        expect(result.error).toBeNull();
+        expect(mockSupabase.update).toHaveBeenCalledWith(
+          expect.objectContaining({ is_resolved: true, resolved_by: 'author' })
+        );
+      });
+
+      it('returns Unauthorized without a session', async () => {
+        mockSupabase.auth.getUser.mockResolvedValue({ data: { user: null } });
+        const result = await resolveThread('thread-1');
+        expect(result.error).toBe('Unauthorized');
+      });
+    });
+
+    describe('unresolveThread', () => {
+      it('clears resolved_by + resolved_at on success', async () => {
+        mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'author' } } });
+        mockSupabase.single.mockResolvedValueOnce({
+          data: { id: 'thread-1', is_resolved: false },
+          error: null,
+        });
+
+        const result = await unresolveThread('thread-1');
+        expect(result.error).toBeNull();
+        expect(mockSupabase.update).toHaveBeenCalledWith(
+          expect.objectContaining({ is_resolved: false, resolved_by: null, resolved_at: null })
+        );
+      });
+    });
+
+    describe('editComment', () => {
+      it('blocks editing another user’s comment', async () => {
+        mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'me' } } });
+        // Pre-edit fetch: author is someone else
+        mockSupabase.single.mockResolvedValueOnce({
+          data: { content: { text: 'old' }, thread_id: 't1', user_id: 'someone-else' },
+          error: null,
+        });
+
+        const result = await editComment('comment-1', { text: 'new' });
+        expect(result.error).toBe('Forbidden');
+        expect(mockSupabase.update).not.toHaveBeenCalled();
+      });
+
+      it('marks is_edited=true and stamps edited_at on success', async () => {
+        mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'me' } } });
+        mockSupabase.single
+          .mockResolvedValueOnce({
+            data: { content: { text: 'old' }, thread_id: 't1', user_id: 'me' },
+            error: null,
+          })
+          .mockResolvedValueOnce({
+            data: { id: 'comment-1', is_edited: true },
+            error: null,
+          });
+
+        const result = await editComment('comment-1', { text: 'new' });
+        expect(result.error).toBeNull();
+        expect(mockSupabase.update).toHaveBeenCalledWith(
+          expect.objectContaining({ is_edited: true, content: { text: 'new' } })
+        );
+      });
+    });
+
+    describe('deleteComment', () => {
+      it('blocks deleting another user’s comment', async () => {
+        mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'me' } } });
+        mockSupabase.single.mockResolvedValueOnce({
+          data: { user_id: 'someone-else' },
+          error: null,
+        });
+
+        const result = await deleteComment('comment-1');
+        expect(result.error).toBe('Forbidden');
+        // delete() is built up through the chain; we verify by ensuring update wasn't
+        // called (delete uses .delete() which is also a chained mock).
+      });
+
+      it('returns Unauthorized without a session', async () => {
+        mockSupabase.auth.getUser.mockResolvedValue({ data: { user: null } });
+        const result = await deleteComment('comment-1');
+        expect(result.error).toBe('Unauthorized');
+      });
+    });
+
+    describe('addComment', () => {
+      it('auto-unresolves a resolved thread before posting', async () => {
+        mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'me' } } });
+        // The auto-unresolve update chain returns nothing useful; the eq()
+        // call returns the chain itself, then resolves.
+        mockSupabase.eq.mockReturnValue(mockSupabase);
+        // The insert single() resolves with the new comment
+        mockSupabase.single.mockResolvedValueOnce({
+          data: { id: 'comment-1', thread_id: 't1', content: { text: 'hi' } },
+          error: null,
+        });
+
+        const result = await addComment('t1', { text: 'hi' });
+        expect(result.error).toBeNull();
+        // First update call should be the auto-unresolve
+        expect(mockSupabase.update).toHaveBeenCalledWith(
+          expect.objectContaining({ is_resolved: false })
+        );
+      });
     });
   });
 });

@@ -57,7 +57,14 @@ export default async function NodePage({ params }: NodePageProps) {
 
   // 2. Fetch User Profile for Presence
   const { data: { user } } = await supabase.auth.getUser();
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Anonymous';
+  // We hard-redirect unauthenticated users earlier in this file, so `user` is
+  // guaranteed defined here. Falling back to email-username over an explicit
+  // 'Anonymous' string — comments must always carry a real identity.
+  const userName =
+    user?.user_metadata?.full_name ||
+    user?.email?.split('@')[0] ||
+    user?.email ||
+    'Workspace member';
   // Simple deterministic color based on user ID
   const userColor = `hsl(${parseInt((user?.id || '0').substring(0, 8), 16) % 360}, 70%, 50%)`;
 

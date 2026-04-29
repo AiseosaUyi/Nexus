@@ -25,10 +25,16 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh session on every request
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Refresh session on every request — fail open if auth service is unreachable
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    // Auth service unreachable — let the request pass through.
+    // Protected pages will re-check auth server-side and redirect if needed.
+    return supabaseResponse;
+  }
 
   const { pathname } = request.nextUrl;
 

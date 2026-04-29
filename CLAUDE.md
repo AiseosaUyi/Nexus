@@ -125,7 +125,9 @@ Each action creates a fresh Supabase server client via `createClient()` (from `@
 
 ### Middleware and auth flow
 
-`middleware.ts` refreshes the Supabase session on every request. Unauthenticated users hitting `/w/*` or `/dashboard` are redirected to `/login`; authenticated users on `/login` or `/signup` are redirected to `/dashboard`. The landing page (`/`) is unprotected.
+`middleware.ts` refreshes the Supabase session on every request (fails open on auth errors). Unauthenticated users hitting `/w/*` or `/dashboard` are redirected to `/login`; authenticated users on `/login` or `/signup` are redirected to `/dashboard`. The landing page (`/`) is unprotected. `/forgot-password` sends a reset link via `supabase.auth.resetPasswordForEmail()`.
+
+**Input validation** — `signUp` validates email format and password length (6+), `signIn` validates non-empty, `inviteMember` validates email format. All normalize email to lowercase/trimmed.
 
 **Signup auto-confirms users** — the `signUp` action uses the Supabase admin API (`SUPABASE_SERVICE_ROLE_KEY`) to auto-confirm the user's email when Supabase doesn't return a session, then signs them in immediately. No email verification step.
 
@@ -150,6 +152,10 @@ Each action creates a fresh Supabase server client via `createClient()` (from `@
 - `t/[teamspace_id]/` — teamspace overview (card grid of root pages)
 - `calendar/` — content calendar
 - `updates/` — activity feed
+
+### Design tokens
+
+Button colors MUST use design tokens, never hardcoded `text-white`. Use `bg-cta text-cta-foreground` for primary CTAs and `bg-accent text-accent-foreground` for accent buttons. In dark mode `bg-cta` is white, so `text-white` on `bg-cta` produces invisible text.
 
 ### Component patterns
 
@@ -194,9 +200,17 @@ Server action `importFromURL` in `actions.ts` fetches URLs server-side (avoids C
 
 **BlockType normalization:** Tiptap produces node types like `bulletList`, `orderedList`, `blockquote`, `codeBlock`, but the DB `block_type` enum only accepts `list`, `quote`, `code`, etc. ImportModal and NexusEditor both normalize types during block sync.
 
+### Cover images
+
+`PageHeader` supports cover images via `node.cover_url`. Three sources: curated gallery (gradients + Unsplash URLs in `COVER_GALLERY`), device upload (Supabase Storage `covers` bucket, falls back to compressed data URL), or remove. `cover_url` is persisted via `updateNode(nodeId, { cover_url })`. Covers render as `<img object-cover>` for URLs/data URIs, or `<div style={{ background }}>` for CSS gradients. Icon and cover work independently.
+
+### RLS patterns
+
+The users table RLS allows workspace members to see each other via a `business_members` join (migration 20). Comment tables RLS checks workspace membership through `nodes → business_members` chain (migration 21). When adding new tables with user data, always gate SELECT policies on workspace membership, not just `auth.uid()`.
+
 ### Email (`src/lib/email.ts`)
 
-Uses Resend SDK. Two functions: `sendTeamInviteEmail()` and `sendPageShareEmail()`. Both are fire-and-forget — failures are caught and logged but don't block the invitation/share creation. Requires `RESEND_API_KEY`; falls back to `onboarding@resend.dev` as sender (sandbox mode — only delivers to the Resend account owner's email). For production delivery, set `RESEND_FROM_EMAIL` to a verified domain.
+Uses Resend SDK. Two functions: `sendTeamInviteEmail()` and `sendPageShareEmail()`. Both are fire-and-forget — failures are caught and logged but don't block the invitation/share creation. **Currently disabled** — Resend requires a verified custom domain (not a Vercel URL). Invites work via shareable links instead. To enable: add a custom domain in Resend dashboard, set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in env.
 
 ---
 
@@ -208,12 +222,14 @@ Migrations are plain SQL files in `database/migrations/` and must be applied in 
 3. Update `packages/api/schema.ts` to match
 4. Update RLS policies if needed (check `11_fix_nodes_rls.sql` for the pattern)
 
-**All migrations through `17_node_shares.sql` must be applied for the current codebase.**
+**All migrations through `21_fix_comments_rls.sql` must be applied for the current codebase.**
 
 **Critical migrations:**
 - `08_realtime.sql` — adds `yjs_snapshot bytea` column to nodes (required for snapshot storage)
 - `16_save_snapshot_rpc.sql` — adds `save_yjs_snapshot(p_node_id uuid, p_snapshot_hex text)` RPC function that uses `decode(p_snapshot_hex, 'hex')` to bypass PostgREST JSON encoding issues with bytea columns
 - `17_node_shares.sql` — adds `node_shares` and `access_requests` tables with RLS policies for per-node sharing and access request workflow
+- `20_users_workspace_visibility.sql` — allows workspace members to see each other's profiles (required for member list display)
+- `21_fix_comments_rls.sql` — locks comment threads/comments to workspace members only (security fix)
 
 > When querying nullable FK columns in Supabase (e.g. `parent_id`, `teamspace_id`), use `.is('col', null)` not `.eq('col', null)` — the latter silently returns no rows.
 
@@ -235,7 +251,7 @@ Migrations are plain SQL files in `database/migrations/` and must be applied in 
 **E2E tests** (Playwright): in `apps/web/e2e/`. Three Playwright projects:
 - `setup` — auth only (runs once)
 - `chromium-public` — unauthenticated flows (`smoke`, `auth` specs)
-- `chromium-auth` — authenticated flows (`create-page`, `sidebar`, `import`, etc.)
+- `chromium-auth` — authenticated flows (`create-page`, `sidebar`, `import`, `cover-image`, etc.)
 
 New E2E spec files must be added to the `testMatch` regex in `apps/web/playwright.config.ts`.
 
@@ -256,7 +272,7 @@ Copy `apps/web/.env.example` → `apps/web/.env.local` and fill in values.
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-ANTHROPIC_API_KEY=              # AI bubble menu
+OPENAI_API_KEY=                # AI bubble menu
 ```
 
 **Optional — email (Resend):**
@@ -277,3 +293,23 @@ NEXT_PUBLIC_POSTHOG_HOST=       # Defaults to https://app.posthog.com
 E2E_TEST_EMAIL=
 E2E_TEST_PASSWORD=
 ```
+
+## Skill routing
+
+When the user's request matches an available skill, ALWAYS invoke it using the Skill
+tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
+The skill has specialized workflows that produce better results than ad-hoc answers.
+
+Key routing rules:
+- Product ideas, "is this worth building", brainstorming → invoke office-hours
+- Bugs, errors, "why is this broken", 500 errors → invoke investigate
+- Ship, deploy, push, create PR → invoke ship
+- QA, test the site, find bugs → invoke qa
+- Code review, check my diff → invoke review
+- Update docs after shipping → invoke document-release
+- Weekly retro → invoke retro
+- Design system, brand → invoke design-consultation
+- Visual audit, design polish → invoke design-review
+- Architecture review → invoke plan-eng-review
+- Save progress, checkpoint, resume → invoke checkpoint
+- Code quality, health check → invoke health

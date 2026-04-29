@@ -7,9 +7,16 @@ import { createClient } from '@/lib/supabase/server';
 export async function signUp(formData: FormData) {
   const supabase = await createClient();
 
-  const email = formData.get('email') as string;
+  const email = (formData.get('email') as string)?.trim().toLowerCase();
   const password = formData.get('password') as string;
-  const fullName = formData.get('full_name') as string;
+  const fullName = (formData.get('full_name') as string)?.trim();
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return redirect(`/signup?error=${encodeURIComponent('Please enter a valid email address')}`);
+  }
+  if (!password || password.length < 6) {
+    return redirect(`/signup?error=${encodeURIComponent('Password must be at least 6 characters')}`);
+  }
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -46,8 +53,12 @@ export async function signUp(formData: FormData) {
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
 
-  const email = formData.get('email') as string;
+  const email = (formData.get('email') as string)?.trim().toLowerCase();
   const password = formData.get('password') as string;
+
+  if (!email || !password) {
+    return redirect(`/login?error=${encodeURIComponent('Email and password are required')}`);
+  }
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -64,6 +75,26 @@ export async function signOut() {
   await supabase.auth.signOut();
   revalidatePath('/', 'layout');
   redirect('/login');
+}
+
+export async function resetPassword(formData: FormData) {
+  const supabase = await createClient();
+
+  const email = (formData.get('email') as string)?.trim().toLowerCase();
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return redirect(`/forgot-password?error=${encodeURIComponent('Please enter a valid email address')}`);
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login`,
+  });
+
+  if (error) {
+    return redirect(`/forgot-password?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect(`/forgot-password?success=${encodeURIComponent('Check your email for a reset link')}`);
 }
 
 export async function createBusiness(formData: FormData) {

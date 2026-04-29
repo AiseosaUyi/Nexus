@@ -9,6 +9,7 @@ import {
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/server';
 import TeamSettingsModal from '@/components/business/TeamSettingsModal';
+import { getWorkspaceMembers } from '../team-actions';
 
 interface SettingsProps {
   params: Promise<{
@@ -46,6 +47,10 @@ export default async function SettingsPage({ params }: SettingsProps) {
       email: user.email || '',
     };
   }
+
+  // Fetch all workspace members server-side
+  const allMembers = business ? await getWorkspaceMembers(business.id) : [];
+  const otherMembers = allMembers.filter((m: any) => m.users?.id !== user?.id);
 
   return (
     <div className="flex flex-col h-full bg-background overflow-y-auto selection:bg-accent/30 custom-scrollbar">
@@ -93,25 +98,52 @@ export default async function SettingsPage({ params }: SettingsProps) {
           <section className="space-y-6">
              <div className="flex items-center gap-2 border-b border-border/5 pb-4">
                <Users className="w-4 h-4 text-muted/60" />
-               <h3 className="text-sm font-bold text-foreground">Team Management</h3>
+               <h3 className="text-sm font-bold text-foreground">Team Members ({allMembers.length})</h3>
              </div>
-             <div className="space-y-4 pt-2">
+             <div className="space-y-2 pt-2">
                 {/* Current user */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-sidebar/30 border border-border/10 hover:bg-sidebar/50 transition-all group">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-sidebar/30 border border-border/10">
                    <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-cta/10 rounded-full flex items-center justify-center text-cta font-bold uppercase">
                         {(currentUser.name || currentUser.email)[0]}
                       </div>
                       <div className="flex flex-col">
-                         <span className="text-sm font-bold text-foreground">{currentUser.name || currentUser.email}</span>
-                         <span className="text-[11px] text-muted">Owner (You)</span>
+                         <span className="text-sm font-bold text-foreground">
+                           {currentUser.name || currentUser.email}
+                           <span className="ml-2 text-[10px] text-muted font-normal">(You)</span>
+                         </span>
+                         <span className="text-[11px] text-muted">{currentUser.email}</span>
                       </div>
                    </div>
-                   <div className="flex items-center gap-3">
-                      <span className="px-2 py-0.5 rounded-full bg-cta/5 border border-cta/10 text-cta text-[10px] font-black uppercase tracking-widest">{currentRole}</span>
-                      <ChevronRight className="w-4 h-4 text-muted/20" />
-                   </div>
+                   <span className="px-2 py-0.5 rounded-full bg-cta/5 border border-cta/10 text-cta text-[10px] font-black uppercase tracking-widest">{currentRole}</span>
                 </div>
+
+                {/* Other members */}
+                {otherMembers.map((member: any) => {
+                  const memberUser = member.users;
+                  const name = memberUser?.full_name || memberUser?.email || 'Unknown';
+                  const email = memberUser?.email || '';
+                  const initials = name.substring(0, 2).toUpperCase();
+                  const roleLabel = member.role === 'ADMIN' ? 'Admin' : member.role === 'EDITOR' ? 'Member' : 'Guest';
+                  return (
+                    <div key={member.id} className="flex items-center justify-between p-4 rounded-xl bg-sidebar/30 border border-border/10 hover:bg-sidebar/50 transition-all">
+                       <div className="flex items-center gap-4">
+                          {memberUser?.avatar_url ? (
+                            <img src={memberUser.avatar_url} alt={name} className="w-10 h-10 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-10 h-10 bg-accent/10 rounded-full flex items-center justify-center text-accent font-bold uppercase text-sm">
+                              {initials}
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                             <span className="text-sm font-bold text-foreground">{name}</span>
+                             <span className="text-[11px] text-muted">{email}</span>
+                          </div>
+                       </div>
+                       <span className="px-2 py-0.5 rounded-full bg-foreground/5 border border-border/10 text-muted text-[10px] font-black uppercase tracking-widest">{roleLabel}</span>
+                    </div>
+                  );
+                })}
 
                 {/* Invite button — opens TeamSettingsModal */}
                 {business && (

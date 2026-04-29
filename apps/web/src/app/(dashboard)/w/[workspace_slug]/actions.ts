@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { Node, NodeType, CreateNodePayload, Block, BlockType, Teamspace } from '@nexus/api/schema';
+import { extractMentions, stringifyTiptap } from '@/lib/extractMentions';
 
 /**
  * Updates a node's Yjs binary snapshot for real-time synchronization.
@@ -100,7 +101,7 @@ export async function createNode(payload: {
  */
 export async function updateNode(
   nodeId: string,
-  updates: Partial<Pick<Node, 'title' | 'name' | 'is_name_custom' | 'icon' | 'parent_id' | 'position' | 'is_archived' | 'teamspace_id' | 'is_public' | 'public_slug'>>
+  updates: Partial<Pick<Node, 'title' | 'name' | 'is_name_custom' | 'icon' | 'cover_url' | 'parent_id' | 'position' | 'is_archived' | 'teamspace_id' | 'is_public' | 'public_slug'>>
 ) {
   const supabase = await createClient();
 
@@ -502,9 +503,13 @@ export async function resolveAccessRequest(requestId: string, approve: boolean) 
 
 export async function createCommentThread(nodeId: string) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { data: null, error: 'Unauthorized' };
+
   const { data, error } = await supabase
     .from('comment_threads')
-    .insert({ node_id: nodeId })
+    .insert({ node_id: nodeId, created_by: user.id })
     .select()
     .single();
 
@@ -516,18 +521,26 @@ export async function createCommentThread(nodeId: string) {
   return { data, error: null };
 }
 
-export async function addComment(threadId: string, content: any) {
+export async function addComment(threadId: string, content: unknown) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return { data: null, error: 'Unauthorized' };
+
+  // Auto-unresolve if posting to a resolved thread (D1 mitigation: prevents
+  // "buried reply" on threads someone else resolved mid-discussion).
+  await supabase
+    .from('comment_threads')
+    .update({ is_resolved: false, resolved_by: null, resolved_at: null })
+    .eq('id', threadId)
+    .eq('is_resolved', true);
 
   const { data, error } = await supabase
     .from('comments')
     .insert({
       thread_id: threadId,
       user_id: user.id,
-      content
+      content,
     })
     .select()
     .single();
@@ -537,36 +550,232 @@ export async function addComment(threadId: string, content: any) {
     return { data: null, error: error.message };
   }
 
+  // Fire mention notifications without awaiting — comment save latency must
+  // not depend on email delivery.
+  notifyMentions({
+    threadId,
+    commentContent: content,
+    commenterId: user.id,
+  }).catch(err => console.error('[Comment] notifyMentions failed:', err));
+
   return { data, error: null };
+}
+
+export async function editComment(commentId: string, content: unknown) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { data: null, error: 'Unauthorized' };
+
+  // Capture pre-edit content so we can diff mentions and only notify newly
+  // added mentions, not re-notify everyone in the original comment.
+  const { data: prev } = await supabase
+    .from('comments')
+    .select('content, thread_id, user_id')
+    .eq('id', commentId)
+    .single();
+
+  if (!prev || prev.user_id !== user.id) {
+    return { data: null, error: 'Forbidden' };
+  }
+
+  const { data, error } = await supabase
+    .from('comments')
+    .update({
+      content,
+      is_edited: true,
+      edited_at: new Date().toISOString(),
+    })
+    .eq('id', commentId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[Comment] Error editing comment:', error);
+    return { data: null, error: error.message };
+  }
+
+  // Notify only newly added mentions.
+  notifyMentions({
+    threadId: prev.thread_id,
+    commentContent: content,
+    commenterId: user.id,
+    excludeMentions: extractMentions(prev.content),
+  }).catch(err => console.error('[Comment] notifyMentions (edit) failed:', err));
+
+  return { data, error: null };
+}
+
+export async function deleteComment(commentId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { error: 'Unauthorized' };
+
+  // RLS already enforces auth.uid() = user_id, but double-checking here gives
+  // a clear error message instead of "0 rows affected".
+  const { data: existing } = await supabase
+    .from('comments')
+    .select('user_id')
+    .eq('id', commentId)
+    .single();
+
+  if (!existing || existing.user_id !== user.id) {
+    return { error: 'Forbidden' };
+  }
+
+  const { error } = await supabase.from('comments').delete().eq('id', commentId);
+
+  if (error) {
+    console.error('[Comment] Error deleting comment:', error);
+    return { error: error.message };
+  }
+
+  return { error: null };
+}
+
+export async function resolveThread(threadId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { error: 'Unauthorized' };
+
+  // RLS gates this to author or admin (migration 22). The update will simply
+  // affect 0 rows for unauthorized users; surface that as Forbidden.
+  const { data, error } = await supabase
+    .from('comment_threads')
+    .update({
+      is_resolved: true,
+      resolved_by: user.id,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq('id', threadId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[Comment] Error resolving thread:', error);
+    return { error: error.message };
+  }
+  if (!data) return { error: 'Forbidden' };
+
+  return { error: null };
+}
+
+export async function unresolveThread(threadId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { error: 'Unauthorized' };
+
+  const { data, error } = await supabase
+    .from('comment_threads')
+    .update({ is_resolved: false, resolved_by: null, resolved_at: null })
+    .eq('id', threadId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[Comment] Error unresolving thread:', error);
+    return { error: error.message };
+  }
+  if (!data) return { error: 'Forbidden' };
+
+  return { error: null };
 }
 
 export async function getCommentsForNode(nodeId: string) {
   const supabase = await createClient();
-  const { data: threads, error: threadError } = await supabase
-    .from('comment_threads')
-    .select('*, comments(*)')
-    .eq('node_id', nodeId);
 
-  if (threadError) {
-    console.error('[Comment] Error fetching threads:', threadError);
-    return { data: [], error: threadError.message };
+  // Single round-trip: threads + nested comments + author join + resolver join.
+  const { data: threads, error } = await supabase
+    .from('comment_threads')
+    .select(`
+      *,
+      resolver:resolved_by(id, full_name, avatar_url),
+      creator:created_by(id, full_name, avatar_url),
+      comments(*, author:user_id(id, full_name, avatar_url))
+    `)
+    .eq('node_id', nodeId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('[Comment] Error fetching threads:', error);
+    return { data: [], error: error.message };
   }
 
-  // Manually fetch user info for comments (Supabase join can be tricky with auth.users)
-  const userIds = Array.from(new Set(threads.flatMap(t => t.comments.map((c: any) => c.user_id))));
-  const { data: users } = await supabase.from('users').select('id, full_name, avatar_url').in('id', userIds);
-  const userMap = Object.fromEntries((users || []).map(u => [u.id, u]));
-
-  const data = threads.map(t => ({
+  const data = (threads || []).map(t => ({
     ...t,
-    comments: t.comments.map((c: any) => ({
-      ...c,
-      author: userMap[c.user_id] || { full_name: 'Unknown User' }
-    })).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    comments: ((t.comments || []) as Array<{ created_at: string }>).slice().sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    ),
   }));
 
   return { data, error: null };
 }
+
+/**
+ * Fires comment-mention notification emails. Fire-and-forget — never await
+ * from request-path actions. `excludeMentions` lets edit flows skip already-
+ * notified users.
+ */
+async function notifyMentions(opts: {
+  threadId: string;
+  commentContent: unknown;
+  commenterId: string;
+  excludeMentions?: string[];
+}): Promise<void> {
+  const allMentions = extractMentions(opts.commentContent);
+  const exclude = new Set([...(opts.excludeMentions || []), opts.commenterId]);
+  const targets = allMentions.filter(id => !exclude.has(id));
+  if (targets.length === 0) return;
+
+  const supabase = await createClient();
+
+  const { data: thread } = await supabase
+    .from('comment_threads')
+    .select('node_id, nodes:node_id(title, business_id, businesses:business_id(slug))')
+    .eq('id', opts.threadId)
+    .single();
+  if (!thread) return;
+
+  const node = (thread as any).nodes;
+  const business = node?.businesses;
+  if (!node || !business) return;
+
+  const { data: commenter } = await supabase
+    .from('users')
+    .select('full_name, email')
+    .eq('id', opts.commenterId)
+    .single();
+  const commenterName = commenter?.full_name || commenter?.email?.split('@')[0] || 'Someone';
+
+  const { data: recipients } = await supabase
+    .from('users')
+    .select('id, email, full_name')
+    .in('id', targets);
+  if (!recipients || recipients.length === 0) return;
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || '';
+  const commentUrl = `${baseUrl}/w/${business.slug}/n/${thread.node_id}?thread=${opts.threadId}`;
+  const snippet = stringifyTiptap(opts.commentContent);
+
+  const { sendCommentNotificationEmail } = await import('@/lib/email');
+
+  await Promise.all(
+    recipients.map(r =>
+      sendCommentNotificationEmail({
+        to: r.email,
+        toName: r.full_name || undefined,
+        commenterName,
+        documentName: node.title || 'Untitled',
+        commentSnippet: snippet,
+        commentUrl,
+      }).catch(err => console.error('[Comment] notify email failed for', r.email, err))
+    )
+  );
+}
+
 
 export async function getTeamMembers(businessId: string) {
   const supabase = await createClient();

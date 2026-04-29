@@ -35,6 +35,7 @@ import type { NodeShare } from '@nexus/api/schema';
 interface PageHeaderProps {
   title: string;
   icon?: string | null;
+  coverUrl?: string | null;
   nodeId: string;
   isNameCustom?: boolean;
   isPublic?: boolean;
@@ -47,7 +48,31 @@ interface PageHeaderProps {
 
 const EMOJIS = ['📄', '📝', '📓', '📚', '💡', '🚀', '🎯', '🎨', '🧠', '🛠️', '📅', '✅', '⭐', '🔥', '🌍', '🏠'];
 
-export default function PageHeader({ title: initialTitle, icon: initialIcon, nodeId, isNameCustom = false, isPublic: initialIsPublic = false, onOpenComments, onImport, teamspace, workspaceSlug, isCalendarEntry }: PageHeaderProps) {
+// ─── Cover Gallery ──────────────────────────────────────────────────────────
+const COVER_GALLERY = [
+  // Gradients
+  { url: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', label: 'Purple Haze' },
+  { url: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', label: 'Pink Sunset' },
+  { url: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', label: 'Ocean Blue' },
+  { url: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', label: 'Mint Fresh' },
+  { url: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', label: 'Warm Glow' },
+  { url: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', label: 'Lavender' },
+  { url: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', label: 'Peach' },
+  { url: 'linear-gradient(135deg, #667eea 0%, #f093fb 100%)', label: 'Twilight' },
+  { url: 'linear-gradient(135deg, #0c3483 0%, #a2b6df 100%)', label: 'Deep Sea' },
+  { url: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', label: 'Midnight' },
+  // Unsplash (free to use, no API key needed for hotlinking)
+  { url: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1200&q=80', label: 'Mountains' },
+  { url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80', label: 'Beach' },
+  { url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1200&q=80', label: 'Forest' },
+  { url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&q=80', label: 'Space' },
+  { url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&q=80', label: 'Abstract' },
+  { url: 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=1200&q=80', label: 'Marble' },
+  { url: 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1200&q=80', label: 'Dark Sky' },
+  { url: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=1200&q=80', label: 'Minimal Dark' },
+];
+
+export default function PageHeader({ title: initialTitle, icon: initialIcon, coverUrl: initialCoverUrl, nodeId, isNameCustom = false, isPublic: initialIsPublic = false, onOpenComments, onImport, teamspace, workspaceSlug, isCalendarEntry }: PageHeaderProps) {
   const router = useRouter();
   const params = useParams();
   const routeSlug = params?.workspace_slug as string;
@@ -67,7 +92,9 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
   const shareMenuRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
-  const [coverUrl, setCoverUrl] = useState<string | null>(null); // To be linked to database later
+  const [coverUrl, setCoverUrl] = useState<string | null>(initialCoverUrl ?? null);
+  const [isCoverPickerOpen, setIsCoverPickerOpen] = useState(false);
+  const coverFileRef = useRef<HTMLInputElement>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -185,12 +212,52 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
     debouncedUpdate(title, null);
   };
 
-  const addCover = () => {
-    setCoverUrl('linear-gradient(to right, #2383e220, #2383e205)');
+  const setCover = async (url: string | null) => {
+    setCoverUrl(url);
+    setIsCoverPickerOpen(false);
+    await updateNode(nodeId, { cover_url: url });
   };
 
-  const removeCover = () => {
-    setCoverUrl(null);
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const supabase = createClient();
+
+    // Upload to Supabase Storage (covers bucket)
+    const ext = file.name.split('.').pop() || 'jpg';
+    const filePath = `${nodeId}/cover-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('covers')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      // Bucket may not exist — fall back to object URL for preview + log error
+      console.error('[Cover] Upload failed:', uploadError.message);
+      // Fallback: compress and use data URL
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = async () => {
+        const maxW = 1200;
+        const scale = Math.min(1, maxW / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.7);
+        setCover(compressed);
+      };
+      img.src = URL.createObjectURL(file);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('covers')
+      .getPublicUrl(filePath);
+
+    setCover(publicUrl);
   };
 
   const handleDuplicate = async () => {
@@ -212,10 +279,20 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
       {/* Cover Image Area */}
       {coverUrl ? (
         <div className="relative w-full h-[30vh] min-h-[160px] group/cover overflow-hidden mb-8">
-           <div className="w-full h-full bg-sidebar/50" style={{ background: coverUrl }} />
-           <div className="absolute bottom-4 right-[calc(50%-480px)] opacity-0 group-hover/cover:opacity-100 transition-opacity">
-              <button 
-                onClick={removeCover}
+           {coverUrl.startsWith('linear-gradient') ? (
+             <div className="w-full h-full" style={{ background: coverUrl }} />
+           ) : (
+             <img src={coverUrl} alt="" className="w-full h-full object-cover" />
+           )}
+           <div className="absolute bottom-4 right-[calc(50%-480px)] flex gap-2 opacity-0 group-hover/cover:opacity-100 transition-opacity">
+              <button
+                onClick={() => setIsCoverPickerOpen(true)}
+                className="px-3 py-1.5 bg-background/80 hover:bg-background text-foreground/70 hover:text-foreground text-xs font-bold rounded-md border border-border/10 backdrop-blur-md transition-all cursor-pointer"
+              >
+                Change cover
+              </button>
+              <button
+                onClick={() => setCover(null)}
                 className="px-3 py-1.5 bg-background/80 hover:bg-background text-foreground/70 hover:text-foreground text-xs font-bold rounded-md border border-border/10 backdrop-blur-md transition-all cursor-pointer"
               >
                 Remove cover
@@ -315,7 +392,7 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
                       <button
                         onClick={handleInvite}
                         disabled={isInviting || !inviteEmail.trim()}
-                        className="px-3 py-1.5 text-[13px] font-medium bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0"
+                        className="px-3 py-1.5 text-[13px] font-medium bg-accent text-accent-foreground rounded-lg hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0"
                       >
                         {isInviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Invite'}
                       </button>
@@ -451,21 +528,25 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
       )}
 
       <div className="w-full max-w-full md:max-w-4xl mx-auto px-6 flex flex-col relative">
-        {/* Buttons appearing on hover (or persistent if icon missing) */}
-        {!icon && !coverUrl && (
+        {/* Buttons appearing on hover — show Add icon if no icon, show Add cover if no cover */}
+        {(!icon || !coverUrl) && (
           <div className="flex items-center gap-3 opacity-0 group-hover/header:opacity-100 transition-opacity mb-4 -ml-1">
-            <button 
-              onClick={() => setIsIconPickerOpen(true)}
-              className="flex items-center gap-1.5 px-2 py-1 text-muted hover:bg-hover rounded transition-all text-[14px] font-medium cursor-pointer"
-            >
-              <Smile className="w-4 h-4 opacity-50" /> Add icon
-            </button>
-            <button 
-              onClick={addCover}
-              className="flex items-center gap-1.5 px-2 py-1 text-muted hover:bg-hover rounded transition-all text-[14px] font-medium cursor-pointer"
-            >
-              <ImageIcon className="w-4 h-4 opacity-50" /> Add cover
-            </button>
+            {!icon && (
+              <button
+                onClick={() => setIsIconPickerOpen(true)}
+                className="flex items-center gap-1.5 px-2 py-1 text-muted hover:bg-hover rounded transition-all text-[14px] font-medium cursor-pointer"
+              >
+                <Smile className="w-4 h-4 opacity-50" /> Add icon
+              </button>
+            )}
+            {!coverUrl && (
+              <button
+                onClick={() => setIsCoverPickerOpen(true)}
+                className="flex items-center gap-1.5 px-2 py-1 text-muted hover:bg-hover rounded transition-all text-[14px] font-medium cursor-pointer"
+              >
+                <ImageIcon className="w-4 h-4 opacity-50" /> Add cover
+              </button>
+            )}
           </div>
         )}
 
@@ -516,8 +597,58 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, nod
           </div>
         )}
 
+        {/* Cover Picker */}
+        {isCoverPickerOpen && (
+          <div className="absolute z-50 top-0 left-0 right-0 bg-background border border-border rounded-xl shadow-popover p-4 animate-in zoom-in-95 duration-150 ring-1 ring-black/5 max-w-lg mx-auto mt-2">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-foreground">Choose a cover</h3>
+              <button onClick={() => setIsCoverPickerOpen(false)} className="p-1 hover:bg-hover rounded transition-colors cursor-pointer text-muted hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Upload button */}
+            <button
+              onClick={() => coverFileRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 py-2.5 mb-3 rounded-lg border border-dashed border-border text-sm text-muted hover:text-foreground hover:border-foreground/30 transition-colors cursor-pointer"
+            >
+              <Upload className="w-4 h-4" />
+              Upload from device
+            </button>
+            <input
+              ref={coverFileRef}
+              type="file"
+              accept="image/*"
+              onChange={handleCoverUpload}
+              className="hidden"
+            />
+
+            {/* Gallery */}
+            <p className="text-[10px] font-bold uppercase tracking-widest text-foreground/30 mb-2">Gallery</p>
+            <div className="grid grid-cols-4 gap-1.5 max-h-[240px] overflow-y-auto custom-scrollbar">
+              {COVER_GALLERY.map((cover) => (
+                <button
+                  key={cover.label}
+                  onClick={() => setCover(cover.url)}
+                  className="relative aspect-[16/9] rounded-lg overflow-hidden border border-border/30 hover:border-accent/50 transition-all cursor-pointer group/thumb"
+                  title={cover.label}
+                >
+                  {cover.url.startsWith('linear-gradient') ? (
+                    <div className="w-full h-full" style={{ background: cover.url }} />
+                  ) : (
+                    <img src={cover.url} alt={cover.label} className="w-full h-full object-cover" loading="lazy" />
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/20 transition-colors flex items-end p-1">
+                    <span className="text-[9px] text-white font-medium opacity-0 group-hover/thumb:opacity-100 transition-opacity drop-shadow-sm">{cover.label}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Editable Title */}
-        <h1 
+        <h1
           ref={titleRef}
           contentEditable
           suppressContentEditableWarning
