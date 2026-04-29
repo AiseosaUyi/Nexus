@@ -6,21 +6,17 @@ import {
   MessageSquare,
   CheckCircle2,
   Send,
-  MoreHorizontal,
   User as UserIcon,
-  Eye,
-  EyeOff,
   Trash2,
   Pencil,
-  RotateCcw,
   AlertCircle,
+  MoreHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   addComment,
   getCommentsForNode,
   resolveThread,
-  unresolveThread,
   editComment,
   deleteComment,
 } from '@/app/(dashboard)/w/[workspace_slug]/actions';
@@ -38,6 +34,7 @@ interface Author {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
+  email: string | null;
 }
 
 interface Comment {
@@ -73,12 +70,17 @@ function formatTime(iso: string): string {
 }
 
 function authorName(a: Author | null | undefined): string {
-  return a?.full_name || 'Workspace member';
+  if (!a) return 'Workspace member';
+  if (a.full_name?.trim()) return a.full_name.trim();
+  // Fall back to email username so users created before the metadata-sync
+  // trigger still get a recognizable identity (e.g. "aise" from aise@x.com).
+  if (a.email) return a.email.split('@')[0];
+  return 'Workspace member';
 }
 
 function authorInitial(a: Author | null | undefined): string {
-  const name = a?.full_name?.trim();
-  return name ? name.charAt(0).toUpperCase() : '?';
+  const name = authorName(a);
+  return name === 'Workspace member' ? '?' : name.charAt(0).toUpperCase();
 }
 
 export default function CommentSidebar({
@@ -93,7 +95,6 @@ export default function CommentSidebar({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [presentThreadIds, setPresentThreadIds] = useState<Set<string>>(new Set());
-  const [showResolved, setShowResolved] = useState(false);
   const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
@@ -208,17 +209,19 @@ export default function CommentSidebar({
     fetchComments();
   };
 
-  const handleResolve = async (threadId: string, isResolved: boolean) => {
+  const handleResolve = async (threadId: string) => {
     setBusy(true);
-    const result = isResolved
-      ? await unresolveThread(threadId)
-      : await resolveThread(threadId);
+    const result = await resolveThread(threadId);
     setBusy(false);
     if (result.error) {
       console.error('[CommentSidebar] resolve error:', result.error);
-      // RLS will surface "Forbidden" for non-author non-admin
       return;
     }
+    // Tell the editor to drop the yellow comment-mark for this thread so
+    // resolved text doesn't keep highlighting after the conversation is closed.
+    window.dispatchEvent(
+      new CustomEvent('nexus:thread-resolved', { detail: { threadId } })
+    );
     fetchComments();
   };
 
@@ -258,15 +261,15 @@ export default function CommentSidebar({
 
   const visibleThreads = useMemo(() => {
     return threads
-      // Hide zombie threads — created without a comment ever being posted
-      // (e.g. old pre-migration-22 PageHeader-Comment-button bug). Showing them
-      // as "Unknown user" with no body confused users.
+      // Hide zombies — threads with zero comments and no creator (created via
+      // the old PageHeader Comment-button bug).
       .filter(t => (t.comments && t.comments.length > 0) || t.created_by)
-      .filter(t => showResolved || !t.is_resolved);
-  }, [threads, showResolved]);
+      // Resolved threads are hidden entirely. Resolving = "this is done, get
+      // it out of my way" rather than archiving for later review.
+      .filter(t => !t.is_resolved);
+  }, [threads]);
 
-  const activeCount = threads.filter(t => !t.is_resolved).length;
-  const resolvedCount = threads.filter(t => t.is_resolved).length;
+  const activeCount = visibleThreads.length;
 
   if (!isOpen) return null;
 
@@ -281,25 +284,13 @@ export default function CommentSidebar({
             {activeCount}
           </span>
         </div>
-        <div className="flex items-center gap-1">
-          {resolvedCount > 0 && (
-            <button
-              onClick={() => setShowResolved(v => !v)}
-              className="flex items-center gap-1 px-2 py-1 hover:bg-hover rounded transition-colors text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
-              title={showResolved ? 'Hide resolved' : 'Show resolved'}
-            >
-              {showResolved ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-              {resolvedCount} resolved
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-hover rounded transition-colors"
-            aria-label="Close comments"
-          >
-            <X className="w-4 h-4 text-muted" />
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          className="p-1 hover:bg-hover rounded transition-colors"
+          aria-label="Close comments"
+        >
+          <X className="w-4 h-4 text-muted" />
+        </button>
       </div>
 
       {/* Threads */}
@@ -310,12 +301,10 @@ export default function CommentSidebar({
               <MessageSquare className="w-6 h-6 text-muted-foreground" />
             </div>
             <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
-              {threads.length === 0 ? 'No comments yet' : 'All resolved'}
+              No comments yet
             </p>
             <p className="text-[11px] mt-1 font-medium leading-relaxed text-muted-foreground">
-              {threads.length === 0
-                ? 'Highlight text in the document and click "Add comment" to start a discussion.'
-                : 'Toggle "show resolved" above to see closed threads.'}
+              Highlight text in the document to start a discussion.
             </p>
           </div>
         ) : (
@@ -332,10 +321,8 @@ export default function CommentSidebar({
                 onClick={() => handleSelectThread(thread)}
                 className={cn(
                   'group relative flex flex-col rounded-xl border p-3 transition-all cursor-pointer',
-                  thread.is_resolved
-                    ? 'bg-sidebar/10 border-border/5 opacity-60 hover:opacity-100'
-                    : 'bg-sidebar/30 border-border/5 hover:border-border/20',
-                  isActive && 'bg-sidebar border-cta/30 shadow-sm opacity-100'
+                  'bg-sidebar/30 border-border/5 hover:border-border/20',
+                  isActive && 'bg-sidebar border-cta/30 shadow-sm'
                 )}
               >
                 {/* Status row */}
@@ -347,32 +334,18 @@ export default function CommentSidebar({
                     <span className="text-[12px] font-bold text-foreground/80 truncate">
                       {authorName(author)}
                     </span>
-                    {thread.is_resolved && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Resolved
-                      </span>
-                    )}
                   </div>
                   {canResolve && (
                     <button
                       onClick={e => {
                         e.stopPropagation();
-                        handleResolve(thread.id, thread.is_resolved);
+                        handleResolve(thread.id);
                       }}
                       disabled={busy}
                       className="opacity-0 group-hover:opacity-100 px-2 py-1 hover:bg-background rounded text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all flex items-center gap-1"
-                      title={thread.is_resolved ? 'Reopen' : 'Resolve'}
+                      title="Mark resolved (removes highlight)"
                     >
-                      {thread.is_resolved ? (
-                        <>
-                          <RotateCcw className="w-3 h-3" /> Reopen
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-3 h-3" /> Resolve
-                        </>
-                      )}
+                      <CheckCircle2 className="w-3 h-3" /> Resolve
                     </button>
                   )}
                 </div>
@@ -384,14 +357,6 @@ export default function CommentSidebar({
                     <span className="text-[10px] font-medium text-amber-700 dark:text-amber-300 leading-relaxed">
                       The text this comment was attached to was deleted.
                     </span>
-                  </div>
-                )}
-
-                {/* Resolved-by badge */}
-                {thread.is_resolved && thread.resolver && (
-                  <div className="mb-3 text-[10px] font-medium text-muted-foreground">
-                    Resolved by <span className="text-foreground/70">{authorName(thread.resolver)}</span>
-                    {thread.resolved_at && <> · {formatTime(thread.resolved_at)}</>}
                   </div>
                 )}
 
@@ -497,37 +462,35 @@ export default function CommentSidebar({
                   })}
                 </div>
 
-                {/* Reply input — hidden for resolved unless active */}
-                {(!thread.is_resolved || isActive) && (
-                  <div className="mt-3 pt-3 border-t border-border/5">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder={thread.is_resolved ? 'Reopen by replying…' : 'Reply…'}
-                        value={replyDraft[thread.id] || ''}
-                        onClick={e => e.stopPropagation()}
-                        onChange={e =>
-                          setReplyDraft(prev => ({ ...prev, [thread.id]: e.target.value }))
-                        }
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleSubmit(thread.id);
-                        }}
-                        className="w-full bg-background border border-border/10 rounded-lg pl-3 pr-10 py-2 text-[12px] focus:outline-none focus:border-cta/30 transition-all font-medium"
-                      />
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleSubmit(thread.id);
-                        }}
-                        disabled={busy || !(replyDraft[thread.id] || '').trim()}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-cta rounded flex items-center justify-center text-cta-foreground disabled:opacity-30 transition-opacity"
-                        aria-label="Send reply"
-                      >
-                        <Send className="w-3 h-3" />
-                      </button>
-                    </div>
+                {/* Reply input */}
+                <div className="mt-3 pt-3 border-t border-border/5">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Reply…"
+                      value={replyDraft[thread.id] || ''}
+                      onClick={e => e.stopPropagation()}
+                      onChange={e =>
+                        setReplyDraft(prev => ({ ...prev, [thread.id]: e.target.value }))
+                      }
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleSubmit(thread.id);
+                      }}
+                      className="w-full bg-background border border-border/10 rounded-lg pl-3 pr-10 py-2 text-[12px] focus:outline-none focus:border-cta/30 transition-all font-medium"
+                    />
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleSubmit(thread.id);
+                      }}
+                      disabled={busy || !(replyDraft[thread.id] || '').trim()}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-cta rounded flex items-center justify-center text-cta-foreground disabled:opacity-30 transition-opacity"
+                      aria-label="Send reply"
+                    >
+                      <Send className="w-3 h-3" />
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             );
           })

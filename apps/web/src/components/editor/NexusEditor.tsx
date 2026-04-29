@@ -35,6 +35,7 @@ import { createClient } from '@/lib/supabase/client';
 import { SupabaseYjsProvider } from '@/lib/realtime/SupabaseYjsProvider';
 import AIPromptBar from './AIPromptBar';
 import BlockPickerPanel from './BlockPickerPanel';
+import CommentComposer, { type CommentComposerHandle } from './CommentComposer';
 import { Bold, Italic, Strikethrough, Code, Plus, MessageSquarePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -85,9 +86,8 @@ export default function NexusEditor({
   const [blockHandleTop, setBlockHandleTop] = useState<number | null>(null);
   const [blockPickerOpen, setBlockPickerOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [composerText, setComposerText] = useState('');
   const [composerSubmitting, setComposerSubmitting] = useState(false);
-  const composerInputRef = useRef<HTMLTextAreaElement>(null);
+  const composerRef = useRef<CommentComposerHandle>(null);
   const hoveredBlockEl = useRef<HTMLElement | null>(null);
   
   // 1. Initialize Yjs Doc and Provider
@@ -324,17 +324,12 @@ export default function NexusEditor({
     };
   }, [editor, composerOpen]);
 
-  // Auto-focus the composer textarea once it opens.
-  useEffect(() => {
-    if (composerOpen) {
-      requestAnimationFrame(() => composerInputRef.current?.focus());
-    }
-  }, [composerOpen]);
-
   // Submit the composer — create thread + first comment in one go, apply the
   // Tiptap mark to the active selection, dispatch open-sidebar event.
   const submitComment = useCallback(async () => {
-    if (!editor || !composerText.trim() || composerSubmitting) return;
+    if (!editor || composerSubmitting) return;
+    const json = composerRef.current?.getJSON();
+    if (!json || composerRef.current?.isEmpty()) return;
     setComposerSubmitting(true);
     try {
       const { createCommentThread, addComment } = await import(
@@ -346,17 +341,23 @@ export default function NexusEditor({
         return;
       }
       editor.chain().focus().setComment({ threadId: data.id }).run();
-      await addComment(data.id, { text: composerText.trim() });
+      await addComment(data.id, json);
       window.dispatchEvent(
         new CustomEvent('nexus:open-comment', { detail: { threadId: data.id } })
       );
-      setComposerText('');
+      composerRef.current?.clear();
       setComposerOpen(false);
       setToolbarPos(null);
     } finally {
       setComposerSubmitting(false);
     }
-  }, [editor, nodeId, composerText, composerSubmitting]);
+  }, [editor, nodeId, composerSubmitting]);
+
+  const cancelComposer = useCallback(() => {
+    composerRef.current?.clear();
+    setComposerOpen(false);
+    setToolbarPos(null);
+  }, []);
 
   // 7. Cmd+J to toggle AI Prompt Bar / Cmd+S to force-save
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -390,12 +391,33 @@ export default function NexusEditor({
       el.classList.add('nexus-comment-flash');
       window.setTimeout(() => el.classList.remove('nexus-comment-flash'), 1400);
     };
+    // When a thread is resolved, strip the corresponding comment mark from the
+    // doc so the yellow highlight goes away. Walks every node, removes the
+    // mark only on ranges whose threadId matches.
+    const handleThreadResolved = (e: any) => {
+      const { threadId } = e.detail;
+      if (!threadId || !editor) return;
+      const { state } = editor;
+      const markType = state.schema.marks.comment;
+      if (!markType) return;
+      const tr = state.tr;
+      state.doc.descendants((node, pos) => {
+        node.marks.forEach(mark => {
+          if (mark.type === markType && mark.attrs.threadId === threadId) {
+            tr.removeMark(pos, pos + node.nodeSize, markType);
+          }
+        });
+      });
+      if (tr.docChanged) editor.view.dispatch(tr);
+    };
     window.addEventListener('nexus:apply-comment', handleApplyComment);
     window.addEventListener('nexus:scroll-to-thread', handleScrollToThread);
+    window.addEventListener('nexus:thread-resolved', handleThreadResolved);
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('nexus:apply-comment', handleApplyComment);
       window.removeEventListener('nexus:scroll-to-thread', handleScrollToThread);
+      window.removeEventListener('nexus:thread-resolved', handleThreadResolved);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [editor, handleKeyDown]);
@@ -579,44 +601,29 @@ export default function NexusEditor({
         </div>
       )}
 
-      {/* Inline comment composer — replaces the bubble when Comment is clicked.
-          On desktop sits next to / below the selection; on mobile takes the
-          full available width below the highlighted range. */}
+      {/* Inline comment composer — Tiptap mini-editor with @-mention support.
+          Replaces the bubble when Comment is clicked. On desktop sits below
+          the selection; on mobile takes full available width. */}
       {editor && toolbarPos && composerOpen && (
         <div
           style={{ top: toolbarPos.top, left: toolbarPos.left }}
           className="absolute z-50 -translate-x-1/2 mt-2 w-[min(320px,calc(100vw-32px))] bg-background rounded-xl shadow-popover border border-border p-2 animate-in fade-in zoom-in-95"
           onMouseDown={e => e.preventDefault()}
         >
-          <textarea
-            ref={composerInputRef}
-            value={composerText}
-            onChange={e => setComposerText(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                submitComment();
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                setComposerOpen(false);
-                setComposerText('');
-                setToolbarPos(null);
-              }
-            }}
-            placeholder="Add a comment…"
-            rows={2}
-            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted/60 outline-none resize-none px-2 py-1.5"
-          />
+          <div className="px-2 py-1.5">
+            <CommentComposer
+              ref={composerRef}
+              placeholder="Add a comment… (@ to mention)"
+              onSubmit={submitComment}
+              onCancel={cancelComposer}
+            />
+          </div>
           <div className="flex items-center justify-between gap-2 px-1 pt-1 border-t border-border/50">
             <span className="text-[10px] text-muted/70 font-medium">Enter to send · Shift+Enter for newline</span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => {
-                  setComposerOpen(false);
-                  setComposerText('');
-                  setToolbarPos(null);
-                }}
+                onClick={cancelComposer}
                 className="px-2 py-1 text-[11px] font-bold text-muted hover:text-foreground rounded transition-colors"
               >
                 Cancel
@@ -624,7 +631,7 @@ export default function NexusEditor({
               <button
                 type="button"
                 onClick={submitComment}
-                disabled={composerSubmitting || !composerText.trim()}
+                disabled={composerSubmitting}
                 className="px-2.5 py-1 bg-cta text-cta-foreground rounded text-[11px] font-bold disabled:opacity-30 transition-opacity"
               >
                 {composerSubmitting ? 'Sending…' : 'Comment'}

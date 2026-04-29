@@ -688,13 +688,15 @@ export async function getCommentsForNode(nodeId: string) {
   const supabase = await createClient();
 
   // Single round-trip: threads + nested comments + author join + resolver join.
+  // Includes email so the sidebar can fall back when full_name is missing
+  // (e.g. users created before the metadata-sync trigger landed).
   const { data: threads, error } = await supabase
     .from('comment_threads')
     .select(`
       *,
-      resolver:resolved_by(id, full_name, avatar_url),
-      creator:created_by(id, full_name, avatar_url),
-      comments(*, author:user_id(id, full_name, avatar_url))
+      resolver:resolved_by(id, full_name, avatar_url, email),
+      creator:created_by(id, full_name, avatar_url, email),
+      comments(*, author:user_id(id, full_name, avatar_url, email))
     `)
     .eq('node_id', nodeId)
     .order('created_at', { ascending: true });
