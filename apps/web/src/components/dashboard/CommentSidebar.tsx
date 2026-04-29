@@ -6,10 +6,8 @@ import {
   MessageSquare,
   CheckCircle2,
   Send,
-  Trash2,
   Pencil,
   AlertCircle,
-  MoreHorizontal,
   Loader2,
   Check,
 } from 'lucide-react';
@@ -19,7 +17,6 @@ import {
   getCommentsForNode,
   resolveThread,
   editComment,
-  deleteComment,
 } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { createClient } from '@/lib/supabase/client';
 import CommentBody from './CommentBody';
@@ -104,7 +101,6 @@ export default function CommentSidebar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
   const [busy, setBusy] = useState(false);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -193,17 +189,6 @@ export default function CommentSidebar({
     return () => window.removeEventListener('nexus:thread-ids', handler);
   }, []);
 
-  // Close any open dropdown when clicking outside
-  useEffect(() => {
-    if (!openMenu) return;
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('[data-comment-menu]')) setOpenMenu(null);
-    };
-    document.addEventListener('click', handler);
-    return () => document.removeEventListener('click', handler);
-  }, [openMenu]);
-
   const handleSubmit = async (threadId: string) => {
     const text = (replyDraft[threadId] || '').trim();
     if (!text || busy) return;
@@ -265,7 +250,6 @@ export default function CommentSidebar({
       walk(comment.content);
       setEditDraft(parts.join(' '));
     }
-    setOpenMenu(null);
   };
 
   const handleSaveEdit = async () => {
@@ -274,14 +258,6 @@ export default function CommentSidebar({
     await editComment(editingId, { text: editDraft.trim() });
     setEditingId(null);
     setEditDraft('');
-    setBusy(false);
-    fetchComments();
-  };
-
-  const handleDelete = async (commentId: string) => {
-    setBusy(true);
-    await deleteComment(commentId);
-    setOpenMenu(null);
     setBusy(false);
     fetchComments();
   };
@@ -439,38 +415,17 @@ export default function CommentSidebar({
                             )}
                           </div>
                           {isOwn && !isEditing && (
-                            <div className="relative" data-comment-menu>
-                              <button
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setOpenMenu(openMenu === comment.id ? null : comment.id);
-                                }}
-                                className="opacity-0 group-hover/comment:opacity-100 p-1 hover:bg-background rounded transition-all"
-                                aria-label="Comment actions"
-                              >
-                                <MoreHorizontal className="w-3.5 h-3.5 text-muted" />
-                              </button>
-                              {openMenu === comment.id && (
-                                <div
-                                  className="absolute right-0 top-full mt-1 z-10 min-w-[120px] bg-popover border border-border rounded-lg shadow-popover py-1"
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  <button
-                                    onClick={() => handleStartEdit(comment)}
-                                    className="w-full text-left px-3 py-1.5 text-[12px] hover:bg-hover flex items-center gap-2"
-                                  >
-                                    <Pencil className="w-3 h-3" /> Edit
-                                  </button>
-                                  <button
-                                    onClick={() => handleDelete(comment.id)}
-                                    disabled={busy}
-                                    className="w-full text-left px-3 py-1.5 text-[12px] hover:bg-hover flex items-center gap-2 text-red-600 dark:text-red-400"
-                                  >
-                                    <Trash2 className="w-3 h-3" /> Delete
-                                  </button>
-                                </div>
-                              )}
-                            </div>
+                            <button
+                              onClick={e => {
+                                e.stopPropagation();
+                                handleStartEdit(comment);
+                              }}
+                              className="opacity-0 group-hover/comment:opacity-100 p-1.5 hover:bg-background rounded transition-all text-muted hover:text-foreground"
+                              aria-label="Edit comment"
+                              title="Edit"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
                           )}
                         </div>
                       </div>
@@ -516,33 +471,31 @@ export default function CommentSidebar({
                         }}
                         disabled={isResolving || justResolved}
                         className={cn(
-                          'px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1',
+                          'p-1.5 rounded-full transition-all flex items-center justify-center',
                           justResolved
                             ? 'bg-emerald-500/15 text-emerald-500'
                             : isResolving
                             ? 'bg-foreground/5 text-muted-foreground cursor-wait'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-background'
+                            : 'text-muted hover:text-foreground hover:bg-background'
                         )}
                         title={
                           justResolved
                             ? 'Resolved'
                             : isResolving
                             ? 'Resolving…'
-                            : 'Mark resolved (removes highlight)'
+                            : 'Mark resolved'
                         }
+                        aria-label={justResolved ? 'Resolved' : 'Resolve thread'}
                       >
                         {justResolved ? (
-                          <>
-                            <Check className="w-3 h-3" strokeWidth={3} /> Resolved
-                          </>
+                          // Settled green check after the spin animation
+                          <Check className="w-4 h-4 nexus-resolve-check" strokeWidth={3} />
                         ) : isResolving ? (
-                          <>
-                            <Loader2 className="w-3 h-3 animate-spin" /> Resolving
-                          </>
+                          // Spinning state — same icon family rotating, not a loader,
+                          // so the transition to "done" feels like one continuous motion.
+                          <CheckCircle2 className="w-4 h-4 animate-spin" />
                         ) : (
-                          <>
-                            <CheckCircle2 className="w-3 h-3" /> Resolve
-                          </>
+                          <CheckCircle2 className="w-4 h-4" />
                         )}
                       </button>
                     </div>

@@ -455,3 +455,14 @@ select:focus {
   animation: nexus-comment-flash 1.4s ease-out;
   border-radius: 3px;
 }
+
+/* --- Resolve action: settled-green check pop after the spinning state --- */
+@keyframes nexus-resolve-check {
+  0%   { transform: scale(0.4) rotate(-180deg); opacity: 0; }
+  60%  { transform: scale(1.25) rotate(0deg);   opacity: 1; }
+  100% { transform: scale(1)    rotate(0deg);   opacity: 1; }
+}
+
+.nexus-resolve-check {
+  animation: nexus-resolve-check 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
