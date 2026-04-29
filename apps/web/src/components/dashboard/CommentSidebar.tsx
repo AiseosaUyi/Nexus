@@ -344,6 +344,9 @@ export default function CommentSidebar({
             const status = resolveStatus[thread.id];
             const isResolving = status === 'pending';
             const justResolved = status === 'done';
+            const firstComment = thread.comments[0];
+            const firstIsOwn = firstComment && firstComment.user_id === currentUserId;
+            const showTopEdit = firstIsOwn && editingId !== firstComment?.id;
 
             return (
               <div
@@ -359,6 +362,58 @@ export default function CommentSidebar({
                     'bg-emerald-500/10 border-emerald-500/40 scale-[0.98] opacity-90'
                 )}
               >
+                {/* Top-right action group: Edit (first comment, if own) +
+                    Resolve. Both icons sit on the same line so the user can
+                    triage the thread without scrolling to a footer. Edit on
+                    reply comments stays inline in their row below. */}
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                  {showTopEdit && firstComment && (
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleStartEdit(firstComment);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full text-muted hover:text-foreground hover:bg-background transition-all"
+                      aria-label="Edit comment"
+                      title="Edit"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                  {canResolve && (
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        if (!isResolving && !justResolved) handleResolve(thread.id);
+                      }}
+                      disabled={isResolving || justResolved}
+                      className={cn(
+                        'p-1.5 rounded-full transition-all flex items-center justify-center',
+                        justResolved
+                          ? 'bg-emerald-500/15 text-emerald-500 opacity-100'
+                          : isResolving
+                          ? 'bg-foreground/5 text-muted-foreground cursor-wait opacity-100'
+                          : 'opacity-0 group-hover:opacity-100 text-muted hover:text-foreground hover:bg-background'
+                      )}
+                      title={
+                        justResolved
+                          ? 'Resolved'
+                          : isResolving
+                          ? 'Resolving…'
+                          : 'Mark resolved'
+                      }
+                      aria-label={justResolved ? 'Resolved' : 'Resolve thread'}
+                    >
+                      {justResolved ? (
+                        <Check className="w-4 h-4 nexus-resolve-check" strokeWidth={3} />
+                      ) : isResolving ? (
+                        <CheckCircle2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
+                </div>
 
                 {/* Orphan badge */}
                 {isOrphan && (
@@ -372,9 +427,13 @@ export default function CommentSidebar({
 
                 {/* Messages */}
                 <div className="space-y-3">
-                  {thread.comments.map(comment => {
+                  {thread.comments.map((comment, commentIndex) => {
                     const isOwn = comment.user_id === currentUserId;
                     const isEditing = editingId === comment.id;
+                    // Inline edit only renders for replies (index > 0) — the
+                    // first comment's edit button lives in the card's top-right
+                    // group alongside Resolve, on the user's request.
+                    const showInlineEdit = isOwn && commentIndex > 0 && !isEditing;
 
                     return (
                       <div key={comment.id} className="group/comment relative">
@@ -430,7 +489,7 @@ export default function CommentSidebar({
                               <CommentBody content={comment.content} members={members} />
                             )}
                           </div>
-                          {isOwn && !isEditing && (
+                          {showInlineEdit && (
                             <button
                               onClick={e => {
                                 e.stopPropagation();
@@ -449,9 +508,9 @@ export default function CommentSidebar({
                   })}
                 </div>
 
-                {/* Footer: reply input + resolve action. Resolve sits at the
-                    far end so it never overlaps with the per-comment menu. */}
-                <div className="mt-3 pt-3 border-t border-border/5 space-y-2">
+                {/* Footer: reply input. Resolve action moved to the
+                    card's top-right action group (alongside Edit). */}
+                <div className="mt-3 pt-3 border-t border-border/5">
                   <div className="relative">
                     <input
                       type="text"
@@ -478,44 +537,6 @@ export default function CommentSidebar({
                       <Send className="w-3 h-3" />
                     </button>
                   </div>
-                  {canResolve && (
-                    <div className="flex justify-end">
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          if (!isResolving && !justResolved) handleResolve(thread.id);
-                        }}
-                        disabled={isResolving || justResolved}
-                        className={cn(
-                          'p-1.5 rounded-full transition-all flex items-center justify-center',
-                          justResolved
-                            ? 'bg-emerald-500/15 text-emerald-500'
-                            : isResolving
-                            ? 'bg-foreground/5 text-muted-foreground cursor-wait'
-                            : 'text-muted hover:text-foreground hover:bg-background'
-                        )}
-                        title={
-                          justResolved
-                            ? 'Resolved'
-                            : isResolving
-                            ? 'Resolving…'
-                            : 'Mark resolved'
-                        }
-                        aria-label={justResolved ? 'Resolved' : 'Resolve thread'}
-                      >
-                        {justResolved ? (
-                          // Settled green check after the spin animation
-                          <Check className="w-4 h-4 nexus-resolve-check" strokeWidth={3} />
-                        ) : isResolving ? (
-                          // Spinning state — same icon family rotating, not a loader,
-                          // so the transition to "done" feels like one continuous motion.
-                          <CheckCircle2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             );
