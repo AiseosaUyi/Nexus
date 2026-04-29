@@ -130,6 +130,28 @@ export interface CalendarEntry {
   updated_at: string;
 }
 
+export interface CommentThread {
+  id: string;
+  node_id: string;
+  is_resolved: boolean;
+  created_by: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Comment {
+  id: string;
+  thread_id: string;
+  user_id: string;
+  content: Record<string, unknown>;
+  is_edited: boolean;
+  edited_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type SharePermission = 'view' | 'comment' | 'edit' | 'full';
 export type AccessRequestStatus = 'pending' | 'approved' | 'denied';
 

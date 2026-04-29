@@ -42,7 +42,7 @@ export default defineConfig({
     // Authenticated tests (dashboard, sidebar, pages) — require setup
     {
       name: 'chromium-auth',
-      testMatch: /\/(create-page|sidebar|block-handle|block-picker|import|cover-image)\.spec\.ts/,
+      testMatch: /\/(create-page|sidebar|block-handle|block-picker|import|cover-image|comments)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], storageState: 'playwright/.auth/user.json' },
       dependencies: ['setup'],
     },

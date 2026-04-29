@@ -39,11 +39,29 @@ import BlockPickerPanel from './BlockPickerPanel';
 import { Bold, Italic, Strikethrough, Code, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Walks the editor doc, collects every threadId present on a Comment mark,
+// and dispatches `nexus:thread-ids`. CommentSidebar uses this to flag orphan
+// threads (rows in DB whose text was deleted from the doc).
+function broadcastThreadIds(editor: { state: { doc: { descendants: (cb: (n: any) => void) => void } } }) {
+  const ids = new Set<string>();
+  editor.state.doc.descendants((node: any) => {
+    if (!node.marks) return;
+    for (const mark of node.marks) {
+      if (mark.type?.name === 'comment' && typeof mark.attrs?.threadId === 'string') {
+        ids.add(mark.attrs.threadId);
+      }
+    }
+  });
+  window.dispatchEvent(
+    new CustomEvent('nexus:thread-ids', { detail: { threadIds: Array.from(ids) } })
+  );
+}
+
 interface NexusEditorProps {
   initialContent?: any;
   initialSnapshot?: Uint8Array | null;
   nodeId: string;
-  userName?: string;
+  userName: string;
   userColor?: string;
   onChange?: (json: any) => void;
 }
@@ -53,13 +71,13 @@ interface ToolbarPosition {
   left: number;
 }
 
-export default function NexusEditor({ 
-  initialContent, 
+export default function NexusEditor({
+  initialContent,
   initialSnapshot,
-  nodeId, 
-  userName = 'Anonymous',
+  nodeId,
+  userName,
   userColor = '#2383e2',
-  onChange 
+  onChange
 }: NexusEditorProps) {
   const supabase = createClient();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -235,6 +253,7 @@ export default function NexusEditor({
       onChange?.(json);
       debouncedSnapshotSave();
       debouncedBlockSync(json);
+      broadcastThreadIds(editor);
     },
   }, [ydoc]);
 
@@ -312,13 +331,42 @@ export default function NexusEditor({
         editor.chain().focus().setComment({ threadId }).run();
       }
     };
+    const handleScrollToThread = (e: any) => {
+      const { threadId } = e.detail;
+      if (!threadId || !editor) return;
+      // Find the DOM element rendered by the Comment mark.
+      const root = editorRef.current;
+      if (!root) return;
+      const el = root.querySelector(`span[data-thread-id="${CSS.escape(threadId)}"]`) as HTMLElement | null;
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('nexus-comment-flash');
+      window.setTimeout(() => el.classList.remove('nexus-comment-flash'), 1400);
+    };
     window.addEventListener('nexus:apply-comment', handleApplyComment);
+    window.addEventListener('nexus:scroll-to-thread', handleScrollToThread);
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('nexus:apply-comment', handleApplyComment);
+      window.removeEventListener('nexus:scroll-to-thread', handleScrollToThread);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [editor, handleKeyDown]);
+
+  // Broadcast the set of comment-mark threadIds present in the document so
+  // CommentSidebar can detect orphaned threads (text deleted but thread row
+  // still exists).
+  useEffect(() => {
+    if (!editor) return;
+    broadcastThreadIds(editor);
+    // Re-broadcast after collaborative updates from Yjs as well — onUpdate
+    // covers local edits but Yjs sync from another tab needs this hook.
+    const handler = () => broadcastThreadIds(editor);
+    editor.on('transaction', handler);
+    return () => {
+      editor.off('transaction', handler);
+    };
+  }, [editor]);
 
   // 8. Cleanup
   useEffect(() => {
