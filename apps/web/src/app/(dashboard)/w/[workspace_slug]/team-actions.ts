@@ -70,12 +70,16 @@ export async function getWorkspaceMembers(businessId: string) {
 export async function updateMemberRole(memberId: string, role: 'ADMIN' | 'EDITOR' | 'VIEWER') {
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('business_members')
     .update({ role })
-    .eq('id', memberId);
+    .eq('id', memberId)
+    .select();
 
   if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return { error: 'Could not update role — only admins can change member roles.' };
+  }
 
   revalidatePath('/', 'layout');
   return { success: true };
@@ -88,12 +92,19 @@ export async function updateMemberRole(memberId: string, role: 'ADMIN' | 'EDITOR
 export async function removeMember(memberId: string) {
   const supabase = await createClient();
 
-  const { error } = await supabase
+  // .select() forces PostgREST to return the deleted rows, so we can detect
+  // when RLS silently blocks the delete (0 rows back, no error). Without this
+  // the action used to return {success: true} on a denied delete.
+  const { data, error } = await supabase
     .from('business_members')
     .delete()
-    .eq('id', memberId);
+    .eq('id', memberId)
+    .select();
 
   if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return { error: 'Could not remove member — only admins can remove members.' };
+  }
 
   revalidatePath('/', 'layout');
   return { success: true };

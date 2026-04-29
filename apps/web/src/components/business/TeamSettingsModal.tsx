@@ -105,14 +105,20 @@ export default function TeamSettingsModal({
 
   const handleRoleChange = async (memberId: string, role: MemberRole) => {
     startTransition(async () => {
-      await updateMemberRole(memberId, role);
+      const result = await updateMemberRole(memberId, role);
+      if (result.error) {
+        setError(result.error);
+      }
       loadData();
     });
   };
 
   const handleRemoveMember = async (memberId: string) => {
     startTransition(async () => {
-      await removeMember(memberId);
+      const result = await removeMember(memberId);
+      if (result.error) {
+        setError(result.error);
+      }
       loadData();
     });
   };
