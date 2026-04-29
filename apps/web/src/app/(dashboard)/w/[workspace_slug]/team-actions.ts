@@ -149,11 +149,44 @@ export async function inviteMember(
   if (!email?.trim()) return { error: 'Email is required' };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return { error: 'Please enter a valid email address' };
 
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // If the email already belongs to an active member of this workspace, block
+  // the invite with a clearer message. Otherwise the unique-constraint error
+  // below would surface as "already invited" even when they're already in.
+  const { data: existingUser } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', normalizedEmail)
+    .maybeSingle();
+
+  if (existingUser) {
+    const { data: existingMember } = await supabase
+      .from('business_members')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('user_id', existingUser.id)
+      .maybeSingle();
+
+    if (existingMember) {
+      return { error: 'This person is already a member of this workspace.' };
+    }
+  }
+
+  // Clear any stale invitation row for this (business_id, email). The unique
+  // constraint persists across accepted/revoked invites, so without this a
+  // re-invite after removing a member silently 23505's.
+  await supabase
+    .from('invitations')
+    .delete()
+    .eq('business_id', businessId)
+    .eq('email', normalizedEmail);
+
   const { data, error } = await supabase
     .from('invitations')
     .insert([{
       business_id: businessId,
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       role,
       invited_by: user.id,
     }])
