@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { createNode, updateNode, createTeamspace } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { useRouter } from 'next/navigation';
 import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { useDialog } from '@/components/providers/DialogProvider';
 
 interface SidebarTreeProps {
   initialNodes: Node[];
@@ -54,6 +55,7 @@ export default function SidebarTree({
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isPrivateCollapsed, setIsPrivateCollapsed] = useState(false);
   const router = useRouter();
+  const dialog = useDialog();
 
   const tree = useMemo(() => buildTree(nodes), [nodes]);
 
@@ -187,7 +189,13 @@ export default function SidebarTree({
         <button
           data-testid="add-teamspace-btn"
           onClick={async () => {
-            const name = prompt('New teamspace name:');
+            const name = await dialog.prompt({
+              title: 'New teamspace',
+              description:
+                'A teamspace groups related pages — like Marketing or Engineering — so the right people see the right work.',
+              placeholder: 'Marketing, Engineering, Ops…',
+              confirmLabel: 'Create teamspace',
+            });
             if (name) {
               const result = await createTeamspace({ business_id: businessId, name });
               if (result.data) setTeamspaces(prev => [...prev, result.data]);

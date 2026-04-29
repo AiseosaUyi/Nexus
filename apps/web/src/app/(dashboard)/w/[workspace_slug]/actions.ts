@@ -527,6 +527,16 @@ export async function addComment(threadId: string, content: unknown) {
 
   if (!user) return { data: null, error: 'Unauthorized' };
 
+  // Re-parse so the value is a plain object — Tiptap's getJSON() output can
+  // arrive as a temporary client reference across the RSC boundary, and
+  // dotting into it (e.g. attrs.id in extractMentions) throws.
+  let safeContent: unknown = content;
+  try {
+    safeContent = JSON.parse(JSON.stringify(content));
+  } catch {
+    /* non-serializable content — fall through with original */
+  }
+
   // Auto-unresolve if posting to a resolved thread (D1 mitigation: prevents
   // "buried reply" on threads someone else resolved mid-discussion).
   await supabase
@@ -540,7 +550,7 @@ export async function addComment(threadId: string, content: unknown) {
     .insert({
       thread_id: threadId,
       user_id: user.id,
-      content,
+      content: safeContent,
     })
     .select()
     .single();
@@ -554,7 +564,7 @@ export async function addComment(threadId: string, content: unknown) {
   // not depend on email delivery.
   notifyMentions({
     threadId,
-    commentContent: content,
+    commentContent: safeContent,
     commenterId: user.id,
   }).catch(err => console.error('[Comment] notifyMentions failed:', err));
 
@@ -566,6 +576,15 @@ export async function editComment(commentId: string, content: unknown) {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return { data: null, error: 'Unauthorized' };
+
+  // See addComment — sanitize the RSC-passed content into plain JSON before
+  // we either persist it or walk it for mentions.
+  let safeContent: unknown = content;
+  try {
+    safeContent = JSON.parse(JSON.stringify(content));
+  } catch {
+    /* non-serializable content — fall through with original */
+  }
 
   // Capture pre-edit content so we can diff mentions and only notify newly
   // added mentions, not re-notify everyone in the original comment.
@@ -582,7 +601,7 @@ export async function editComment(commentId: string, content: unknown) {
   const { data, error } = await supabase
     .from('comments')
     .update({
-      content,
+      content: safeContent,
       is_edited: true,
       edited_at: new Date().toISOString(),
     })
@@ -598,7 +617,7 @@ export async function editComment(commentId: string, content: unknown) {
   // Notify only newly added mentions.
   notifyMentions({
     threadId: prev.thread_id,
-    commentContent: content,
+    commentContent: safeContent,
     commenterId: user.id,
     excludeMentions: extractMentions(prev.content),
   }).catch(err => console.error('[Comment] notifyMentions (edit) failed:', err));
@@ -774,6 +793,9 @@ async function notifyMentions(opts: {
 
   console.log('[notifyMentions] sending', recipients.length, 'emails from', commenterName, 're:', node.title);
 
+  // Send immediately — no throttle. Edit-flow dedup via excludeMentions
+  // (diff against previous content) is the only filter, so a teammate only
+  // gets re-notified when a new mention is added during an edit.
   const { sendCommentNotificationEmail } = await import('@/lib/email');
 
   await Promise.all(

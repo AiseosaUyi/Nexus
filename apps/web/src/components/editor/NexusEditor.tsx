@@ -342,9 +342,10 @@ export default function NexusEditor({
       }
       editor.chain().focus().setComment({ threadId: data.id }).run();
       await addComment(data.id, json);
-      window.dispatchEvent(
-        new CustomEvent('nexus:open-comment', { detail: { threadId: data.id } })
-      );
+      // Don't auto-open the sidebar — users typically place several comments
+      // in a row, and the right-rail sidebar covers the text they're about
+      // to comment on next. They can click the Comments button (or any
+      // existing inline mark) to open it when they want to read replies.
       composerRef.current?.clear();
       setComposerOpen(false);
       setToolbarPos(null);

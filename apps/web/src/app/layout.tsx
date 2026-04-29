@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { CSPostHogProvider } from '@/components/providers/PostHogProvider';
+import { DialogProvider } from '@/components/providers/DialogProvider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -55,7 +56,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased dark`}>
       <body className="min-h-full flex flex-col font-[family-name:var(--font-inter)] text-foreground bg-background">
-        <CSPostHogProvider>{children}</CSPostHogProvider>
+        <CSPostHogProvider>
+          <DialogProvider>{children}</DialogProvider>
+        </CSPostHogProvider>
       </body>
     </html>
   );

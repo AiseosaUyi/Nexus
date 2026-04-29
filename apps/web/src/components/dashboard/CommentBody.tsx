@@ -41,7 +41,7 @@ function resolveMentionLabel(
   if (attrs?.id && members?.[attrs.id]?.email) {
     return members[attrs.id].email!.split('@')[0];
   }
-  return 'teammate';
+  return 'someone';
 }
 
 function renderNode(

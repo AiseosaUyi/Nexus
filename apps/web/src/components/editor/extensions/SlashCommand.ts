@@ -7,6 +7,24 @@ import tippy from 'tippy.js';
 const SlashCommandPluginKey = new PluginKey('slashCommand');
 import CommandsList from './SlashCommandList';
 
+// Bridge to <DialogProvider> for non-React Tiptap commands. Uses our
+// designed modals; falls back to the browser primitive only if the
+// provider hasn't mounted yet (which shouldn't happen at runtime).
+function dialogPrompt(opts: {
+  title: string;
+  description?: string;
+  placeholder?: string;
+  defaultValue?: string;
+  confirmLabel?: string;
+}): Promise<string | null> {
+  const handle = (typeof window !== 'undefined' ? (window as any).__nexusDialog : null) as
+    | { prompt: (o: any) => Promise<string | null> }
+    | null;
+  if (handle?.prompt) return handle.prompt(opts);
+  const fallback = window.prompt(opts.title, opts.defaultValue);
+  return Promise.resolve(fallback);
+}
+
 export const SlashCommand = Extension.create({
   name: 'slashCommand',
 
@@ -132,12 +150,22 @@ export const suggestion = {
         searchTerms: ['link', 'mention', 'page', 'subpage'],
         group: 'Basic blocks',
         shortcut: '',
-        command: ({ editor, range }: any) => {
-          const title = window.prompt('Page Title');
-          const url = window.prompt('URL or ID');
-          if (title && url) {
-            editor.chain().focus().deleteRange(range).setPageLink({ title, href: url }).run();
-          }
+        command: async ({ editor, range }: any) => {
+          const title = await dialogPrompt({
+            title: 'Link to a page',
+            description: 'Add a label first — that’s what readers will see.',
+            placeholder: 'e.g. Q3 launch plan',
+            confirmLabel: 'Next',
+          });
+          if (!title) return;
+          const url = await dialogPrompt({
+            title: 'Page URL or ID',
+            description: 'Paste the link or page ID this should jump to.',
+            placeholder: 'https://app.nexus.so/… or page ID',
+            confirmLabel: 'Insert link',
+          });
+          if (!url) return;
+          editor.chain().focus().deleteRange(range).setPageLink({ title, href: url }).run();
         },
       },
       {
@@ -168,8 +196,13 @@ export const suggestion = {
         searchTerms: ['picture', 'photo', 'img'],
         group: 'Media',
         shortcut: '',
-        command: ({ editor, range }: any) => {
-          const url = window.prompt('Image URL');
+        command: async ({ editor, range }: any) => {
+          const url = await dialogPrompt({
+            title: 'Embed an image',
+            description: 'Paste a public image URL — JPG, PNG, GIF, or WebP.',
+            placeholder: 'https://example.com/photo.jpg',
+            confirmLabel: 'Insert image',
+          });
           if (url) {
             editor.chain().focus().deleteRange(range).setImage({ src: url }).run();
           }
@@ -181,8 +214,13 @@ export const suggestion = {
         searchTerms: ['youtube', 'vimeo', 'video'],
         group: 'Media',
         shortcut: '',
-        command: ({ editor, range }: any) => {
-          const url = window.prompt('YouTube URL');
+        command: async ({ editor, range }: any) => {
+          const url = await dialogPrompt({
+            title: 'Embed a YouTube video',
+            description: 'Paste the full YouTube link — we’ll embed the player inline.',
+            placeholder: 'https://youtube.com/watch?v=…',
+            confirmLabel: 'Embed video',
+          });
           if (url) {
             editor.chain().focus().deleteRange(range).setYoutubeVideo({ src: url }).run();
           }
@@ -194,8 +232,13 @@ export const suggestion = {
         searchTerms: ['mp3', 'sound', 'music', 'podcast'],
         group: 'Media',
         shortcut: '',
-        command: ({ editor, range }: any) => {
-          const url = window.prompt('Audio URL');
+        command: async ({ editor, range }: any) => {
+          const url = await dialogPrompt({
+            title: 'Embed audio',
+            description: 'Drop in a public MP3 or WAV — it’ll play right inside the page.',
+            placeholder: 'https://example.com/track.mp3',
+            confirmLabel: 'Embed audio',
+          });
           if (url) {
             editor.chain().focus().deleteRange(range).setAudio({ src: url }).run();
           }
@@ -217,12 +260,23 @@ export const suggestion = {
         searchTerms: ['attachment', 'pdf', 'doc', 'file'],
         group: 'Media',
         shortcut: '',
-        command: ({ editor, range }: any) => {
-          const name = window.prompt('File Name', 'Untitled File');
-          const url = window.prompt('File URL');
-          if (name && url) {
-            editor.chain().focus().deleteRange(range).setFile({ name, src: url }).run();
-          }
+        command: async ({ editor, range }: any) => {
+          const name = await dialogPrompt({
+            title: 'Attach a file',
+            description: 'Give it a name readers will recognize.',
+            placeholder: 'Q3 financials.pdf',
+            defaultValue: 'Untitled file',
+            confirmLabel: 'Next',
+          });
+          if (!name) return;
+          const url = await dialogPrompt({
+            title: 'File URL',
+            description: 'Paste a public link to the file you want to attach.',
+            placeholder: 'https://example.com/file.pdf',
+            confirmLabel: 'Attach',
+          });
+          if (!url) return;
+          editor.chain().focus().deleteRange(range).setFile({ name, src: url }).run();
         },
       },
 

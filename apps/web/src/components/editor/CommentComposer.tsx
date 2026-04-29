@@ -135,7 +135,45 @@ const CommentComposer = forwardRef<CommentComposerHandle, CommentComposerProps>(
 
     const focus = useCallback(() => editor?.commands.focus(), [editor]);
     const clear = useCallback(() => editor?.commands.clearContent(true), [editor]);
-    const getJSON = useCallback(() => editor?.getJSON() ?? null, [editor]);
+    // editor.getJSON() can drop a custom mention node's attrs depending on
+    // schema/extension wiring. Build the JSON ourselves from the live PM doc
+    // so attrs.id and attrs.label always make it through.
+    const getJSON = useCallback(() => {
+      if (!editor) return null;
+      const serialize = (node: any): any => {
+        const out: any = { type: node.type.name };
+        if (node.attrs && Object.keys(node.attrs).length) {
+          // Drop null/undefined values so the JSON stays compact, but keep
+          // anything else so mention id/label survive.
+          const cleanAttrs: Record<string, unknown> = {};
+          for (const k of Object.keys(node.attrs)) {
+            const v = node.attrs[k];
+            if (v !== null && v !== undefined) cleanAttrs[k] = v;
+          }
+          if (Object.keys(cleanAttrs).length) out.attrs = cleanAttrs;
+        }
+        if (node.isText) {
+          out.text = node.text;
+          if (node.marks?.length) {
+            out.marks = node.marks.map((m: any) => {
+              const mo: any = { type: m.type.name };
+              if (m.attrs && Object.keys(m.attrs).length) {
+                mo.attrs = { ...m.attrs };
+              }
+              return mo;
+            });
+          }
+          return out;
+        }
+        if (node.content?.size) {
+          const children: any[] = [];
+          node.content.forEach((c: any) => children.push(serialize(c)));
+          out.content = children;
+        }
+        return out;
+      };
+      return serialize(editor.state.doc);
+    }, [editor]);
     const isEmpty = useCallback(() => {
       if (!editor) return true;
       return editor.isEmpty;

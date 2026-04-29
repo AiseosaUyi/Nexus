@@ -8,6 +8,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import SidebarItem from './SidebarItem';
 import { createNode, createTeamspace, updateTeamspace, deleteTeamspace } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { useRouter } from 'next/navigation';
+import { useDialog } from '@/components/providers/DialogProvider';
 
 interface SidebarTeamspaceProps {
   teamspace: Teamspace;
@@ -22,6 +23,7 @@ export default function SidebarTeamspace({
 }: SidebarTeamspaceProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const router = useRouter();
+  const dialog = useDialog();
 
   const handleCreatePage = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -39,7 +41,13 @@ export default function SidebarTeamspace({
   };
 
   const handleRename = async () => {
-    const newName = prompt('Enter new teamspace name:', teamspace.name);
+    const newName = await dialog.prompt({
+      title: 'Rename teamspace',
+      description: 'Pick a name your team will recognize at a glance.',
+      placeholder: 'Marketing, Engineering, Ops…',
+      defaultValue: teamspace.name,
+      confirmLabel: 'Rename',
+    });
     if (newName && newName !== teamspace.name) {
       await updateTeamspace(teamspace.id, { name: newName });
       router.refresh();
@@ -56,7 +64,15 @@ export default function SidebarTeamspace({
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Delete "${teamspace.name}"? This cannot be undone.`)) return;
+    const ok = await dialog.confirm({
+      title: `Delete "${teamspace.name}"?`,
+      description:
+        'Every page in this teamspace will be removed for everyone. This can’t be undone.',
+      confirmLabel: 'Delete teamspace',
+      cancelLabel: 'Keep it',
+      variant: 'danger',
+    });
+    if (!ok) return;
     await deleteTeamspace(teamspace.id);
     router.refresh();
   };

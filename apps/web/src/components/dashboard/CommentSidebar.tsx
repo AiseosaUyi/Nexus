@@ -102,6 +102,7 @@ export default function CommentSidebar({
   // id → {name, email} for the workspace members. Used to render mention
   // chips in legacy comments where the label wasn't saved.
   const [members, setMembers] = useState<Record<string, { name: string; email: string | null }>>({});
+  const [membersReady, setMembersReady] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingInitial, setEditingInitial] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -146,21 +147,29 @@ export default function CommentSidebar({
         '@/app/(dashboard)/w/[workspace_slug]/actions'
       );
       const { data: memberList } = await getTeamMembers(node.business_id);
-      if (cancelled || !memberList) return;
+      if (cancelled) return;
       const lookup: Record<string, { name: string; email: string | null }> = {};
-      for (const m of memberList as { id: string; name: string; email: string | null }[]) {
+      for (const m of (memberList || []) as { id: string; name: string; email: string | null }[]) {
         lookup[m.id] = { name: m.name, email: m.email };
       }
       setMembers(lookup);
+      setMembersReady(true);
     })();
     return () => {
       cancelled = true;
     };
   }, [isOpen, nodeId, supabase]);
 
+  // Reset readiness when the sidebar closes so the next open re-fetches.
   useEffect(() => {
-    if (isOpen) fetchComments();
-  }, [isOpen, fetchComments]);
+    if (!isOpen) setMembersReady(false);
+  }, [isOpen]);
+
+  // Comments only fetch after members are ready, so mention chips have a
+  // members map to fall back to when a stored attrs.label is missing.
+  useEffect(() => {
+    if (isOpen && membersReady) fetchComments();
+  }, [isOpen, membersReady, fetchComments]);
 
   // Realtime: subscribe to thread + comment changes for this node. Coalesce
   // bursts (e.g. INSERT thread + INSERT comment in same tick) into one refetch
