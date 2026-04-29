@@ -54,6 +54,13 @@ export default async function InviteAcceptPage({ params }: InvitePageProps) {
 
   // If logged in, show accept button. If not, show the embedded Auth Form.
   if (!user) {
+    // Pre-check user existence so the form can ask only for password (returning
+    // user) or name + password (new user) — the email is already known from
+    // the invitation, no reason to ask for it again.
+    const { data: userExists } = await supabase.rpc('check_user_exists', {
+      p_email: invitation.email,
+    });
+
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center w-full max-w-sm mx-4">
@@ -63,11 +70,22 @@ export default async function InviteAcceptPage({ params }: InvitePageProps) {
           <h1 className="text-xl font-bold text-foreground mb-2">
             Join {invitation.business_name || 'a workspace'}
           </h1>
-          <p className="text-[14px] text-muted mb-8">
-            Enter your email to join as a <strong>{roleLabel}</strong>.
+          <p className="text-[14px] text-muted mb-2">
+            Hi <strong className="text-foreground">{invitation.email}</strong>,
           </p>
-          
-          <InviteAuthForm token={token} businessName={invitation.business_name} />
+          <p className="text-[14px] text-muted mb-8">
+            {userExists
+              ? <>Sign in to join <strong>{invitation.business_name}</strong> as a <strong>{roleLabel}</strong>.</>
+              : <>You've been invited to join <strong>{invitation.business_name}</strong> as a <strong>{roleLabel}</strong>. Set a password below.</>
+            }
+          </p>
+
+          <InviteAuthForm
+            token={token}
+            email={invitation.email}
+            businessName={invitation.business_name}
+            isExisting={!!userExists}
+          />
         </div>
       </div>
     );
