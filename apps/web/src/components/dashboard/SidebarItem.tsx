@@ -25,10 +25,24 @@ import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { deleteNode, updateNode, createNode, duplicateNode } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
+import { useCommentCount } from './CommentCountsContext';
 
 interface SidebarItemProps {
   node: Node & { children?: Node[] };
   level?: number;
+}
+
+function CommentCountBadge({ nodeId }: { nodeId: string }) {
+  const count = useCommentCount(nodeId);
+  if (count === 0) return null;
+  return (
+    <span
+      className="shrink-0 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-cta/15 text-cta text-[10px] font-bold tabular-nums"
+      title={`${count} unresolved ${count === 1 ? 'comment' : 'comments'}`}
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  );
 }
 
 export default function SidebarItem({ node, level = 0 }: SidebarItemProps) {
@@ -177,6 +191,9 @@ export default function SidebarItem({ node, level = 0 }: SidebarItemProps) {
                 <span>{(node.name || node.title) || (isFolder ? 'Untitled Folder' : 'Untitled')}</span>
               )}
             </Link>
+
+            <CommentCountBadge nodeId={node.id} />
+
 
             {/* Mobile-friendly Actions (Always visible or easier to trigger on touch) */}
             <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">

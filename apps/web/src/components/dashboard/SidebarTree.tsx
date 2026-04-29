@@ -11,9 +11,11 @@ import { Node, Teamspace } from '@nexus/api/schema';
 import { buildTree } from '@/lib/tree';
 import { Plus, Search, Clock, Home, Upload, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { createNode, updateNode, createTeamspace } from '@/app/(dashboard)/w/[workspace_slug]/actions';
+import { createNode, updateNode, createTeamspace, getUnresolvedCommentCounts } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { useRouter } from 'next/navigation';
 import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { CommentCountsProvider } from './CommentCountsContext';
+import { createClient } from '@/lib/supabase/client';
 
 interface SidebarTreeProps {
   initialNodes: Node[];
@@ -34,10 +36,37 @@ export default function SidebarTree({
 }: SidebarTreeProps) {
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [teamspaces, setTeamspaces] = useState<Teamspace[]>(initialTeamspaces);
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
 
   // Sync state when the server re-renders with fresh data (e.g. after router.refresh())
   useEffect(() => { setNodes(initialNodes); }, [initialNodes]);
   useEffect(() => { setTeamspaces(initialTeamspaces); }, [initialTeamspaces]);
+
+  // Fetch unresolved comment counts on mount + subscribe to thread changes so
+  // the sidebar badge stays in sync as users comment / resolve.
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      const counts = await getUnresolvedCommentCounts(businessId);
+      if (!cancelled) setCommentCounts(counts);
+    };
+    refresh();
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`sidebar-comments:${businessId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'comment_threads' },
+        () => refresh()
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [businessId]);
 
   // Optimistically add newly created nodes (from teamspace/item/modal creation handlers)
   useEffect(() => {
@@ -138,6 +167,7 @@ export default function SidebarTree({
   };
 
   return (
+    <CommentCountsProvider value={commentCounts}>
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="flex flex-col w-full h-full bg-sidebar py-3">
         
@@ -261,5 +291,6 @@ export default function SidebarTree({
       />
     </div>
     </DndContext>
+    </CommentCountsProvider>
   );
 }

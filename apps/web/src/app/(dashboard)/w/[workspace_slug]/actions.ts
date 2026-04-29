@@ -779,6 +779,34 @@ async function notifyMentions(opts: {
 }
 
 
+/**
+ * Returns a map of nodeId → count of unresolved comment threads. Used by the
+ * sidebar tree to render a small badge next to nodes that have open
+ * discussions, so users know to click in.
+ */
+export async function getUnresolvedCommentCounts(businessId: string) {
+  const supabase = await createClient();
+
+  // Single round-trip: nodes in this business, joined to their unresolved
+  // comment_threads. RLS already gates threads to workspace members.
+  const { data, error } = await supabase
+    .from('comment_threads')
+    .select('node_id, nodes!inner(business_id)')
+    .eq('is_resolved', false)
+    .eq('nodes.business_id', businessId);
+
+  if (error) {
+    console.error('[Comment] count query failed:', error);
+    return {} as Record<string, number>;
+  }
+
+  const counts: Record<string, number> = {};
+  for (const row of data || []) {
+    counts[row.node_id] = (counts[row.node_id] || 0) + 1;
+  }
+  return counts;
+}
+
 export async function getTeamMembers(businessId: string) {
   const supabase = await createClient();
   const { data: members, error } = await supabase
