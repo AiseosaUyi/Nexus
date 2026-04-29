@@ -24,15 +24,24 @@ interface CommentComposerProps {
   onCancel?: () => void;
   className?: string;
   autoFocus?: boolean;
+  initialContent?: unknown;
 }
 
 const CommentComposer = forwardRef<CommentComposerHandle, CommentComposerProps>(
   function CommentComposer(
-    { placeholder = 'Add a comment…', onSubmit, onCancel, className, autoFocus = true },
+    {
+      placeholder = 'Add a comment…',
+      onSubmit,
+      onCancel,
+      className,
+      autoFocus = true,
+      initialContent,
+    },
     ref
   ) {
     const editor = useEditor({
       immediatelyRender: false,
+      content: initialContent && typeof initialContent === 'object' ? initialContent : undefined,
       extensions: [
         StarterKit.configure({
           // Comments are flat — no headings/lists/blockquotes/etc.
@@ -120,7 +129,7 @@ const CommentComposer = forwardRef<CommentComposerHandle, CommentComposerProps>(
 
     useEffect(() => {
       if (autoFocus && editor) {
-        requestAnimationFrame(() => editor.commands.focus());
+        requestAnimationFrame(() => editor.commands.focus('end'));
       }
     }, [autoFocus, editor]);
 

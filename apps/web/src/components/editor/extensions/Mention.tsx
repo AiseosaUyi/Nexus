@@ -155,7 +155,22 @@ export const mentionSuggestion = {
   // nothing when you click an item — the popup just dismisses. This handler
   // replaces the trigger range ("@que") with an actual mention node + a
   // trailing space so the cursor lands sensibly.
-  command: ({ editor, range, props }: { editor: any; range: { from: number; to: number }; props: { id: string; label: string } }) => {
+  command: ({
+    editor,
+    range,
+    props,
+  }: {
+    editor: any;
+    range: { from: number; to: number };
+    props: { id?: string; label?: string };
+  }) => {
+    // Defensive: refuse to insert a mention without both id + label so we
+    // never end up with @teammate fallbacks for new comments. Logs visible in
+    // dev tools so we can trace the source of the failure if it ever happens.
+    if (!props?.id || !props?.label) {
+      console.warn('[Mention.command] missing id/label on insert — skipping', props);
+      return;
+    }
     editor
       .chain()
       .focus()

@@ -20,6 +20,7 @@ import {
 } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { createClient } from '@/lib/supabase/client';
 import CommentBody from './CommentBody';
+import CommentComposer, { type CommentComposerHandle } from '../editor/CommentComposer';
 
 interface CommentSidebarProps {
   nodeId: string;
@@ -102,9 +103,10 @@ export default function CommentSidebar({
   // chips in legacy comments where the label wasn't saved.
   const [members, setMembers] = useState<Record<string, { name: string; email: string | null }>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState('');
+  const [editingInitial, setEditingInitial] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const editComposerRef = useRef<CommentComposerHandle>(null);
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchComments = useCallback(async () => {
@@ -247,35 +249,33 @@ export default function CommentSidebar({
 
   const handleStartEdit = (comment: Comment) => {
     setEditingId(comment.id);
-    // For Tiptap JSON content, extract plain text for the simple edit textarea.
-    // This loses mention chips on edit — acceptable trade-off until edit gets
-    // its own Tiptap composer.
     const c = comment.content as { text?: string } | undefined;
     if (c && typeof c.text === 'string') {
-      setEditDraft(c.text);
+      // Legacy comment with plain text — wrap into Tiptap doc shape.
+      setEditingInitial({
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: c.text }] }],
+      });
     } else {
-      // Walk Tiptap JSON to extract plain text
-      const parts: string[] = [];
-      const walk = (n: unknown) => {
-        if (!n || typeof n !== 'object') return;
-        const node = n as { text?: string; type?: string; attrs?: { label?: string }; content?: unknown[] };
-        if (typeof node.text === 'string') parts.push(node.text);
-        if (node.type === 'mention' && node.attrs?.label) parts.push(`@${node.attrs.label}`);
-        if (Array.isArray(node.content)) node.content.forEach(walk);
-      };
-      walk(comment.content);
-      setEditDraft(parts.join(' '));
+      setEditingInitial(comment.content);
     }
   };
 
   const handleSaveEdit = async () => {
-    if (!editingId || !editDraft.trim()) return;
+    if (!editingId || !editComposerRef.current) return;
+    if (editComposerRef.current.isEmpty()) return;
+    const json = editComposerRef.current.getJSON();
     setBusy(true);
-    await editComment(editingId, { text: editDraft.trim() });
+    await editComment(editingId, json);
     setEditingId(null);
-    setEditDraft('');
+    setEditingInitial(null);
     setBusy(false);
     fetchComments();
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingInitial(null);
   };
 
   const handleSelectThread = (thread: Thread) => {
@@ -454,34 +454,37 @@ export default function CommentSidebar({
                               )}
                             </div>
                             {isEditing ? (
-                              <div className="space-y-1.5">
-                                <textarea
-                                  value={editDraft}
-                                  onChange={e => setEditDraft(e.target.value)}
-                                  onClick={e => e.stopPropagation()}
-                                  className="w-full bg-background border border-border/30 rounded p-2 text-[13px] focus:outline-none focus:border-cta/50 transition-colors resize-y min-h-[60px]"
+                              <div
+                                className="space-y-2 bg-background border border-border/30 rounded p-2"
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <CommentComposer
+                                  ref={editComposerRef}
+                                  initialContent={editingInitial}
+                                  placeholder="Edit comment… (@ to mention)"
+                                  onSubmit={handleSaveEdit}
+                                  onCancel={handleCancelEdit}
                                   autoFocus
                                 />
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/30">
+                                  <button
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      handleCancelEdit();
+                                    }}
+                                    className="px-2 py-1 hover:bg-hover rounded text-[11px] font-bold text-muted-foreground"
+                                  >
+                                    Cancel
+                                  </button>
                                   <button
                                     onClick={e => {
                                       e.stopPropagation();
                                       handleSaveEdit();
                                     }}
-                                    disabled={busy || !editDraft.trim()}
+                                    disabled={busy}
                                     className="px-2 py-1 bg-cta text-cta-foreground rounded text-[11px] font-bold disabled:opacity-30"
                                   >
                                     Save
-                                  </button>
-                                  <button
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      setEditingId(null);
-                                      setEditDraft('');
-                                    }}
-                                    className="px-2 py-1 hover:bg-hover rounded text-[11px] font-bold text-muted-foreground"
-                                  >
-                                    Cancel
                                   </button>
                                 </div>
                               </div>
