@@ -21,6 +21,7 @@ import {
   deleteComment,
 } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { createClient } from '@/lib/supabase/client';
+import CommentBody from './CommentBody';
 
 interface CommentSidebarProps {
   nodeId: string;
@@ -41,7 +42,7 @@ interface Comment {
   id: string;
   thread_id: string;
   user_id: string;
-  content: { text?: string } & Record<string, unknown>;
+  content: unknown;
   is_edited: boolean;
   edited_at: string | null;
   created_at: string;
@@ -227,7 +228,25 @@ export default function CommentSidebar({
 
   const handleStartEdit = (comment: Comment) => {
     setEditingId(comment.id);
-    setEditDraft(comment.content?.text || '');
+    // For Tiptap JSON content, extract plain text for the simple edit textarea.
+    // This loses mention chips on edit — acceptable trade-off until edit gets
+    // its own Tiptap composer.
+    const c = comment.content as { text?: string } | undefined;
+    if (c && typeof c.text === 'string') {
+      setEditDraft(c.text);
+    } else {
+      // Walk Tiptap JSON to extract plain text
+      const parts: string[] = [];
+      const walk = (n: unknown) => {
+        if (!n || typeof n !== 'object') return;
+        const node = n as { text?: string; type?: string; attrs?: { label?: string }; content?: unknown[] };
+        if (typeof node.text === 'string') parts.push(node.text);
+        if (node.type === 'mention' && node.attrs?.label) parts.push(`@${node.attrs.label}`);
+        if (Array.isArray(node.content)) node.content.forEach(walk);
+      };
+      walk(comment.content);
+      setEditDraft(parts.join(' '));
+    }
     setOpenMenu(null);
   };
 
@@ -312,8 +331,6 @@ export default function CommentSidebar({
             const isActive = activeThreadId === thread.id;
             const isOrphan = !presentThreadIds.has(thread.id);
             const canResolve = isAdmin || thread.created_by === currentUserId;
-            const firstComment = thread.comments[0];
-            const author = thread.creator || firstComment?.author;
 
             return (
               <div
@@ -325,17 +342,9 @@ export default function CommentSidebar({
                   isActive && 'bg-sidebar border-cta/30 shadow-sm'
                 )}
               >
-                {/* Status row */}
-                <div className="flex items-center justify-between mb-3 gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-6 h-6 rounded-full bg-cta/10 flex items-center justify-center text-[10px] font-bold text-cta shrink-0">
-                      {author ? authorInitial(author) : <UserIcon className="w-3 h-3" />}
-                    </div>
-                    <span className="text-[12px] font-bold text-foreground/80 truncate">
-                      {authorName(author)}
-                    </span>
-                  </div>
-                  {canResolve && (
+                {/* Resolve button — appears on hover, top-right */}
+                {canResolve && (
+                  <div className="absolute top-2 right-2">
                     <button
                       onClick={e => {
                         e.stopPropagation();
@@ -347,8 +356,8 @@ export default function CommentSidebar({
                     >
                       <CheckCircle2 className="w-3 h-3" /> Resolve
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* Orphan badge */}
                 {isOrphan && (
@@ -369,12 +378,12 @@ export default function CommentSidebar({
                     return (
                       <div key={comment.id} className="group/comment relative">
                         <div className="flex items-start gap-2">
-                          <div className="w-5 h-5 rounded-full bg-muted/30 flex items-center justify-center text-[9px] font-bold text-foreground/60 shrink-0 mt-0.5">
+                          <div className="w-6 h-6 rounded-full bg-cta/10 flex items-center justify-center text-[10px] font-bold text-cta shrink-0 mt-0.5">
                             {authorInitial(comment.author)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 text-[10px] mb-0.5">
-                              <span className="font-bold text-foreground/70">
+                            <div className="flex items-center gap-1.5 text-[11px] mb-1">
+                              <span className="font-bold text-foreground/85">
                                 {authorName(comment.author)}
                               </span>
                               <span className="text-muted-foreground">
@@ -417,9 +426,7 @@ export default function CommentSidebar({
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-[13px] leading-relaxed text-foreground/80 break-words whitespace-pre-wrap">
-                                {comment.content?.text || ''}
-                              </p>
+                              <CommentBody content={comment.content} />
                             )}
                           </div>
                           {isOwn && !isEditing && (

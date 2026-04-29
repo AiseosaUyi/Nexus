@@ -5,7 +5,9 @@ import { ReactRenderer } from '@tiptap/react';
 import { PluginKey } from '@tiptap/pm/state';
 import tippy from 'tippy.js';
 
-const MentionPluginKey = new PluginKey('mention');
+// Each editor instance gets its own PluginKey so the document editor and the
+// inline comment composer don't fight over a shared suggestion plugin state.
+let _mentionPluginCounter = 0;
 
 export const Mention = Node.create({
   name: 'mention',
@@ -59,19 +61,26 @@ export const Mention = Node.create({
   },
 
   addProseMirrorPlugins() {
+    const pluginKey = new PluginKey(`mention-${++_mentionPluginCounter}`);
     return [
       Suggestion({
         editor: this.editor,
         ...this.options.suggestion,
-        pluginKey: MentionPluginKey,
+        pluginKey,
       }),
     ];
   },
 });
 
-// Internal Suggestion List Component
+// Internal Suggestion List Component. Reset selectedIndex when the items
+// array identity changes (i.e. when query refines) so the highlight stays on
+// the first match instead of going out of bounds.
 const SuggestionList = forwardRef((props: any, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  React.useEffect(() => {
+    setSelectedIndex(0);
+  }, [props.items]);
 
   const selectItem = (index: number) => {
     const item = props.items[index];
@@ -82,6 +91,7 @@ const SuggestionList = forwardRef((props: any, ref) => {
 
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }: { event: KeyboardEvent }) => {
+      if (props.items.length === 0) return false;
       if (event.key === 'ArrowUp') {
         setSelectedIndex((selectedIndex + props.items.length - 1) % props.items.length);
         return true;
@@ -98,22 +108,40 @@ const SuggestionList = forwardRef((props: any, ref) => {
     },
   }));
 
-  if (props.items.length === 0) return null;
+  if (props.items.length === 0) {
+    return (
+      <div className="z-[120] min-w-[180px] bg-background rounded-lg shadow-popover border border-border px-3 py-2 text-[12px] text-muted">
+        No matches
+      </div>
+    );
+  }
 
   return (
-    <div className="z-[120] min-w-[180px] bg-background rounded-lg shadow-popover border border-border p-1 animate-in fade-in zoom-in-95 duration-100">
+    <div className="z-[120] min-w-[200px] bg-background rounded-lg shadow-popover border border-border p-1 animate-in fade-in zoom-in-95 duration-100">
       {props.items.map((item: any, index: number) => (
         <button
           key={item.id}
-          onClick={() => selectItem(index)}
+          type="button"
+          // Prevent focus/blur from stealing selection from the editor before
+          // command() can fire — without this, clicking the item dismissed the
+          // popup without inserting the mention.
+          onMouseDown={(e) => {
+            e.preventDefault();
+            selectItem(index);
+          }}
           className={`flex w-full items-center text-left px-2 py-1.5 rounded transition-colors ${
             index === selectedIndex ? 'bg-hover text-foreground' : 'text-muted hover:bg-hover hover:text-foreground'
           }`}
         >
-          <div className="w-5 h-5 rounded-full bg-cta/10 flex items-center justify-center text-[10px] font-bold text-cta mr-2">
+          <div className="w-5 h-5 rounded-full bg-cta/10 flex items-center justify-center text-[10px] font-bold text-cta mr-2 shrink-0">
              {item.name.charAt(0).toUpperCase()}
           </div>
-          <span className="text-[13px] font-medium truncate">{item.name}</span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] font-semibold truncate text-foreground">{item.name}</div>
+            {item.email && (
+              <div className="text-[11px] truncate text-muted/70">{item.email}</div>
+            )}
+          </div>
         </button>
       ))}
     </div>
