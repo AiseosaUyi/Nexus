@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authenticateAndAcceptInvite } from '@/app/(auth)/actions';
-import { Lock, User, Loader2, AlertCircle } from 'lucide-react';
+import { Lock, User, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 interface InviteAuthFormProps {
   token: string;
@@ -22,6 +22,7 @@ export default function InviteAuthForm({
 
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,15 +101,24 @@ export default function InviteAuthForm({
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/50" />
             <input
               id="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               required
               autoFocus={isExisting}
               minLength={6}
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border bg-background text-foreground placeholder:text-muted/50 outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all text-sm"
+              className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-border bg-background text-foreground placeholder:text-muted/50 outline-none transition-all text-sm"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(s => !s)}
+              tabIndex={-1}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted/60 hover:text-foreground transition-colors"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
           {!isExisting && (
             <p className="text-[11px] text-muted/70 ml-1">At least 6 characters.</p>
