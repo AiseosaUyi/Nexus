@@ -13,6 +13,10 @@ const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
+// Bumping `?v` busts cached favicons after a redesign. Update this when the
+// icon visuals change so existing tabs reload the new mark.
+const ICON_VERSION = '3';
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
@@ -22,6 +26,11 @@ export const metadata: Metadata = {
   description:
     'A block-based knowledge system for your team. Write, organize, and collaborate — all in one place.',
   applicationName: 'Nexus',
+  icons: {
+    icon: { url: `/icon.svg?v=${ICON_VERSION}`, type: 'image/svg+xml' },
+    shortcut: `/icon.svg?v=${ICON_VERSION}`,
+    apple: `/apple-icon?v=${ICON_VERSION}`,
+  },
   openGraph: {
     type: 'website',
     siteName: 'Nexus',
