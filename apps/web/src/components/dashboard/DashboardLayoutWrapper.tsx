@@ -6,6 +6,7 @@ import MobileSidebar from './MobileSidebar';
 import BusinessSwitcher from '@/components/business/BusinessSwitcher';
 import SidebarTree from './SidebarTree';
 import NavigationProgress from './NavigationProgress';
+import CommentCountsLoader from './CommentCountsLoader';
 import { Node, Teamspace } from '@nexus/api/schema';
 
 interface DashboardLayoutWrapperProps {
@@ -30,6 +31,7 @@ export default function DashboardLayoutWrapper({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
+    <CommentCountsLoader businessId={activeBusiness?.id}>
     <div className="flex flex-col md:flex-row h-screen w-full bg-background text-foreground font-sans selection:bg-accent/30 overflow-hidden">
       <NavigationProgress />
       
@@ -72,5 +74,6 @@ export default function DashboardLayoutWrapper({
         {children}
       </main>
     </div>
+    </CommentCountsLoader>
   );
 }

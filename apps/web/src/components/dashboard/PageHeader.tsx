@@ -30,6 +30,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useDebouncedCallback } from 'use-debounce';
 import { useRouter, useParams } from 'next/navigation';
 import { updateNode, toggleNodePublic, createCommentThread, duplicateNode, deleteNode, getNodeShares, inviteToNode, removeNodeShare } from '@/app/(dashboard)/w/[workspace_slug]/actions';
+import { useCommentCount } from './CommentCountsContext';
 import type { NodeShare } from '@nexus/api/schema';
 
 interface PageHeaderProps {
@@ -71,6 +72,36 @@ const COVER_GALLERY = [
   { url: 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1200&q=80', label: 'Dark Sky' },
   { url: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=1200&q=80', label: 'Minimal Dark' },
 ];
+
+// Header-level Comments button. Lives on every page, shows a count pill
+// alongside the icon when there are unresolved threads so users see open
+// discussions without opening the side panel first.
+function CommentsButton({
+  nodeId,
+  onOpenComments,
+}: {
+  nodeId: string;
+  onOpenComments?: () => void;
+}) {
+  const count = useCommentCount(nodeId);
+  return (
+    <button
+      onClick={() => onOpenComments?.()}
+      className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-hover text-foreground transition-colors cursor-pointer"
+      title={count > 0 ? `Show ${count} unresolved ${count === 1 ? 'comment' : 'comments'}` : 'Show comments'}
+    >
+      <MessageSquare className="w-3.5 h-3.5 opacity-60" />
+      <span className="hidden md:inline">Comments</span>
+      {count > 0 && (
+        <span
+          className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-cta/15 text-cta text-[10px] font-bold tabular-nums"
+        >
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </button>
+  );
+}
 
 export default function PageHeader({ title: initialTitle, icon: initialIcon, coverUrl: initialCoverUrl, nodeId, isNameCustom = false, isPublic: initialIsPublic = false, onOpenComments, onImport, teamspace, workspaceSlug, isCalendarEntry }: PageHeaderProps) {
   const router = useRouter();
@@ -353,14 +384,7 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
             </div>
             {/* Header button only opens the sidebar; new threads always come
                 from inline text-selection so every thread has an anchor. */}
-            <button
-              onClick={() => onOpenComments?.()}
-              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-hover text-foreground transition-colors cursor-pointer"
-              title="Show comments"
-            >
-              <MessageSquare className="w-3.5 h-3.5 opacity-60" />
-              <span className="hidden md:inline">Comments</span>
-            </button>
+            <CommentsButton nodeId={nodeId} onOpenComments={onOpenComments} />
             <div className="relative" ref={shareMenuRef}>
               <button
                 onClick={() => setIsShareMenuOpen(prev => !prev)}
