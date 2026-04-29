@@ -39,15 +39,40 @@ export default async function PublicNodePage({ params }: PublicPageProps) {
   const { node_id } = await params;
   const supabase = await createClient();
 
-  // First check: is the node public?
-  const { data: node } = await supabase
+  // Access ladder: a viewer is allowed if either
+  //   1. the node is public (`is_public = true`), or
+  //   2. the viewer is authenticated and their email appears in node_shares
+  //      for this node (the email-invite path).
+  // We try (1) first because it's the cheap, common case.
+  let { data: node } = await supabase
     .from('nodes')
     .select('id, title, icon, is_public')
     .eq('id', node_id)
     .eq('is_public', true)
     .single();
 
-  // If not public, show request access page
+  if (!node) {
+    const { data: { user } } = await supabase.auth.getUser();
+    const viewerEmail = user?.email?.toLowerCase().trim();
+    if (viewerEmail) {
+      const { data: share } = await supabase
+        .from('node_shares')
+        .select('permission')
+        .eq('node_id', node_id)
+        .eq('email', viewerEmail)
+        .maybeSingle();
+      if (share) {
+        const { data: viaShare } = await supabase
+          .from('nodes')
+          .select('id, title, icon, is_public')
+          .eq('id', node_id)
+          .single();
+        if (viaShare) node = viaShare;
+      }
+    }
+  }
+
+  // If still no access, show the "request access" page.
   if (!node) {
     // Verify the node exists at all (without RLS filter)
     const { data: existsCheck } = await supabase

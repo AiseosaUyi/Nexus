@@ -21,6 +21,9 @@ import {
   Loader2,
   Lock,
   UserPlus,
+  Eye,
+  Pencil,
+  ChevronDown,
 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import Link from 'next/link';
@@ -32,6 +35,14 @@ import { useRouter, useParams } from 'next/navigation';
 import { updateNode, toggleNodePublic, createCommentThread, duplicateNode, deleteNode, getNodeShares, inviteToNode, removeNodeShare } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { useCommentCount } from './CommentCountsContext';
 import type { NodeShare } from '@nexus/api/schema';
+
+type EnrichedShare = NodeShare & {
+  user_id: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  is_member: boolean;
+  is_registered: boolean;
+};
 
 interface PageHeaderProps {
   title: string;
@@ -116,9 +127,11 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [isCopied, setIsCopied] = useState(false);
   const [isTogglingPublic, setIsTogglingPublic] = useState(false);
-  const [shares, setShares] = useState<NodeShare[]>([]);
+  const [shares, setShares] = useState<EnrichedShare[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePermission, setInvitePermission] = useState<'view' | 'edit'>('view');
   const [isInviting, setIsInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ email: string; name: string | null; avatar: string | null } | null>(null);
   const shareMenuRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -149,7 +162,7 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
   useEffect(() => {
     if (isShareMenuOpen) {
       getNodeShares(nodeId).then((result) => {
-        if (result.data) setShares(result.data as NodeShare[]);
+        if (result.data) setShares(result.data as EnrichedShare[]);
       });
       if (!currentUser) {
         const supabase = createClient();
@@ -199,12 +212,30 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
 
   const handleInvite = async () => {
     const email = inviteEmail.trim();
-    if (!email || !email.includes('@')) return;
+    setInviteError(null);
+    if (!email || !email.includes('@')) {
+      setInviteError('Enter a valid email address.');
+      return;
+    }
     setIsInviting(true);
-    const result = await inviteToNode(nodeId, email, 'view');
+    const result = await inviteToNode(nodeId, email, invitePermission);
     if (result.data) {
-      setShares((prev) => [...prev.filter((s) => s.email !== email), result.data as NodeShare]);
+      // Refetch so the new row is enriched (member/guest, name, avatar) for
+      // the list — the insert response only carries the raw node_shares row.
+      const refreshed = await getNodeShares(nodeId);
+      if (refreshed.data) setShares(refreshed.data as EnrichedShare[]);
       setInviteEmail('');
+    } else if (result.error) {
+      // Surface the actual error so the user doesn't watch a silent spinner.
+      // Translates a few known Postgres/PostgREST codes into plain English.
+      const raw = String(result.error);
+      if (raw.includes('node_shares') && raw.includes('schema cache')) {
+        setInviteError(
+          'Sharing isn’t set up on this database yet. Apply database migrations 17–23 in Supabase, then try again.'
+        );
+      } else {
+        setInviteError(raw);
+      }
     }
     setIsInviting(false);
   };
@@ -406,10 +437,57 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
                         type="email"
                         placeholder="Email address"
                         value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
+                        onChange={(e) => { setInviteEmail(e.target.value); setInviteError(null); }}
                         onKeyDown={(e) => { if (e.key === 'Enter') handleInvite(); }}
                         className="flex-1 px-3 py-1.5 text-[13px] bg-foreground/[0.04] border border-border rounded-lg text-foreground placeholder:text-muted/50 outline-none focus:border-accent/40"
                       />
+                      <DropdownMenu.Root>
+                        <DropdownMenu.Trigger asChild>
+                          <button
+                            type="button"
+                            title={invitePermission === 'edit' ? 'Full access — can edit this page' : 'View only — can read but not edit'}
+                            className="flex items-center gap-1 px-2 py-1.5 text-[12px] font-medium bg-foreground/[0.04] hover:bg-foreground/[0.08] border border-border rounded-lg text-foreground/80 transition-colors cursor-pointer shrink-0"
+                          >
+                            {invitePermission === 'edit' ? (
+                              <Pencil className="w-3.5 h-3.5" />
+                            ) : (
+                              <Eye className="w-3.5 h-3.5" />
+                            )}
+                            <span>{invitePermission === 'edit' ? 'Edit' : 'View'}</span>
+                            <ChevronDown className="w-3 h-3 opacity-60" />
+                          </button>
+                        </DropdownMenu.Trigger>
+                        <DropdownMenu.Portal>
+                          <DropdownMenu.Content
+                            align="end"
+                            sideOffset={6}
+                            className="z-[100] min-w-[200px] bg-background border border-border/30 rounded-xl shadow-popover p-1 animate-in zoom-in-95 fade-in duration-150"
+                          >
+                            <DropdownMenu.Item
+                              onSelect={() => setInvitePermission('view')}
+                              className="flex items-start gap-2 px-2 py-2 rounded-lg text-[13px] text-foreground hover:bg-hover cursor-pointer outline-none"
+                            >
+                              <Eye className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                              <div className="flex-1">
+                                <p className="font-bold leading-tight">View only</p>
+                                <p className="text-[11px] text-muted-foreground leading-snug">Can read the page. Can’t edit or change settings.</p>
+                              </div>
+                              {invitePermission === 'view' && <Check className="w-3.5 h-3.5 mt-1 text-cta shrink-0" />}
+                            </DropdownMenu.Item>
+                            <DropdownMenu.Item
+                              onSelect={() => setInvitePermission('edit')}
+                              className="flex items-start gap-2 px-2 py-2 rounded-lg text-[13px] text-foreground hover:bg-hover cursor-pointer outline-none"
+                            >
+                              <Pencil className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                              <div className="flex-1">
+                                <p className="font-bold leading-tight">Full access</p>
+                                <p className="text-[11px] text-muted-foreground leading-snug">Can edit, comment, and invite other people.</p>
+                              </div>
+                              {invitePermission === 'edit' && <Check className="w-3.5 h-3.5 mt-1 text-cta shrink-0" />}
+                            </DropdownMenu.Item>
+                          </DropdownMenu.Content>
+                        </DropdownMenu.Portal>
+                      </DropdownMenu.Root>
                       <button
                         onClick={handleInvite}
                         disabled={isInviting || !inviteEmail.trim()}
@@ -418,6 +496,9 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
                         {isInviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Invite'}
                       </button>
                     </div>
+                    {inviteError && (
+                      <p className="mt-2 text-[11px] text-red-400/90 leading-snug">{inviteError}</p>
+                    )}
                   </div>
 
                   {/* People with access */}
@@ -441,24 +522,71 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
                           <span className="text-[11px] text-muted shrink-0">Full access</span>
                         </div>
                       )}
-                      {shares.map((share) => (
-                        <div key={share.id} className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-foreground/10 flex items-center justify-center text-[11px] font-bold text-foreground/60 shrink-0 uppercase">
-                            {share.email[0]}
+                      {shares.map((share) => {
+                        const displayName = share.full_name?.trim() || share.email.split('@')[0];
+                        const initial = (share.full_name?.trim() || share.email)[0]?.toUpperCase() || '?';
+                        // Member = registered user inside this workspace.
+                        // Guest = either external email with no Nexus account
+                        // or a registered user from a different workspace.
+                        const subline = share.is_member
+                          ? share.email
+                          : share.is_registered
+                          ? `${share.email} · Guest`
+                          : `${share.email} · Email invite`;
+                        return (
+                          <div key={share.id} className="flex items-center gap-2.5">
+                            {share.avatar_url ? (
+                              <img src={share.avatar_url} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
+                            ) : (
+                              <div className={cn(
+                                "w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 uppercase",
+                                share.is_member
+                                  ? "bg-cta/10 text-cta"
+                                  : "bg-foreground/10 text-foreground/60"
+                              )}>
+                                {initial}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-[13px] text-foreground truncate">{displayName}</p>
+                                <span className={cn(
+                                  "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0",
+                                  share.is_member
+                                    ? "bg-cta/10 text-cta"
+                                    : "bg-amber-500/10 text-amber-400"
+                                )}>
+                                  {share.is_member ? 'Member' : 'Guest'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-muted truncate">{subline}</p>
+                            </div>
+                            <span
+                              title={share.permission === 'edit' || share.permission === 'full' ? 'Full access' : 'View only'}
+                              className="flex items-center gap-1 text-[11px] text-muted shrink-0"
+                            >
+                              {share.permission === 'edit' || share.permission === 'full' ? (
+                                <><Pencil className="w-3 h-3" /> Edit</>
+                              ) : (
+                                <><Eye className="w-3 h-3" /> View</>
+                              )}
+                            </span>
+                            <button
+                              onClick={() => handleRemoveShare(share.email)}
+                              className="p-0.5 rounded hover:bg-hover text-muted hover:text-red-400 transition-colors cursor-pointer shrink-0"
+                              aria-label={`Remove ${displayName}`}
+                              title="Remove access"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] text-foreground truncate">{share.email}</p>
-                            <p className="text-[10px] text-amber-400/70">Invited</p>
-                          </div>
-                          <span className="text-[11px] text-muted capitalize shrink-0">Can {share.permission}</span>
-                          <button
-                            onClick={() => handleRemoveShare(share.email)}
-                            className="p-0.5 rounded hover:bg-hover text-muted hover:text-red-400 transition-colors cursor-pointer shrink-0"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
+                      {shares.length === 0 && (
+                        <p className="text-[12px] text-muted/70 italic px-1">
+                          No one’s been invited yet. Add an email above to share this page.
+                        </p>
+                      )}
                     </div>
                   </div>
 

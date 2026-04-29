@@ -391,7 +391,52 @@ export async function getNodeShares(nodeId: string) {
     .order('created_at', { ascending: true });
 
   if (error) return { data: [], error: error.message };
-  return { data: data ?? [] };
+  if (!data?.length) return { data: [] };
+
+  // Enrich each share with the recipient's identity (if they have a Nexus
+  // account) and a flag for whether they belong to this node's workspace.
+  // Lets the UI show a real name/avatar for members and a "Guest" badge
+  // for external invites.
+  const emails = data.map((s) => s.email);
+
+  const { data: nodeRow } = await supabase
+    .from('nodes')
+    .select('business_id')
+    .eq('id', nodeId)
+    .single();
+
+  const { data: users } = await supabase
+    .from('users')
+    .select('id, email, full_name, avatar_url')
+    .in('email', emails);
+
+  let memberIds = new Set<string>();
+  if (nodeRow?.business_id && users?.length) {
+    const { data: memberships } = await supabase
+      .from('business_members')
+      .select('user_id')
+      .eq('business_id', nodeRow.business_id)
+      .in('user_id', users.map((u) => u.id));
+    memberIds = new Set((memberships || []).map((m: any) => m.user_id as string));
+  }
+
+  const usersByEmail = new Map(
+    (users || []).map((u: any) => [String(u.email).toLowerCase(), u])
+  );
+
+  const enriched = data.map((s) => {
+    const u = usersByEmail.get(s.email.toLowerCase());
+    return {
+      ...s,
+      user_id: u?.id ?? null,
+      full_name: u?.full_name ?? null,
+      avatar_url: u?.avatar_url ?? null,
+      is_member: u?.id ? memberIds.has(u.id) : false,
+      is_registered: !!u?.id,
+    };
+  });
+
+  return { data: enriched };
 }
 
 export async function inviteToNode(nodeId: string, email: string, permission: string = 'view') {
@@ -421,14 +466,19 @@ export async function inviteToNode(nodeId: string, email: string, permission: st
     const pageTitle = node?.title || 'Untitled';
     const pageUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/p/${nodeId}`;
 
-    await sendPageShareEmail({
+    const result = await sendPageShareEmail({
       to: email.toLowerCase().trim(),
       inviterName,
       pageTitle,
       pageUrl,
     });
+    if ('error' in result) {
+      console.error('[Share] Email FAILED for', email, ':', result.error);
+    } else {
+      console.log('[Share] Email sent to', email, 'page:', pageTitle, 'id:', result.id);
+    }
   } catch (emailErr) {
-    console.error('[Share] Email send failed (share still created):', emailErr);
+    console.error('[Share] Email send threw (share still created):', emailErr);
   }
 
   return { data };
