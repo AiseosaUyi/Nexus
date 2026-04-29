@@ -179,12 +179,18 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
     }
   }, [isShareMenuOpen, nodeId, currentUser]);
 
-  // Close share menu on outside click
+  // Close share menu on outside click. Radix portals its dropdown contents
+  // to <body>, so a click on the access-type dropdown lives OUTSIDE
+  // shareMenuRef and would otherwise close the share menu beneath it. We
+  // explicitly allow clicks inside any Radix portal (data-radix-popper-
+  // content-wrapper) so picking an access type leaves the share menu open.
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target as Node)) {
-        setIsShareMenuOpen(false);
-      }
+      const target = e.target as HTMLElement | null;
+      if (!shareMenuRef.current) return;
+      if (shareMenuRef.current.contains(target as Node)) return;
+      if (target?.closest('[data-radix-popper-content-wrapper]')) return;
+      setIsShareMenuOpen(false);
     };
     if (isShareMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
@@ -461,29 +467,48 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
                           <DropdownMenu.Content
                             align="end"
                             sideOffset={6}
-                            className="z-[100] min-w-[200px] bg-background border border-border/30 rounded-xl shadow-popover p-1 animate-in zoom-in-95 fade-in duration-150"
+                            // Radix portals this content to <body>. The
+                            // share menu's outside-click handler runs on
+                            // document `mousedown` and would close the
+                            // share menu before Radix's `onSelect` even
+                            // fires. We stop both events at this boundary
+                            // so the share menu never sees a click that
+                            // landed on the dropdown.
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                            className="z-[100] min-w-[260px] bg-sidebar border border-border/40 rounded-xl shadow-popover p-1 ring-1 ring-black/20 animate-in zoom-in-95 fade-in duration-150"
                           >
                             <DropdownMenu.Item
                               onSelect={() => setInvitePermission('view')}
-                              className="flex items-start gap-2 px-2 py-2 rounded-lg text-[13px] text-foreground hover:bg-hover cursor-pointer outline-none"
+                              className={cn(
+                                'flex items-start gap-2 px-2 py-2 rounded-lg text-[13px] cursor-pointer outline-none transition-colors',
+                                invitePermission === 'view'
+                                  ? 'bg-cta/10 text-foreground'
+                                  : 'text-foreground hover:bg-hover'
+                              )}
                             >
-                              <Eye className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                              <Eye className={cn('w-4 h-4 mt-0.5 shrink-0', invitePermission === 'view' ? 'text-cta' : 'text-muted-foreground')} />
                               <div className="flex-1">
                                 <p className="font-bold leading-tight">View only</p>
                                 <p className="text-[11px] text-muted-foreground leading-snug">Can read the page. Can’t edit or change settings.</p>
                               </div>
-                              {invitePermission === 'view' && <Check className="w-3.5 h-3.5 mt-1 text-cta shrink-0" />}
+                              {invitePermission === 'view' && <Check className="w-4 h-4 mt-0.5 text-cta shrink-0" strokeWidth={3} />}
                             </DropdownMenu.Item>
                             <DropdownMenu.Item
                               onSelect={() => setInvitePermission('edit')}
-                              className="flex items-start gap-2 px-2 py-2 rounded-lg text-[13px] text-foreground hover:bg-hover cursor-pointer outline-none"
+                              className={cn(
+                                'flex items-start gap-2 px-2 py-2 rounded-lg text-[13px] cursor-pointer outline-none transition-colors',
+                                invitePermission === 'edit'
+                                  ? 'bg-cta/10 text-foreground'
+                                  : 'text-foreground hover:bg-hover'
+                              )}
                             >
-                              <Pencil className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                              <Pencil className={cn('w-4 h-4 mt-0.5 shrink-0', invitePermission === 'edit' ? 'text-cta' : 'text-muted-foreground')} />
                               <div className="flex-1">
                                 <p className="font-bold leading-tight">Full access</p>
                                 <p className="text-[11px] text-muted-foreground leading-snug">Can edit, comment, and invite other people.</p>
                               </div>
-                              {invitePermission === 'edit' && <Check className="w-3.5 h-3.5 mt-1 text-cta shrink-0" />}
+                              {invitePermission === 'edit' && <Check className="w-4 h-4 mt-0.5 text-cta shrink-0" strokeWidth={3} />}
                             </DropdownMenu.Item>
                           </DropdownMenu.Content>
                         </DropdownMenu.Portal>

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import ReadOnlyEditor from '@/components/editor/ReadOnlyEditor';
 import RequestAccessForm from './RequestAccessForm';
+import GuestEditor from './GuestEditor';
 
 interface PublicPageProps {
   params: Promise<{ node_id: string }>;
@@ -51,23 +52,36 @@ export default async function PublicNodePage({ params }: PublicPageProps) {
     .eq('is_public', true)
     .single();
 
-  if (!node) {
-    const { data: { user } } = await supabase.auth.getUser();
-    const viewerEmail = user?.email?.toLowerCase().trim();
-    if (viewerEmail) {
-      const { data: share } = await supabase
-        .from('node_shares')
-        .select('permission')
-        .eq('node_id', node_id)
-        .eq('email', viewerEmail)
-        .maybeSingle();
-      if (share) {
-        const { data: viaShare } = await supabase
-          .from('nodes')
-          .select('id, title, icon, is_public')
-          .eq('id', node_id)
-          .single();
-        if (viaShare) node = viaShare;
+  // Track the viewer's permission so we can pick read-only vs editable below.
+  // 'public' means the page is open to the world (read-only). For invited
+  // viewers we honor what's stored on node_shares.
+  type Perm = 'public' | 'view' | 'comment' | 'edit' | 'full';
+  let viewerPermission: Perm = 'public';
+  let viewerName = '';
+  let viewerEmail = '';
+
+  const { data: { user } } = await supabase.auth.getUser();
+  viewerEmail = user?.email?.toLowerCase().trim() ?? '';
+  viewerName = (user?.user_metadata?.full_name as string)
+    || (user?.user_metadata?.name as string)
+    || (viewerEmail ? viewerEmail.split('@')[0] : 'Guest');
+
+  if (!node && viewerEmail) {
+    const { data: share } = await supabase
+      .from('node_shares')
+      .select('permission')
+      .eq('node_id', node_id)
+      .eq('email', viewerEmail)
+      .maybeSingle();
+    if (share) {
+      const { data: viaShare } = await supabase
+        .from('nodes')
+        .select('id, title, icon, is_public')
+        .eq('id', node_id)
+        .single();
+      if (viaShare) {
+        node = viaShare;
+        viewerPermission = (share.permission as Perm) ?? 'view';
       }
     }
   }
@@ -129,6 +143,12 @@ export default async function PublicNodePage({ params }: PublicPageProps) {
 
   const snapshot = nodeWithSnapshot?.yjs_snapshot as string | null;
 
+  // Editable mode only when the viewer is an invited Guest with edit/full
+  // permission. Public viewers and view-only invitees still hit the
+  // ReadOnlyEditor. We never expose the dashboard chrome — Guests stay on
+  // a single-page surface so they can't navigate to other workspace pages.
+  const canEdit = viewerPermission === 'edit' || viewerPermission === 'full';
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/10 px-6 py-3 flex items-center justify-between">
@@ -138,8 +158,12 @@ export default async function PublicNodePage({ params }: PublicPageProps) {
           </div>
           <span className="text-foreground/60 text-sm font-medium">Nexus</span>
         </div>
-        <span className="text-xs text-muted bg-sidebar/50 border border-border/30 px-2 py-1 rounded-full">
-          Read-only
+        <span className={
+          canEdit
+            ? 'text-xs text-cta bg-cta/10 border border-cta/30 px-2 py-1 rounded-full font-bold'
+            : 'text-xs text-muted bg-sidebar/50 border border-border/30 px-2 py-1 rounded-full'
+        }>
+          {canEdit ? 'Guest editor' : 'Read-only'}
         </span>
       </header>
 
@@ -150,7 +174,15 @@ export default async function PublicNodePage({ params }: PublicPageProps) {
         <h1 className="text-5xl font-black font-display tracking-tight leading-tight text-foreground mb-8">
           {node.title || 'Untitled'}
         </h1>
-        <ReadOnlyEditor snapshot={snapshot} />
+        {canEdit ? (
+          <GuestEditor
+            nodeId={node.id}
+            initialSnapshot={snapshot}
+            userName={viewerName}
+          />
+        ) : (
+          <ReadOnlyEditor snapshot={snapshot} />
+        )}
       </main>
     </div>
   );
