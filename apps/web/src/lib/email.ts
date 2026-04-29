@@ -104,10 +104,12 @@ function renderEmailLayout(opts: {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="card" style="max-width:480px;background:#ffffff;border:1px solid #ececec;border-radius:14px;overflow:hidden;">
         <tr>
           <td style="padding:32px 32px 16px;">
-            <div style="display:inline-flex;align-items:center;gap:10px;">
-              <span style="display:inline-flex;width:32px;height:32px;background:#111;border-radius:7px;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;letter-spacing:-0.02em;">N</span>
-              <span style="font-weight:600;font-size:15px;color:#111;">Nexus</span>
-            </div>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="width:32px;height:32px;background:#0a0a0a;border-radius:7px;text-align:center;vertical-align:middle;color:#ffffff;font-weight:800;font-size:18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:32px;">N</td>
+                <td style="padding-left:10px;font-weight:600;font-size:15px;color:#111;vertical-align:middle;">Nexus</td>
+              </tr>
+            </table>
           </td>
         </tr>
         <tr>
