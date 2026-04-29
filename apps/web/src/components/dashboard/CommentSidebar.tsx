@@ -6,11 +6,12 @@ import {
   MessageSquare,
   CheckCircle2,
   Send,
-  User as UserIcon,
   Trash2,
   Pencil,
   AlertCircle,
   MoreHorizontal,
+  Loader2,
+  Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -97,6 +98,9 @@ export default function CommentSidebar({
   const [isAdmin, setIsAdmin] = useState(false);
   const [presentThreadIds, setPresentThreadIds] = useState<Set<string>>(new Set());
   const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
+  // Per-thread resolve UX state. 'pending' = spinner; 'done' = green flash;
+  // null/absent = idle. Drives the button label + the card transition.
+  const [resolveStatus, setResolveStatus] = useState<Record<string, 'pending' | 'done'>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -211,19 +215,33 @@ export default function CommentSidebar({
   };
 
   const handleResolve = async (threadId: string) => {
-    setBusy(true);
+    setResolveStatus(s => ({ ...s, [threadId]: 'pending' }));
     const result = await resolveThread(threadId);
-    setBusy(false);
     if (result.error) {
       console.error('[CommentSidebar] resolve error:', result.error);
+      setResolveStatus(s => {
+        const n = { ...s };
+        delete n[threadId];
+        return n;
+      });
       return;
     }
-    // Tell the editor to drop the yellow comment-mark for this thread so
-    // resolved text doesn't keep highlighting after the conversation is closed.
+    // Drop the yellow mark from the editor immediately.
     window.dispatchEvent(
       new CustomEvent('nexus:thread-resolved', { detail: { threadId } })
     );
-    fetchComments();
+    // Show the green "Resolved" state for ~700ms so the user actually sees
+    // the action complete, then refetch (which removes the card via the
+    // is_resolved=false filter).
+    setResolveStatus(s => ({ ...s, [threadId]: 'done' }));
+    setTimeout(() => {
+      fetchComments();
+      setResolveStatus(s => {
+        const n = { ...s };
+        delete n[threadId];
+        return n;
+      });
+    }, 700);
   };
 
   const handleStartEdit = (comment: Comment) => {
@@ -331,6 +349,9 @@ export default function CommentSidebar({
             const isActive = activeThreadId === thread.id;
             const isOrphan = !presentThreadIds.has(thread.id);
             const canResolve = isAdmin || thread.created_by === currentUserId;
+            const status = resolveStatus[thread.id];
+            const isResolving = status === 'pending';
+            const justResolved = status === 'done';
 
             return (
               <div
@@ -339,22 +360,58 @@ export default function CommentSidebar({
                 className={cn(
                   'group relative flex flex-col rounded-xl border p-3 transition-all cursor-pointer',
                   'bg-sidebar/30 border-border/5 hover:border-border/20',
-                  isActive && 'bg-sidebar border-cta/30 shadow-sm'
+                  isActive && !justResolved && 'bg-sidebar border-cta/30 shadow-sm',
+                  // Green pulse + slight scale-down while the success state is
+                  // visible. Card transitions out when fetchComments removes it.
+                  justResolved &&
+                    'bg-emerald-500/10 border-emerald-500/40 scale-[0.98] opacity-90'
                 )}
               >
-                {/* Resolve button — appears on hover, top-right */}
+                {/* Resolve button — pinned top-right; visible on hover, OR
+                    while resolving / just-resolved so the user sees the
+                    state transition. */}
                 {canResolve && (
                   <div className="absolute top-2 right-2">
                     <button
                       onClick={e => {
                         e.stopPropagation();
-                        handleResolve(thread.id);
+                        if (!isResolving && !justResolved) handleResolve(thread.id);
                       }}
-                      disabled={busy}
-                      className="opacity-0 group-hover:opacity-100 px-2 py-1 hover:bg-background rounded text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all flex items-center gap-1"
-                      title="Mark resolved (removes highlight)"
+                      disabled={isResolving || justResolved}
+                      className={cn(
+                        'px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1',
+                        // Visibility: appear on hover OR while busy/done so
+                        // the spinner/checkmark is always visible.
+                        isResolving || justResolved
+                          ? 'opacity-100'
+                          : 'opacity-0 group-hover:opacity-100 hover:bg-background',
+                        justResolved
+                          ? 'bg-emerald-500/15 text-emerald-500'
+                          : isResolving
+                          ? 'bg-foreground/5 text-muted-foreground cursor-wait'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                      title={
+                        justResolved
+                          ? 'Resolved'
+                          : isResolving
+                          ? 'Resolving…'
+                          : 'Mark resolved (removes highlight)'
+                      }
                     >
-                      <CheckCircle2 className="w-3 h-3" /> Resolve
+                      {justResolved ? (
+                        <>
+                          <Check className="w-3 h-3" strokeWidth={3} /> Resolved
+                        </>
+                      ) : isResolving ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" /> Resolving
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3 h-3" /> Resolve
+                        </>
+                      )}
                     </button>
                   </div>
                 )}

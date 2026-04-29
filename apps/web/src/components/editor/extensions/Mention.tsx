@@ -151,6 +151,20 @@ const SuggestionList = forwardRef((props: any, ref) => {
 SuggestionList.displayName = 'SuggestionList';
 
 export const mentionSuggestion = {
+  // Critical: without a `command` here, the Suggestion plugin's default does
+  // nothing when you click an item — the popup just dismisses. This handler
+  // replaces the trigger range ("@que") with an actual mention node + a
+  // trailing space so the cursor lands sensibly.
+  command: ({ editor, range, props }: { editor: any; range: { from: number; to: number }; props: { id: string; label: string } }) => {
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(range, [
+        { type: 'mention', attrs: { id: props.id, label: props.label } },
+        { type: 'text', text: ' ' },
+      ])
+      .run();
+  },
   render: () => {
     let component: any;
     let popup: any;
