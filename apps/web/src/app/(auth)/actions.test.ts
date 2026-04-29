@@ -16,6 +16,18 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }));
 
+// signUp dynamically imports @supabase/supabase-js to make an admin client
+// when no session is returned. Mock it so the test doesn't require real env.
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(() => ({
+    auth: {
+      admin: {
+        updateUserById: vi.fn().mockResolvedValue({ data: null, error: null }),
+      },
+    },
+  })),
+}));
+
 describe('Auth Actions', () => {
   const mockSupabase = {
     auth: {
@@ -48,22 +60,25 @@ describe('Auth Actions', () => {
       expect(redirect).toHaveBeenCalledWith('/dashboard');
     });
 
-    it('redirects to signup message when session is null (email unconfirmed)', async () => {
+    it('auto-confirms and signs in when session is null (email unconfirmed)', async () => {
       const formData = new FormData();
       formData.append('email', 'test@example.com');
       formData.append('password', 'password123');
       formData.append('full_name', 'Test User');
 
-      mockSupabase.auth.signUp.mockResolvedValue({ 
-        data: { session: null, user: { id: '123' } }, 
-        error: null 
+      mockSupabase.auth.signUp.mockResolvedValue({
+        data: { session: null, user: { id: '123' } },
+        error: null,
+      });
+      // Auto-confirm path then signs in via the same supabase client.
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: { user: { id: '123' } },
+        error: null,
       });
 
       await signUp(formData);
 
-      expect(redirect).toHaveBeenCalledWith(
-        expect.stringContaining('signup?message=Success')
-      );
+      expect(redirect).toHaveBeenCalledWith('/dashboard');
     });
 
     it('redirects with error message on failure', async () => {
