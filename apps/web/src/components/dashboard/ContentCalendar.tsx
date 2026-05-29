@@ -43,7 +43,7 @@ const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
   draft:     { label: 'Draft',     dot: 'bg-foreground/30', bg: 'bg-foreground/[0.08]', text: 'text-foreground/50' },
-  scheduled: { label: 'Scheduled', dot: 'bg-blue-400',      bg: 'bg-blue-500/15',       text: 'text-blue-400' },
+  scheduled: { label: 'Scheduled', dot: 'bg-amber-400',     bg: 'bg-amber-500/15',      text: 'text-amber-500' },
   published: { label: 'Published', dot: 'bg-green-400',     bg: 'bg-green-500/15',      text: 'text-green-400' },
   cancelled: { label: 'Cancelled', dot: 'bg-red-400',       bg: 'bg-red-500/15',        text: 'text-red-400' },
 };

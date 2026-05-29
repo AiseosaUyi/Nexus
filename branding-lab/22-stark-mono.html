@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Everything you know, in one tree</title>
+<style>
+  :root{
+    --bg:#000; --bg2:#0a0a0a; --fg:#fafafa; --muted:#a1a1a1; --dim:#6e6e6e;
+    --line:#222; --line2:#333; --accent:#3b82f6;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--bg);color:var(--fg);line-height:1.5;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;letter-spacing:-.011em}
+  ::selection{background:var(--fg);color:var(--bg)}
+  a{color:inherit;text-decoration:none}
+  .mono{font-family:var(--mono);letter-spacing:0}
+  .edge{max-width:1100px;margin:0 auto;padding:0 28px}
+  .hair{height:1px;background:var(--line);border:0}
+
+  header{position:sticky;top:0;z-index:50;background:rgba(0,0,0,.7);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  nav{max-width:1100px;margin:0 auto;height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;letter-spacing:-.02em}
+  .brand .mk{width:18px;height:18px;border:1px solid var(--fg);position:relative}
+  .brand .mk:after{content:"";position:absolute;inset:4px 4px auto auto;width:6px;height:6px;background:var(--fg)}
+  nav .links{display:flex;gap:28px;font-size:13.5px;color:var(--muted)}
+  nav .links a:hover{color:var(--fg)}
+  @media(max-width:760px){nav .links{display:none}}
+  .navcta{display:flex;align-items:center;gap:18px;font-size:13.5px}
+  .navcta .si{color:var(--muted)}.navcta .si:hover{color:var(--fg)}
+  .navcta .go{background:var(--fg);color:var(--bg);padding:7px 15px;border-radius:7px;font-weight:500}
+
+  /* hero */
+  .hero{padding:120px 0 70px;border-bottom:1px solid var(--line);position:relative}
+  .hero:before{content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:linear-gradient(var(--bg2) 1px,transparent 1px),linear-gradient(90deg,var(--bg2) 1px,transparent 1px);
+    background-size:64px 64px;mask-image:radial-gradient(120% 80% at 50% 0,#000,transparent 75%);opacity:.6}
+  .hero-inner{position:relative;max-width:840px}
+  .kick{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.02em;margin-bottom:24px;display:flex;align-items:center;gap:10px}
+  .kick .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(59,130,246,.18)}
+  h1{font-size:clamp(46px,8vw,96px);line-height:.96;font-weight:600;letter-spacing:-.045em;margin-bottom:24px}
+  h1 .o{color:var(--dim)}
+  .lede{font-size:clamp(17px,1.7vw,20px);color:var(--muted);max-width:56ch;line-height:1.55;margin-bottom:34px}
+  .cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .btn{font-size:14.5px;font-weight:500;padding:12px 22px;border-radius:8px;transition:.15s}
+  .btn.fill{background:var(--fg);color:var(--bg)}.btn.fill:hover{opacity:.85}
+  .btn.out{border:1px solid var(--line2);color:var(--fg)}.btn.out:hover{border-color:var(--fg)}
+  .micro{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:18px}
+
+  /* product mock — flat, bordered, no glow */
+  .stage{position:relative;margin-top:60px}
+  .win{border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--bg2)}
+  .win .bar{display:flex;align-items:center;gap:7px;padding:11px 14px;border-bottom:1px solid var(--line)}
+  .win .bar .d{width:10px;height:10px;border-radius:50%;background:var(--line2)}
+  .win .bar .u{margin:0 auto;font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .win .b{display:grid;grid-template-columns:210px 1fr;min-height:340px}
+  @media(max-width:640px){.win .b{grid-template-columns:1fr}.win .side{display:none}}
+  .side{border-right:1px solid var(--line);padding:14px 12px}
+  .side .ws{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;padding:6px 8px;margin-bottom:12px}
+  .side .ws .a{width:20px;height:20px;border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted)}
+  .side .g{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);margin:12px 0 6px 8px}
+  .side .it{font-size:12.5px;color:var(--muted);padding:5px 8px;border-radius:6px}
+  .side .it.on{background:#161616;color:var(--fg)}
+  .side .it.ind{padding-left:20px}
+  .main{padding:26px 30px}
+  .main h4{font-size:22px;font-weight:600;letter-spacing:-.02em;margin-bottom:5px}
+  .main .meta{font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:18px}
+  .main .ln{height:9px;border-radius:5px;background:#161616;margin-bottom:9px}
+  .main .callout{border:1px solid var(--line2);border-left:2px solid var(--accent);border-radius:6px;padding:11px 13px;margin:14px 0;font-size:12.5px;color:var(--muted)}
+  .main .tk{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted);margin-bottom:8px}
+  .main .tk .c{width:14px;height:14px;border-radius:4px;border:1px solid var(--line2)}
+  .main .tk.done .c{background:var(--fg);border-color:var(--fg)}
+  .main .tk.done span{color:var(--dim);text-decoration:line-through}
+
+  /* logo strip */
+  .cloud{padding:46px 0;border-bottom:1px solid var(--line);text-align:center}
+  .cloud p{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:22px}
+  .logos{display:flex;flex-wrap:wrap;justify-content:center;gap:14px 44px;opacity:.5;font-weight:600;font-size:16px;letter-spacing:-.02em}
+
+  /* feature rows */
+  .feat{border-bottom:1px solid var(--line)}
+  .fr{display:grid;grid-template-columns:80px 280px 1fr;gap:24px;padding:30px 0;border-bottom:1px solid var(--line);align-items:start}
+  .fr:last-child{border-bottom:none}
+  @media(max-width:720px){.fr{grid-template-columns:1fr}.fr .fn{display:none}}
+  .fr .fn{font-family:var(--mono);font-size:12px;color:var(--accent)}
+  .fr h3{font-size:20px;font-weight:600;letter-spacing:-.02em}
+  .fr p{font-size:15px;color:var(--muted);line-height:1.55}
+  .sechead{padding:80px 0 36px}
+  .sechead .e{font-family:var(--mono);font-size:12px;color:var(--accent)}
+  .sechead h2{font-size:clamp(28px,4vw,46px);font-weight:600;letter-spacing:-.03em;margin-top:12px}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:70px 0}
+  @media(max-width:680px){.stats{grid-template-columns:1fr 1fr}}
+  .stat{padding:32px 24px;border-right:1px solid var(--line)}
+  .stat:nth-child(2n){border-right:1px solid var(--line)}
+  .stat .n{font-size:clamp(30px,3.8vw,46px);font-weight:600;letter-spacing:-.03em}
+  .stat .l{font-size:13px;color:var(--muted);margin-top:6px}
+
+  /* pricing */
+  .prices{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:50px 0 90px}
+  @media(max-width:820px){.prices{grid-template-columns:1fr;max-width:420px;margin-inline:auto}}
+  .price{border:1px solid var(--line);border-radius:12px;padding:28px}
+  .price.feat{border-color:var(--fg)}
+  .price .t{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .price .amt{font-size:40px;font-weight:600;letter-spacing:-.03em;margin:12px 0 2px}
+  .price .amt small{font-size:14px;color:var(--dim);font-weight:400}
+  .price .d{font-size:13.5px;color:var(--muted);margin-bottom:20px}
+  .price ul{list-style:none;font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:9px;margin-bottom:22px}
+  .price li:before{content:"+ ";color:var(--accent);font-family:var(--mono)}
+  .price .pb{display:block;text-align:center;font-size:14px;font-weight:500;padding:11px;border-radius:8px;border:1px solid var(--line2)}
+  .price.feat .pb{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+  .price .pb:hover{border-color:var(--fg)}
+
+  .final{text-align:center;padding:100px 0;border-top:1px solid var(--line)}
+  .final h2{font-size:clamp(34px,6vw,72px);font-weight:600;letter-spacing:-.04em;line-height:1;margin-bottom:24px}
+  .final h2 .o{color:var(--dim)}
+  footer{border-top:1px solid var(--line);padding:36px 0}
+  .fg{display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--dim)}
+  .fg a{color:var(--muted)}.fg a:hover{color:var(--fg)}
+  .reveal{opacity:0;transform:translateY(22px);transition:.7s cubic-bezier(.2,.7,.2,1)}.reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<header><nav>
+  <a class="brand" href="#"><span class="mk"></span>Nexus</a>
+  <div class="links"><a href="#product">Product</a><a href="#pricing">Pricing</a><a href="#">Docs</a><a href="#">Changelog</a></div>
+  <div class="navcta"><a class="si" href="#">Sign in</a><a class="go" href="#">Start free</a></div>
+</nav></header>
+
+<!-- HERO -->
+<section class="hero"><div class="edge hero-inner">
+  <div class="kick"><span class="dot"></span>REAL-TIME COLLABORATION IS LIVE</div>
+  <h1>Everything you know,<br><span class="o">in one tree.</span></h1>
+  <p class="lede">Nexus is a block-based workspace for notes, docs, and plans. Folders, documents and calendars are all nodes — fast, collaborative, and impossible to lose.</p>
+  <div class="cta-row">
+    <a class="btn fill" href="#">Start free</a>
+    <a class="btn out" href="#">Read the docs</a>
+  </div>
+  <div class="micro">$ npm i -g nexus &nbsp;·&nbsp; no credit card required</div>
+
+  <div class="stage">
+    <div class="win">
+      <div class="bar"><span class="d"></span><span class="d"></span><span class="d"></span><span class="u">nexus.app/acme/engineering/architecture</span></div>
+      <div class="b">
+        <div class="side">
+          <div class="ws"><span class="a">A</span>Acme Inc</div>
+          <div class="g">Pages</div>
+          <div class="it">Product Roadmap</div>
+          <div class="it">Engineering</div>
+          <div class="it ind on">Architecture</div>
+          <div class="it ind">API Docs</div>
+          <div class="it">Marketing</div>
+        </div>
+        <div class="main">
+          <h4>System Architecture</h4>
+          <div class="meta">EDITED 2M AGO · 3 EDITORS ONLINE</div>
+          <div class="ln" style="width:92%"></div>
+          <div class="ln" style="width:76%"></div>
+          <div class="callout">Everything is a node. Documents are block containers, folders are tree nodes — one model at any depth.</div>
+          <div class="tk done"><span class="c"></span><span>Define the node schema</span></div>
+          <div class="tk done"><span class="c"></span><span>Build the block editor</span></div>
+          <div class="tk"><span class="c"></span><span>Wire realtime subscriptions</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- LOGO STRIP -->
+<div class="cloud"><div class="edge">
+  <p>Trusted by fast-moving teams</p>
+  <div class="logos"><span>Northwind</span><span>Vector</span><span>Foundry</span><span>Lumen</span><span>Halcyon</span><span>Cobalt</span></div>
+</div></div>
+
+<!-- FEATURES -->
+<section class="edge reveal" id="product">
+  <div class="sechead"><div class="e">// product</div><h2>One workspace, every kind of work.</h2></div>
+  <div class="feat">
+    <div class="fr"><span class="fn">01</span><h3>Block editor</h3><p>Headings, media, tasks, code, tables — every document is composed of blocks you can reorder instantly. Type “/” for anything.</p></div>
+    <div class="fr"><span class="fn">02</span><h3>Infinite nesting</h3><p>Folders, documents and calendars are all nodes in one tree. Restructure the whole workspace with a single drag.</p></div>
+    <div class="fr"><span class="fn">03</span><h3>Real-time</h3><p>Live cursors and instant updates over WebSocket subscriptions. Edit together without a single collision.</p></div>
+    <div class="fr"><span class="fn">04</span><h3>Notion import</h3><p>Paste a URL — the DOM is parsed straight into clean Nexus blocks. h1→heading, p→paragraph, img→image.</p></div>
+    <div class="fr"><span class="fn">05</span><h3>Roles &amp; access</h3><p>Admin, editor, viewer — permissions scoped per business and enforced at the source.</p></div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="edge reveal"><div class="stats">
+  <div class="stat"><div class="n">10k+</div><div class="l">blocks per document</div></div>
+  <div class="stat"><div class="n">&lt;30ms</div><div class="l">sync latency</div></div>
+  <div class="stat"><div class="n">99.99%</div><div class="l">uptime</div></div>
+  <div class="stat"><div class="n">∞</div><div class="l">nesting depth</div></div>
+</div></div>
+
+<!-- PRICING -->
+<section class="edge reveal" id="pricing">
+  <div class="sechead"><div class="e">// pricing</div><h2>Simple plans that scale.</h2></div>
+  <div class="prices">
+    <div class="price">
+      <div class="t">Personal</div><div class="amt">$0<small> /forever</small></div>
+      <div class="d">Your first workspace and solo thinking.</div>
+      <ul><li>Unlimited pages &amp; blocks</li><li>Infinite nesting</li><li>Content calendar</li></ul>
+      <a class="pb" href="#">Get started</a>
+    </div>
+    <div class="price feat">
+      <div class="t">Team</div><div class="amt">$12<small> /user/mo</small></div>
+      <div class="d">For teams building a shared brain.</div>
+      <ul><li>Everything in Personal</li><li>Real-time collaboration</li><li>Roles &amp; permissions</li><li>Notion import</li></ul>
+      <a class="pb" href="#">Start free trial</a>
+    </div>
+    <div class="price">
+      <div class="t">Enterprise</div><div class="amt">Custom</div>
+      <div class="d">Scale &amp; security needs.</div>
+      <ul><li>SSO &amp; SAML</li><li>Audit logs</li><li>Dedicated support</li></ul>
+      <a class="pb" href="#">Contact sales</a>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL -->
+<section class="final reveal"><div class="edge">
+  <h2>Give your thinking<br><span class="o">a place to live.</span></h2>
+  <a class="btn fill" href="#">Start free</a>
+</div></section>
+
+<footer><div class="edge fg">
+  <span>© 2026 Nexus, Inc.</span>
+  <span><a href="index.html">← branding lab</a> · Privacy · Terms · Status</span>
+</div></footer>
+
+<script>
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

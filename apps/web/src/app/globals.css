@@ -1,468 +1,217 @@
 @import "tailwindcss";
 
+/* ============================================================================
+   NEXUS — WARM-CALM DESIGN SYSTEM  ·  light + dark
+   Paper / ink / clay. Quiet, editorial, premium. Soft radii + soft shadows.
+   System sans only. Tokens drive the whole app, so every page inherits it.
+   ========================================================================== */
+
 :root {
-  /* --- Notion Light Mode --- */
-  --background: #ffffff;
-  --foreground: #37352f;
-  --sidebar: #fbfbfa;
-  --border: rgba(55, 53, 47, 0.09);
-  --muted: rgba(55, 53, 47, 0.4);
-  --hover: rgba(55, 53, 47, 0.08);
-  --active: rgba(55, 53, 47, 0.12);
-  --accent: #2383e2;
-  --accent-foreground: #ffffff;
-  --cta-bg: #37352f;
-  --cta-fg: #ffffff;
+  /* ── Light (warm paper) ── */
+  --background:#f2ede2;
+  --foreground:#241f18;
+  --sidebar:#ece4d4;
+  --card:#fcf9f2;
+  --card-hover:#f6f0e4;
+  --border:rgba(36,31,24,0.12);
+  --muted:rgba(36,31,24,0.56);
+  --hover:rgba(36,31,24,0.05);
+  --active:rgba(36,31,24,0.10);
+  --accent:#b14e2c;              /* clay */
+  --accent-foreground:#ffffff;
+  --cta-bg:#241f18;              /* ink primary buttons */
+  --cta-fg:#f7f2e8;
+
+  /* warm brand pops (replace the old neon nb-* set) */
+  --nb-blue:#b14e2c;             /* clay */
+  --nb-pink:#c4677e;             /* muted rose */
+  --nb-yellow:#c08a3e;           /* gold */
+  --nb-green:#5e7152;            /* sage */
+  --nb-orange:#bf6a36;           /* burnt orange */
+
+  --dot:rgba(36,31,24,0.045);
+
+  --shadow-notion:0 1px 2px rgba(36,31,24,.06),0 2px 6px rgba(36,31,24,.05);
+  --shadow-popover:0 1px 2px rgba(36,31,24,.06),0 18px 40px -24px rgba(36,31,24,.30);
+
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
 }
 
 .dark {
-  --background: #191919;
-  --foreground: #ffffff;
-  --sidebar: #111111;
-  --border: rgba(255, 255, 255, 0.08);
-  --muted: rgba(255, 255, 255, 0.55);
-  --hover: rgba(255, 255, 255, 0.07);
-  --active: rgba(255, 255, 255, 0.12);
-  --accent: #2383e2;
-  --accent-foreground: #ffffff;
-  --cta-bg: #ffffff;
-  --cta-fg: #111111;
-  --card: #212121;
-  --card-hover: #272727;
+  /* ── Dark (warm espresso) ── */
+  --background:#1a1510;
+  --foreground:#f1ece1;
+  --sidebar:#151009;
+  --card:#241d15;
+  --card-hover:#2c2419;
+  --border:rgba(241,236,225,0.13);
+  --muted:rgba(241,236,225,0.56);
+  --hover:rgba(241,236,225,0.06);
+  --active:rgba(241,236,225,0.11);
+  --accent:#df7d45;             /* warmer clay for dark */
+  --accent-foreground:#1a1510;
+  --cta-bg:#f1ece1;             /* light primary on dark */
+  --cta-fg:#1a1510;
 
-  /* Safe Area / Mobile Utilities */
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --nb-blue:#df7d45;
+  --nb-pink:#d98aa0;
+  --nb-yellow:#d9a85a;
+  --nb-green:#8aa179;
+  --nb-orange:#e08a4e;
+
+  --dot:rgba(241,236,225,0.05);
+
+  --shadow-notion:0 1px 2px rgba(0,0,0,.35),0 2px 6px rgba(0,0,0,.3);
+  --shadow-popover:0 1px 2px rgba(0,0,0,.4),0 20px 44px -22px rgba(0,0,0,.7);
 }
 
 @theme {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-sidebar: var(--sidebar);
-  --color-border: var(--border);
-  --color-muted: var(--muted);
-  --color-hover: var(--hover);
-  --color-active: var(--active);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-cta: var(--cta-bg);
-  --color-cta-foreground: var(--cta-fg);
+  --color-background:var(--background);
+  --color-foreground:var(--foreground);
+  --color-sidebar:var(--sidebar);
+  --color-card:var(--card);
+  --color-border:var(--border);
+  --color-muted:var(--muted);
+  --color-hover:var(--hover);
+  --color-active:var(--active);
+  --color-accent:var(--accent);
+  --color-accent-foreground:var(--accent-foreground);
+  --color-cta:var(--cta-bg);
+  --color-cta-foreground:var(--cta-fg);
 
-  /* Typography Reference: Notion refined look */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Outfit', 'Inter', sans-serif;
+  --color-nb-blue:var(--nb-blue);
+  --color-nb-pink:var(--nb-pink);
+  --color-nb-yellow:var(--nb-yellow);
+  --color-nb-green:var(--nb-green);
+  --color-nb-orange:var(--nb-orange);
 
-  --shadow-notion: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 1px rgba(0, 0, 0, 0.1);
-  --shadow-popover: 0px 10px 38px -10px rgba(22, 23, 24, 0.35), 0px 10px 20px -15px rgba(22, 23, 24, 0.2);
+  /* System sans only — no special fonts */
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
 
-  /* Animation Tokens */
-  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  --ease-in-out-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring:cubic-bezier(0.175,0.885,0.32,1.275);
+  --ease-in-out-smooth:cubic-bezier(0.4,0,0.2,1);
 }
 
-body {
-  margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
+html{color-scheme:light}
+html.dark{color-scheme:dark}
+
+body{
+  margin:0;
+  background:var(--background);
+  color:var(--foreground);
+  font-family:var(--font-sans);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  line-height:1.5;
+  letter-spacing:-.011em;
+  background-image:radial-gradient(var(--dot) 1px,transparent 1px);
+  background-size:30px 30px;
 }
 
-/* Custom Scrollbar Notion Style */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* headings lean a touch heavier; editor content keeps body weight */
+h1,h2,h3,.font-display{font-family:var(--font-display);letter-spacing:-.02em}
+.tiptap h1,.tiptap h2,.tiptap h3,.tiptap h4,
+.prose h1,.prose h2,.prose h3{letter-spacing:-.01em}
+
+/* gentle interaction helper (kept harmless for any leftover usage) */
+.nb-press{transition:transform .18s,box-shadow .18s}
+.nb-press:hover{transform:translateY(-1px)}
+
+/* ── scrollbar ── */
+.custom-scrollbar::-webkit-scrollbar{width:10px;height:10px}
+.custom-scrollbar::-webkit-scrollbar-track{background:transparent}
+.custom-scrollbar::-webkit-scrollbar-thumb{background:transparent;border-radius:6px}
+.custom-scrollbar:hover::-webkit-scrollbar-thumb{background:var(--muted);border:3px solid var(--sidebar)}
+
+::selection{background:var(--accent);color:#fff}
+.selection\:bg-accent\/30 ::selection{background-color:color-mix(in oklab,var(--accent) 30%,transparent)}
+
+/* ── mobile / a11y ── */
+.mobile-safe-top{padding-top:var(--safe-top)}
+.mobile-safe-bottom{padding-bottom:var(--safe-bottom)}
+button,[role="button"],a{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tiptap:focus-visible,.tiptap:focus,[contenteditable]:focus-visible,[contenteditable]:focus,
+input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none !important}
+
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,
+input:-webkit-autofill:active,textarea:-webkit-autofill,textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,select:-webkit-autofill{
+  -webkit-box-shadow:0 0 0 100px var(--background) inset !important;
+  -webkit-text-fill-color:var(--foreground) !important;
+  caret-color:var(--foreground);border-color:var(--border) !important;
+  transition:background-color 5000s ease-in-out 0s;
+}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--accent) !important;
+  box-shadow:0 0 0 3px color-mix(in oklab,var(--accent) 18%,transparent);
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* ── landing / shared animations ── */
+@keyframes hero-reveal{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.hero-stagger-1{opacity:0;animation:hero-reveal .6s ease-out .1s both}
+.hero-stagger-2{opacity:0;animation:hero-reveal .6s ease-out .25s both}
+.hero-stagger-3{opacity:0;animation:hero-reveal .6s ease-out .4s both}
+.hero-stagger-4{opacity:0;animation:hero-reveal .6s ease-out .55s both}
+.hero-stagger-5{opacity:0;animation:hero-reveal .8s ease-out .75s both}
+@keyframes glow-drift{0%,100%{opacity:.07;transform:translate(-50%,0) scale(1)}50%{opacity:.13;transform:translate(-50%,-3%) scale(1.04)}}
+.animate-glow-drift{animation:glow-drift 10s ease-in-out infinite}
+@keyframes slide-in-from-left-spring{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+.animate-slide-in-left{animation:slide-in-from-left-spring .4s var(--ease-spring)}
+@keyframes fade-in-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.animate-fade-in-up{animation:fade-in-up .45s var(--ease-in-out-smooth) forwards}
+/* idle bob for landing illustrations */
+@keyframes c-bob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-8px) rotate(1.5deg)}}
+@keyframes c-wig{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2deg)}}
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 4px;
-}
+/* ── Tiptap / ProseMirror editor typography (theme-adaptive) ──────────────── */
+.tiptap h1{font-size:1.875em !important;font-weight:700 !important;line-height:1.3;margin:1em 0 .25em}
+.tiptap h2{font-size:1.5em !important;font-weight:650 !important;line-height:1.3;margin:.85em 0 .2em}
+.tiptap h3{font-size:1.25em !important;font-weight:650 !important;line-height:1.4;margin:.75em 0 .15em}
+.tiptap h4{font-size:1em !important;font-weight:650 !important;line-height:1.4;margin:.65em 0 .1em}
+.tiptap p{margin:.15em 0;line-height:1.65}
+.tiptap p.is-editor-empty:first-child::before,.tiptap .is-empty::before{
+  content:attr(data-placeholder);float:left;color:var(--muted);opacity:.5;pointer-events:none;height:0}
+.tiptap ol{list-style-type:decimal !important;padding-left:1.625em !important;margin:.5em 0}
+.tiptap ul:not([data-type="taskList"]){list-style-type:disc !important;padding-left:1.625em !important;margin:.5em 0}
+.tiptap ul ul,.tiptap ol ul{list-style-type:circle}
+.tiptap ul ul ul,.tiptap ol ol ul,.tiptap ol ul ul,.tiptap ul ol ul{list-style-type:square}
+.tiptap li{margin:.15em 0}.tiptap li>p{margin:0}
+.tiptap blockquote{border-left:3px solid var(--accent);padding-left:1em;margin:.75em 0;color:var(--muted)}
+.tiptap hr{border:none;border-top:1px solid var(--border);margin:1.5em 0}
+.tiptap ul[data-type="taskList"]{list-style:none;padding-left:0}
+.tiptap ul[data-type="taskList"] li{display:flex;align-items:flex-start;gap:.5em;margin:.15em 0}
+.tiptap ul[data-type="taskList"] li>label{margin-top:.3em;flex-shrink:0}
+.tiptap ul[data-type="taskList"] li>label input[type="checkbox"]{
+  appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--muted);
+  border-radius:5px;background:transparent;cursor:pointer;display:block;position:relative}
+.tiptap ul[data-type="taskList"] li>label input[type="checkbox"]:checked{background:var(--accent);border-color:var(--accent)}
+.tiptap ul[data-type="taskList"] li>label input[type="checkbox"]:checked::after{
+  content:'';position:absolute;left:3px;top:0;width:6px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.tiptap ul[data-type="taskList"] li[data-checked="true"]>div{text-decoration:line-through;color:var(--muted)}
+.tiptap details{margin:.35em 0}
+.tiptap details summary{cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:flex-start;gap:.35em}
+.tiptap details summary::before{content:'▶';font-size:.7em;margin-top:.35em;transition:transform .15s ease;flex-shrink:0}
+.tiptap details[open] summary::before{transform:rotate(90deg)}
+.tiptap details summary::-webkit-details-marker{display:none}
+.tiptap details>div:not(:first-child){padding-left:1.25em;margin-top:.25em}
+.tiptap pre{background:color-mix(in oklab,var(--foreground) 6%,transparent);border:1px solid var(--border);
+  border-radius:.6em;padding:.75em 1em;overflow-x:auto;margin:.5em 0}
+.tiptap pre code{background:none;padding:0;font-size:.875em}
+.tiptap code{background:color-mix(in oklab,var(--foreground) 8%,transparent);padding:.15em .35em;border-radius:.3em;font-size:.9em}
+.tiptap table{border-collapse:collapse;width:100%;margin:.75em 0}
+.tiptap th,.tiptap td{border:1px solid var(--border);padding:.5em .75em;text-align:left}
+.tiptap th{font-weight:650;background:color-mix(in oklab,var(--foreground) 4%,transparent)}
+.tiptap.prose,.ProseMirror.prose{max-width:none !important;width:100% !important}
+.tiptap.prose>*,.ProseMirror.prose>*{max-width:none !important}
 
-.custom-scrollbar:hover::-webkit-scrollbar-thumb {
-  background: var(--muted);
-  border: 2px solid var(--sidebar);
-}
-
-.selection\:bg-accent\/30 ::selection {
-  background-color: rgba(35, 131, 226, 0.3);
-}
-
-/* --- Mobile-First Layout Utilities --- */
-.mobile-safe-top {
-  padding-top: var(--safe-top);
-}
-
-.mobile-safe-bottom {
-  padding-bottom: var(--safe-bottom);
-}
-
-/* Accessibility: Improved touch targets and refined focus states */
-button, 
-[role="button"],
-a {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* Suppress focus ring on editor, contenteditable, and form inputs */
-.tiptap:focus-visible,
-.tiptap:focus,
-[contenteditable]:focus-visible,
-[contenteditable]:focus,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: none !important;
-}
-
-/* ── Form field theming overrides ─────────────────────────────────────────── */
-/* Chrome/Safari paint autofilled inputs with a hardcoded yellow/blue that
-   completely breaks dark-mode contrast. The 100px inset shadow trick replaces
-   the autofill background with our theme color; -webkit-text-fill-color
-   restores legible text. The 5000s transition is a known hack that delays the
-   browser's recolor long enough to feel instantaneous. */
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active,
-textarea:-webkit-autofill,
-textarea:-webkit-autofill:hover,
-textarea:-webkit-autofill:focus,
-select:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 100px var(--background) inset !important;
-  -webkit-text-fill-color: var(--foreground) !important;
-  caret-color: var(--foreground);
-  border-color: var(--border) !important;
-  transition: background-color 5000s ease-in-out 0s;
-}
-
-/* Unified focus ring for all inputs/textareas/selects across Nexus.
-   Uses the foreground color so it stays visible in both light and dark modes
-   without the harsh accent-blue saturation. Apply any local style on top — this
-   only adds a thin readable ring. */
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: var(--foreground) !important;
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--foreground) 18%, transparent);
-}
-
-/* ── Landing Page Animations ──────────────────────────────────────────────── */
-
-@keyframes hero-reveal {
-  from { opacity: 0; transform: translateY(24px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.hero-stagger-1 { opacity: 0; animation: hero-reveal 0.6s ease-out 0.1s both; }
-.hero-stagger-2 { opacity: 0; animation: hero-reveal 0.6s ease-out 0.25s both; }
-.hero-stagger-3 { opacity: 0; animation: hero-reveal 0.6s ease-out 0.4s both; }
-.hero-stagger-4 { opacity: 0; animation: hero-reveal 0.6s ease-out 0.55s both; }
-.hero-stagger-5 { opacity: 0; animation: hero-reveal 0.8s ease-out 0.75s both; }
-
-@keyframes glow-drift {
-  0%, 100% { opacity: 0.07; transform: translate(-50%, 0%) scale(1); }
-  50% { opacity: 0.13; transform: translate(-50%, -3%) scale(1.04); }
-}
-
-.animate-glow-drift {
-  animation: glow-drift 10s ease-in-out infinite;
-}
-
-/* Animations */
-@keyframes slide-in-from-left-spring {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
-}
-
-.animate-slide-in-left {
-  animation: slide-in-from-left-spring 0.4s var(--ease-spring);
-}
-
-@keyframes fade-in-up {
-  from { 
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up 0.45s var(--ease-in-out-smooth) forwards;
-}
-
-/* ── Tiptap / ProseMirror editor typography ────────────────────────────────── */
-
-/* Headings — Notion-like sizing */
-.tiptap h1 {
-  font-size: 1.875em !important;
-  font-weight: 700 !important;
-  line-height: 1.3;
-  margin: 1em 0 0.25em;
-}
-
-.tiptap h2 {
-  font-size: 1.5em !important;
-  font-weight: 600 !important;
-  line-height: 1.3;
-  margin: 0.85em 0 0.2em;
-}
-
-.tiptap h3 {
-  font-size: 1.25em !important;
-  font-weight: 600 !important;
-  line-height: 1.4;
-  margin: 0.75em 0 0.15em;
-}
-
-.tiptap h4 {
-  font-size: 1em !important;
-  font-weight: 600 !important;
-  line-height: 1.4;
-  margin: 0.65em 0 0.1em;
-}
-
-/* Paragraphs */
-.tiptap p {
-  margin: 0.15em 0;
-  line-height: 1.625;
-}
-
-/* Placeholder — shows "Heading 1", "Type '/' for commands", etc. */
-.tiptap p.is-editor-empty:first-child::before,
-.tiptap .is-empty::before {
-  content: attr(data-placeholder);
-  float: left;
-  color: var(--muted);
-  opacity: 0.5;
-  pointer-events: none;
-  height: 0;
-}
-
-/* Lists */
-.tiptap ol {
-  list-style-type: decimal !important;
-  padding-left: 1.625em !important;
-  margin: 0.5em 0;
-}
-
-.tiptap ul:not([data-type="taskList"]) {
-  list-style-type: disc !important;
-  padding-left: 1.625em !important;
-  margin: 0.5em 0;
-}
-
-.tiptap ul ul,
-.tiptap ol ul {
-  list-style-type: circle;
-}
-
-.tiptap ul ul ul,
-.tiptap ol ol ul,
-.tiptap ol ul ul,
-.tiptap ul ol ul {
-  list-style-type: square;
-}
-
-.tiptap li {
-  margin: 0.15em 0;
-}
-
-.tiptap li > p {
-  margin: 0;
-}
-
-/* Blockquote */
-.tiptap blockquote {
-  border-left: 3px solid var(--border);
-  padding-left: 1em;
-  margin: 0.75em 0;
-  color: var(--muted);
-}
-
-/* Horizontal rule */
-.tiptap hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 1.5em 0;
-}
-
-/* Task list */
-.tiptap ul[data-type="taskList"] {
-  list-style: none;
-  padding-left: 0;
-}
-
-.tiptap ul[data-type="taskList"] li {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5em;
-  margin: 0.15em 0;
-}
-
-.tiptap ul[data-type="taskList"] li > label {
-  margin-top: 0.3em;
-  flex-shrink: 0;
-}
-
-.tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--muted);
-  border-radius: 3px;
-  background: transparent;
-  cursor: pointer;
-  display: block;
-  position: relative;
-}
-
-.tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
-  content: '';
-  position: absolute;
-  left: 3px;
-  top: 0px;
-  width: 6px;
-  height: 10px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-.tiptap ul[data-type="taskList"] li[data-checked="true"] > div {
-  text-decoration: line-through;
-  color: var(--muted);
-}
-
-/* Toggle / Details */
-.tiptap details {
-  margin: 0.35em 0;
-}
-
-.tiptap details summary {
-  cursor: pointer;
-  font-weight: 500;
-  list-style: none;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.35em;
-}
-
-.tiptap details summary::before {
-  content: '▶';
-  font-size: 0.7em;
-  margin-top: 0.35em;
-  transition: transform 0.15s ease;
-  flex-shrink: 0;
-}
-
-.tiptap details[open] summary::before {
-  transform: rotate(90deg);
-}
-
-.tiptap details summary::-webkit-details-marker {
-  display: none;
-}
-
-.tiptap details > div:not(:first-child) {
-  padding-left: 1.25em;
-  margin-top: 0.25em;
-}
-
-/* Code blocks */
-.tiptap pre {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 0.5em;
-  padding: 0.75em 1em;
-  overflow-x: auto;
-  margin: 0.5em 0;
-}
-
-.tiptap pre code {
-  background: none;
-  padding: 0;
-  font-size: 0.875em;
-}
-
-.tiptap code {
-  background: rgba(255, 255, 255, 0.08);
-  padding: 0.15em 0.35em;
-  border-radius: 0.25em;
-  font-size: 0.9em;
-}
-
-/* Tables */
-.tiptap table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 0.75em 0;
-}
-
-.tiptap th,
-.tiptap td {
-  border: 1px solid var(--border);
-  padding: 0.5em 0.75em;
-  text-align: left;
-}
-
-.tiptap th {
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-/* --- Editor Width Fix: Ensure full span and override prose defaults --- */
-.tiptap.prose,
-.ProseMirror.prose {
-  max-width: none !important;
-  width: 100% !important;
-}
-
-/* Ensure individual blocks also span the full width of the editor container */
-.tiptap.prose > *,
-.ProseMirror.prose > * {
-  max-width: none !important;
-}
-
-/* --- Comment scroll-to-thread flash --- */
-@keyframes nexus-comment-flash {
-  0%   { background-color: rgba(245, 158, 11, 0.15); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.0); }
-  20%  { background-color: rgba(245, 158, 11, 0.55); box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.18); }
-  100% { background-color: rgba(245, 158, 11, 0.15); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.0); }
-}
-
-.nexus-comment-flash {
-  animation: nexus-comment-flash 1.4s ease-out;
-  border-radius: 3px;
-}
-
-/* --- Resolve action: settled-green check pop after the spinning state --- */
-@keyframes nexus-resolve-check {
-  0%   { transform: scale(0.4) rotate(-180deg); opacity: 0; }
-  60%  { transform: scale(1.25) rotate(0deg);   opacity: 1; }
-  100% { transform: scale(1)    rotate(0deg);   opacity: 1; }
-}
-
-.nexus-resolve-check {
-  animation: nexus-resolve-check 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
+/* comment flash + resolve */
+@keyframes nexus-comment-flash{
+  0%{background-color:color-mix(in oklab,var(--accent) 12%,transparent)}
+  20%{background-color:color-mix(in oklab,var(--accent) 40%,transparent)}
+  100%{background-color:color-mix(in oklab,var(--accent) 12%,transparent)}}
+.nexus-comment-flash{animation:nexus-comment-flash 1.4s ease-out;border-radius:6px}
+@keyframes nexus-resolve-check{0%{transform:scale(.4) rotate(-180deg);opacity:0}60%{transform:scale(1.25) rotate(0);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+.nexus-resolve-check{animation:nexus-resolve-check 380ms cubic-bezier(0.34,1.56,0.64,1)}

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Stack Your Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+  :root{--paper:#fdf3d8;--ink:#0f0f0f;--blue:#2b54ff;--pink:#ff5cc8;--yellow:#ffd400;--green:#1ec96b;--orange:#ff6a2b;--line:#0f0f0f}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Space Grotesk",sans-serif;background:var(--paper);color:var(--ink);overflow-x:hidden;line-height:1.45;
+    background-image:radial-gradient(var(--ink) 1.3px,transparent 1.3px);background-size:26px 26px}
+  ::selection{background:var(--blue);color:#fff}
+  .ab{font-family:"Archivo Black",sans-serif}
+  a{color:inherit;text-decoration:none}
+  .edge{padding-left:clamp(18px,4vw,52px);padding-right:clamp(18px,4vw,52px)}
+  .shadow{box-shadow:6px 6px 0 var(--ink)}
+  .box{border:3px solid var(--ink);background:var(--paper)}
+
+  header{position:sticky;top:0;z-index:60;background:var(--paper);border-bottom:3px solid var(--ink)}
+  nav{height:68px;display:flex;align-items:center;justify-content:space-between}
+  nav .lg{font-family:"Archivo Black";font-size:24px;display:flex;align-items:center;gap:10px}
+  nav .lg .b{background:var(--blue);color:#fff;border:3px solid var(--ink);padding:0 8px;transform:rotate(-3deg);display:inline-block}
+  nav .nx{display:flex;gap:10px}
+  nav .nx a{border:3px solid var(--ink);padding:7px 14px;font-weight:700;font-size:13px;background:var(--paper);transition:transform .1s,box-shadow .1s}
+  nav .nx a:hover{transform:translate(-2px,-2px);box-shadow:3px 3px 0 var(--ink)}
+  @media(max-width:760px){nav .nx a:nth-child(n+2){display:none}}
+  .nbtn{border:3px solid var(--ink);background:var(--yellow);font-weight:700;font-size:14px;padding:11px 20px;cursor:pointer;
+    box-shadow:5px 5px 0 var(--ink);transition:transform .1s,box-shadow .1s;display:inline-flex;align-items:center;gap:8px}
+  .nbtn:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--ink)}
+  .nbtn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+  .nbtn.blue{background:var(--blue);color:#fff}.nbtn.pink{background:var(--pink)}.nbtn.green{background:var(--green)}
+
+  /* HERO */
+  .hero{padding-top:70px;padding-bottom:60px;display:grid;grid-template-columns:1.2fr .8fr;gap:36px;align-items:center}
+  @media(max-width:880px){.hero{grid-template-columns:1fr}}
+  .tagsticker{display:inline-block;background:var(--green);border:3px solid var(--ink);padding:6px 14px;font-weight:700;font-size:13px;
+    transform:rotate(-2deg);box-shadow:4px 4px 0 var(--ink);margin-bottom:24px}
+  .hero h1{font-family:"Archivo Black";font-size:clamp(44px,8.5vw,104px);line-height:.92;letter-spacing:-.02em;text-transform:uppercase}
+  .hero h1 .hl{background:var(--pink);padding:0 10px;border:3px solid var(--ink);display:inline-block;transform:rotate(-1deg)}
+  .hero h1 .hl2{background:var(--blue);color:#fff;padding:0 10px;border:3px solid var(--ink);display:inline-block;transform:rotate(1.5deg)}
+  .hero p{font-size:18px;margin:26px 0 28px;max-width:46ch;font-weight:500}
+  .btnrow{display:flex;gap:14px;flex-wrap:wrap}
+
+  .hero-card{border:3px solid var(--ink);background:#fff;box-shadow:8px 8px 0 var(--ink);transform:rotate(1.5deg)}
+  .hc-bar{background:var(--blue);border-bottom:3px solid var(--ink);padding:8px 12px;display:flex;gap:7px;align-items:center}
+  .hc-bar .d{width:13px;height:13px;border:2px solid var(--ink);border-radius:50%}
+  .hc-bar .d.y{background:var(--yellow)}.hc-bar .d.p{background:var(--pink)}.hc-bar .d.g{background:var(--green)}
+  .hc-bar span{color:#fff;font-weight:700;font-size:12px;margin-left:auto}
+  .hc-body{padding:16px}
+  .blk{border:3px solid var(--ink);padding:10px 12px;margin-bottom:10px;font-weight:500;font-size:14px;display:flex;align-items:center;gap:10px;background:var(--paper)}
+  .blk .t{width:26px;height:26px;border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+  .blk.b1 .t{background:var(--yellow)}.blk.b2 .t{background:var(--pink)}.blk.b3 .t{background:var(--green)}.blk.b4 .t{background:var(--orange)}
+
+  section{padding:80px 0;border-top:3px solid var(--ink)}
+  .skick{display:inline-block;background:var(--yellow);border:3px solid var(--ink);padding:5px 12px;font-weight:700;font-size:12px;text-transform:uppercase;transform:rotate(-1.5deg);box-shadow:3px 3px 0 var(--ink);margin-bottom:24px}
+  h2{font-family:"Archivo Black";font-size:clamp(30px,5.5vw,64px);line-height:.95;text-transform:uppercase;letter-spacing:-.02em;margin-bottom:34px}
+
+  /* tree blocks */
+  .tree{display:flex;flex-direction:column;gap:0}
+  .tn{border:3px solid var(--ink);padding:16px 18px;margin-bottom:12px;display:flex;align-items:center;gap:14px;font-weight:700;
+    box-shadow:5px 5px 0 var(--ink);transition:transform .12s,box-shadow .12s}
+  .tn:hover{transform:translate(-3px,-3px);box-shadow:8px 8px 0 var(--ink)}
+  .tn .tag{border:3px solid var(--ink);padding:3px 9px;font-size:11px;text-transform:uppercase;font-weight:700}
+  .tn .nm{font-family:"Archivo Black";font-size:clamp(16px,2.4vw,26px);text-transform:uppercase}
+  .tn.l1{background:var(--blue);color:#fff}.tn.l1 .tag{background:#fff;color:var(--ink)}
+  .tn.l2{margin-left:clamp(16px,5vw,60px);background:var(--pink)}.tn.l2 .tag{background:var(--paper)}
+  .tn.l3{margin-left:clamp(32px,10vw,120px);background:var(--paper)}.tn.l3 .tag{background:var(--yellow)}
+
+  /* features */
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:840px){.cards{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.cards{grid-template-columns:1fr}}
+  .c{border:3px solid var(--ink);background:#fff;padding:22px;box-shadow:6px 6px 0 var(--ink);transition:transform .12s,box-shadow .12s}
+  .c:hover{transform:translate(-3px,-3px);box-shadow:9px 9px 0 var(--ink)}
+  .c .ic{width:48px;height:48px;border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px}
+  .c:nth-child(1) .ic{background:var(--yellow)}.c:nth-child(2) .ic{background:var(--pink)}.c:nth-child(3) .ic{background:var(--green)}
+  .c:nth-child(4) .ic{background:var(--orange)}.c:nth-child(5) .ic{background:var(--blue)}.c:nth-child(6) .ic{background:var(--yellow)}
+  .c h3{font-family:"Archivo Black";font-size:18px;text-transform:uppercase;margin-bottom:8px}
+  .c p{font-size:14px;font-weight:500;color:#222}
+
+  /* calendar */
+  .cal{border:3px solid var(--ink);background:#fff;box-shadow:6px 6px 0 var(--ink)}
+  .cr{display:grid;grid-template-columns:90px 1fr 130px;gap:14px;padding:16px 18px;border-bottom:3px solid var(--ink);align-items:center}
+  .cr:last-child{border-bottom:none}
+  .cr .d{font-family:"Archivo Black";font-size:16px}
+  .cr .t{font-weight:500}
+  .cr .s{justify-self:end;border:3px solid var(--ink);padding:4px 10px;font-size:11px;font-weight:700;text-transform:uppercase}
+  .cr .s.live{background:var(--green)}.cr .s.draft{background:var(--yellow)}.cr .s.sched{background:var(--pink)}
+
+  .end{padding:90px 0 110px;text-align:center}
+  .end h2{font-size:clamp(40px,10vw,120px)}
+  .end .nbtn{margin-top:20px;font-size:18px;padding:16px 32px}
+  footer{border-top:3px solid var(--ink);padding:24px clamp(18px,4vw,52px);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-weight:500;font-size:13px}
+  footer a{border-bottom:3px solid var(--ink)}
+  .reveal{opacity:0;transform:translateY(30px);transition:.7s cubic-bezier(.16,1,.3,1)}.reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<header><nav class="edge"><div class="lg">NE<span class="b">XUS</span></div>
+  <div class="nx"><a href="#tree">Tree</a><a href="#feat">Stuff</a><a href="#cal">Calendar</a><a href="#start">Start</a></div>
+</nav></header>
+
+<!-- HERO -->
+<div class="hero edge">
+  <div>
+    <span class="tagsticker">★ block-based knowledge OS</span>
+    <h1 class="ab">Stack <span class="hl">your</span><br>whole <span class="hl2">brain.</span></h1>
+    <p>Nexus snaps everything you know into blocks, files them into folders that nest forever, and lets your whole team edit at once. No mess. Lots of personality.</p>
+    <div class="btnrow">
+      <a class="nbtn blue" href="#start">Start free →</a>
+      <a class="nbtn" href="#tree">See how it stacks</a>
+    </div>
+  </div>
+  <div class="hero-card">
+    <div class="hc-bar"><span class="d y"></span><span class="d p"></span><span class="d g"></span><span>LAUNCH-PLAN.DOC</span></div>
+    <div class="hc-body">
+      <div class="blk b1"><span class="t">H</span>Heading block</div>
+      <div class="blk b2"><span class="t">¶</span>Paragraph block</div>
+      <div class="blk b3"><span class="t">▦</span>Image block</div>
+      <div class="blk b4"><span class="t">▶</span>Video block</div>
+      <div class="blk b1"><span class="t">/</span>Type "/" to add another…</div>
+    </div>
+  </div>
+</div>
+
+<!-- TREE -->
+<section id="tree" class="edge reveal">
+  <span class="skick">01 — everything nests</span>
+  <h2>One big<br>messy-free tree.</h2>
+  <div class="tree">
+    <div class="tn l1"><span class="tag">Business</span><span class="nm">Acme, Inc.</span></div>
+    <div class="tn l2"><span class="tag">Folder</span><span class="nm">Marketing</span></div>
+    <div class="tn l3"><span class="tag">Doc · 142blk</span><span class="nm">Launch Plan</span></div>
+    <div class="tn l2"><span class="tag">Folder</span><span class="nm">Engineering</span></div>
+    <div class="tn l3"><span class="tag">Doc · Live</span><span class="nm">Architecture</span></div>
+    <div class="tn l2"><span class="tag">Calendar</span><span class="nm">Content Cal</span></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="feat" class="edge reveal">
+  <span class="skick">02 — the good stuff</span>
+  <h2>Six chunky<br>superpowers.</h2>
+  <div class="cards">
+    <div class="c"><div class="ic">🧱</div><h3>Block Editor</h3><p>Text, image, video, embed — drag 'em into any order you like.</p></div>
+    <div class="c"><div class="ic">♾️</div><h3>Infinite Nesting</h3><p>Folders in folders in folders. No bottom of the box.</p></div>
+    <div class="c"><div class="ic">⚡</div><h3>Real-Time</h3><p>Everyone edits at once. Cursors fly around live.</p></div>
+    <div class="c"><div class="ic">🔌</div><h3>Notion Import</h3><p>Paste a URL, get clean blocks. That easy.</p></div>
+    <div class="c"><div class="ic">🖼️</div><h3>Asset CDN</h3><p>Media stored per business, served super fast.</p></div>
+    <div class="c"><div class="ic">🔑</div><h3>Roles</h3><p>Admin, editor, viewer. You decide who touches what.</p></div>
+  </div>
+</section>
+
+<!-- CALENDAR -->
+<section id="cal" class="edge reveal">
+  <span class="skick">03 — ship it</span>
+  <h2>A calendar<br>that's a node too.</h2>
+  <div class="cal">
+    <div class="cr"><span class="d">JUL 06</span><span class="t">Launch announcement → Blog</span><span class="s sched">Scheduled</span></div>
+    <div class="cr"><span class="d">JUL 08</span><span class="t">Carousel → Instagram</span><span class="s draft">Draft</span></div>
+    <div class="cr"><span class="d">JUL 09</span><span class="t">Dispatch → Newsletter</span><span class="s live">Live</span></div>
+    <div class="cr"><span class="d">JUL 12</span><span class="t">Case study → Blog</span><span class="s sched">Scheduled</span></div>
+    <div class="cr"><span class="d">JUL 14</span><span class="t">Demo film → Video</span><span class="s draft">Draft</span></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="end edge reveal" id="start">
+  <h2 class="ab">Go stack<br>something.</h2>
+  <a class="nbtn green" href="#">Start free →</a>
+</div>
+
+<footer><span>Nexus © 2026 — block-based knowledge workspace</span><a href="index.html">← branding lab</a></footer>
+
+<script>
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

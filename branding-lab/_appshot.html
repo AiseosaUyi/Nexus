@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Nexus app — warm calm</title>
+<style>
+  :root{
+    --paper:#f2ede2; --paper2:#ece4d4; --paper3:#e7ddc9; --card:#fcf9f2;
+    --ink:#241f18; --ink2:#544c3f; --muted:#948b79; --faint:#b4ab98;
+    --line:rgba(36,31,24,.10); --line2:rgba(36,31,24,.16); --line3:rgba(36,31,24,.26);
+    --clay:#b14e2c; --sage:#5e7152; --gold:#c08a3e;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;
+    letter-spacing:-.011em;overflow:hidden}
+  svg.i{width:1em;height:1em;display:block;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .app{display:flex;height:100vh;width:100vw}
+
+  /* sidebar */
+  .side{width:264px;flex-shrink:0;background:var(--paper2);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px 13px}
+  .ws{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:11px;background:var(--card);border:1px solid var(--line);
+    box-shadow:0 1px 2px rgba(36,31,24,.05)}
+  .ws .a{width:26px;height:26px;border-radius:8px;background:var(--clay);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .ws b{font-size:14px;font-weight:600;flex:1}
+  .ws .cv{color:var(--muted);width:16px}
+  .search{display:flex;align-items:center;gap:9px;margin-top:14px;padding:9px 11px;border-radius:10px;background:rgba(36,31,24,.04);font-size:13.5px;color:var(--muted)}
+  .search svg{width:15px}
+  .search .k{margin-left:auto;font-size:11px;border:1px solid var(--line2);border-radius:5px;padding:1px 6px}
+  .nav{margin-top:14px;display:flex;flex-direction:column;gap:2px}
+  .nv{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:9px;font-size:13.5px;color:var(--ink2);font-weight:480}
+  .nv svg{width:16px;color:var(--muted)}
+  .nv.on{background:var(--paper3);color:var(--ink)} .nv.on svg{color:var(--clay)}
+  .nv .b{margin-left:auto;width:18px;height:18px;border-radius:6px;background:var(--clay);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .grp{display:flex;align-items:center;justify-content:space-between;margin:18px 6px 7px 11px}
+  .grp span{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--faint);font-weight:650}
+  .grp .add{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+  .grp .add svg{width:13px}
+  .tree{display:flex;flex-direction:column;gap:1px;overflow:hidden;flex:1}
+  .it{display:flex;align-items:center;gap:9px;padding:7px 11px;border-radius:8px;font-size:13.5px;color:var(--ink2)}
+  .it svg{width:15px;color:var(--muted);flex-shrink:0}
+  .it.on{background:var(--paper3);color:var(--ink);font-weight:520} .it.on svg{color:var(--clay)}
+  .it.ind{margin-left:17px;font-size:13px}
+  .user{display:flex;align-items:center;gap:10px;padding:8px 9px;border-top:1px solid var(--line);margin-top:8px}
+  .user .av{width:30px;height:30px;border-radius:50%;background:var(--sage);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .user .nm{font-size:13px;font-weight:600;line-height:1.2}
+  .user .ro{font-size:11px;color:var(--muted)}
+  .user .cog{margin-left:auto;color:var(--muted);width:16px}
+
+  /* main */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .top{height:56px;flex-shrink:0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 22px;background:var(--paper)}
+  .crumb{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:500}
+  .crumb .m{color:var(--muted)} .crumb svg{width:14px;color:var(--faint)}
+  .tabs{margin-left:14px;display:flex;border:1px solid var(--line2);border-radius:9px;overflow:hidden}
+  .tabs .t{font-size:12.5px;font-weight:550;padding:6px 13px;color:var(--ink2)}
+  .tabs .t.on{background:var(--ink);color:var(--paper)}
+  .actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .av-stack{display:flex}
+  .av-stack i{width:28px;height:28px;border-radius:50%;border:2px solid var(--paper);margin-left:-8px;font-style:normal;font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center}
+  .share{font-size:13px;font-weight:550;background:var(--ink);color:var(--paper);padding:8px 15px;border-radius:10px;display:flex;align-items:center;gap:7px}
+  .share svg{width:14px}
+  .iconbtn{width:34px;height:34px;border:1px solid var(--line2);border-radius:9px;background:var(--card);display:flex;align-items:center;justify-content:center;color:var(--ink2)}
+  .iconbtn svg{width:16px}
+
+  .scroll{flex:1;overflow:hidden;display:flex}
+  .doc{flex:1;overflow:hidden;padding:46px 56px}
+  .docwrap{max-width:720px;margin:0 auto}
+  .doc h1{font-size:40px;font-weight:650;letter-spacing:-.03em;margin-bottom:10px}
+  .docmeta{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);margin-bottom:30px}
+  .docmeta .dot{width:5px;height:5px;border-radius:50%;background:var(--faint)}
+  .doc p{font-size:16.5px;line-height:1.72;color:var(--ink2);margin-bottom:16px}
+  .doc h2{font-size:23px;font-weight:620;letter-spacing:-.02em;margin:30px 0 12px}
+  .callout{display:flex;gap:13px;border:1px solid var(--line2);border-left:3px solid var(--clay);background:#f6ecdd;border-radius:0 12px 12px 0;padding:16px 18px;margin:22px 0;font-size:15px;color:var(--ink2);line-height:1.6}
+  .callout .ic{color:var(--clay);width:20px;flex-shrink:0;margin-top:2px}
+  ul.b{list-style:none;margin:6px 0 18px;display:flex;flex-direction:column;gap:10px}
+  ul.b li{display:flex;gap:12px;font-size:16px;color:var(--ink2);line-height:1.6}
+  ul.b li:before{content:"";width:7px;height:7px;border-radius:2px;background:var(--clay);margin-top:9px;flex-shrink:0}
+  .tasks{display:flex;flex-direction:column;gap:11px;margin:8px 0 22px}
+  .tk{display:flex;align-items:center;gap:12px;font-size:16px;color:var(--ink2)}
+  .tk .c{width:19px;height:19px;border-radius:6px;border:1.6px solid var(--line3);display:flex;align-items:center;justify-content:center;color:transparent;flex-shrink:0}
+  .tk.done .c{background:var(--sage);border-color:var(--sage);color:#fff}.tk.done .c svg{width:12px}
+  .tk.done span{color:var(--muted);text-decoration:line-through}
+  pre{background:#efe7d8;border:1px solid var(--line2);border-radius:12px;padding:18px 20px;font-family:ui-monospace,Menlo,monospace;font-size:13.5px;color:var(--ink2);line-height:1.7;overflow:hidden;margin:8px 0 18px}
+  pre .k{color:var(--clay)} pre .s{color:var(--sage)} pre .c{color:var(--faint)}
+
+  /* comments rail */
+  .rail{width:300px;flex-shrink:0;border-left:1px solid var(--line);background:var(--paper2);padding:22px 20px;overflow:hidden}
+  .rail h4{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);font-weight:650;margin-bottom:16px}
+  .cm{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(36,31,24,.04)}
+  .cm .h{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+  .cm .av{width:24px;height:24px;border-radius:50%;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .cm .nm{font-size:13px;font-weight:600} .cm .tm{font-size:11px;color:var(--muted);margin-left:auto}
+  .cm p{font-size:13.5px;color:var(--ink2);line-height:1.55}
+  .cm .react{margin-top:9px;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);border:1px solid var(--line2);border-radius:999px;padding:3px 9px}
+  @media(max-width:1180px){.rail{display:none}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2Z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+  <symbol id="i-chevr" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/><circle cx="5" cy="12" r="1.4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></symbol>
+</defs></svg>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="side">
+    <div class="ws"><span class="a">A</span><b>Acme Inc</b><svg class="i cv"><use href="#i-chev"/></svg></div>
+    <div class="search"><svg class="i"><use href="#i-search"/></svg>Search<span class="k">⌘K</span></div>
+    <div class="nav">
+      <div class="nv"><svg class="i"><use href="#i-home"/></svg>Dashboard</div>
+      <div class="nv"><svg class="i"><use href="#i-cal"/></svg>Calendar</div>
+      <div class="nv"><svg class="i"><use href="#i-bell"/></svg>Updates<span class="b">3</span></div>
+    </div>
+    <div class="grp"><span>Pages</span><span class="add"><svg class="i"><use href="#i-plus"/></svg></span></div>
+    <div class="tree">
+      <div class="it"><svg class="i"><use href="#i-file"/></svg>Product Roadmap</div>
+      <div class="it"><svg class="i"><use href="#i-folder"/></svg>Marketing</div>
+      <div class="it ind"><svg class="i"><use href="#i-file"/></svg>Launch Plan</div>
+      <div class="it ind"><svg class="i"><use href="#i-file"/></svg>Brand Voice</div>
+      <div class="it"><svg class="i"><use href="#i-folder"/></svg>Engineering</div>
+      <div class="it ind on"><svg class="i"><use href="#i-file"/></svg>System Architecture</div>
+      <div class="it ind"><svg class="i"><use href="#i-file"/></svg>API Documentation</div>
+      <div class="it"><svg class="i"><use href="#i-cal"/></svg>Content Calendar</div>
+    </div>
+    <div class="user"><span class="av">JD</span><div><div class="nm">Jamie Doe</div><div class="ro">Admin</div></div><svg class="i cog"><use href="#i-cog"/></svg></div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="top">
+      <div class="crumb"><span class="m">Engineering</span><svg class="i"><use href="#i-chevr"/></svg><span>System Architecture</span></div>
+      <div class="tabs"><span class="t on">Document</span><span class="t">Calendar</span></div>
+      <div class="actions">
+        <div class="av-stack"><i style="background:#b14e2c">A</i><i style="background:#5e7152">M</i><i style="background:#c08a3e">K</i></div>
+        <a class="share"><svg class="i"><use href="#i-share"/></svg>Share</a>
+        <div class="iconbtn"><svg class="i"><use href="#i-msg"/></svg></div>
+        <div class="iconbtn"><svg class="i"><use href="#i-more"/></svg></div>
+      </div>
+    </div>
+
+    <div class="scroll">
+      <div class="doc"><div class="docwrap">
+        <h1>System Architecture</h1>
+        <div class="docmeta">Edited 2 minutes ago <span class="dot"></span> 3 collaborators online <span class="dot"></span> 142 blocks</div>
+        <p>Nexus is designed as a block-based knowledge system. Every document is composed of ordered blocks, and every object in a workspace lives inside one hierarchical tree.</p>
+        <div class="callout"><svg class="i ic"><use href="#i-spark"/></svg><div><b>Core principle.</b> Everything is a node. Documents are block containers, folders are tree nodes, and a calendar entry is simply another node — one consistent model at any depth.</div></div>
+        <h2>The core entities</h2>
+        <ul class="b">
+          <li><b>Account</b> — a person who signs in to Nexus.</li>
+          <li><b>Business</b> — a workspace that isolates a team's data.</li>
+          <li><b>Node</b> — a folder, document, or calendar item in the tree.</li>
+          <li><b>Block</b> — the ordered content unit inside a document.</li>
+        </ul>
+        <h2>Launch checklist</h2>
+        <div class="tasks">
+          <div class="tk done"><span class="c"><svg class="i"><use href="#i-check"/></svg></span><span>Define the node schema &amp; indexes</span></div>
+          <div class="tk done"><span class="c"><svg class="i"><use href="#i-check"/></svg></span><span>Build the block editor on Tiptap</span></div>
+          <div class="tk"><span class="c"></span><span>Wire real-time subscriptions</span></div>
+          <div class="tk"><span class="c"></span><span>Ship the content calendar</span></div>
+        </div>
+        <h2>Node shape</h2>
+        <pre><span class="c">// the single primitive everything builds on</span>
+<span class="k">type</span> Node = {
+  id: <span class="s">string</span>;
+  type: <span class="s">'folder'</span> | <span class="s">'document'</span> | <span class="s">'calendar'</span>;
+  parent_id: <span class="s">string</span> | null;
+  title: <span class="s">string</span>;
+}</pre>
+      </div></div>
+
+      <!-- comments rail -->
+      <aside class="rail">
+        <h4>Comments</h4>
+        <div class="cm">
+          <div class="h"><span class="av" style="background:#5e7152">MR</span><span class="nm">Mara Reyes</span><span class="tm">2m</span></div>
+          <p>Love how clean the node model is. Should calendar entries support recurring dates in v1?</p>
+          <span class="react">Reply</span>
+        </div>
+        <div class="cm">
+          <div class="h"><span class="av" style="background:#b14e2c">KO</span><span class="nm">Kai Owens</span><span class="tm">just now</span></div>
+          <p>Pushed the realtime branch — cursors are syncing under 30ms locally.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+</body>
+</html>

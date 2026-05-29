@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — The Branding Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0e0e10;--ink:#f4f1ea;--muted:#8d8a82;--line:rgba(255,255,255,.1);--accent:#c9a14a;--good:#5fae3e;--new:#7c8cff}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Fraunces",serif;background:var(--bg);color:var(--ink);overflow-x:hidden;
+    background-image:radial-gradient(120% 80% at 50% -10%,#1b1b22,#0e0e10 60%)}
+  ::selection{background:var(--accent);color:#0e0e10}
+  .mono{font-family:"JetBrains Mono",monospace}
+
+  header{max-width:1240px;margin:0 auto;padding:80px 32px 20px}
+  .tag{font-family:"JetBrains Mono";font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--accent)}
+  h1{font-weight:300;font-size:clamp(40px,7vw,88px);line-height:1;letter-spacing:-1.5px;margin:18px 0 22px}
+  h1 em{font-style:italic;color:var(--accent)}
+  .blurb{color:#c9c5bd;font-size:clamp(17px,2vw,21px);max-width:68ch;font-weight:300}
+  .blurb b{color:var(--ink);font-weight:500}
+  .meta{display:flex;gap:28px;flex-wrap:wrap;margin-top:30px;font-family:"JetBrains Mono";font-size:12.5px;color:var(--muted)}
+  .meta span b{color:var(--ink)}
+
+  .secbar{max-width:1240px;margin:0 auto;padding:46px 32px 6px;display:flex;align-items:baseline;gap:16px}
+  .secbar h2{font-weight:400;font-size:26px;letter-spacing:-.3px}
+  .secbar .line{flex:1;height:1px;background:var(--line)}
+  .secbar .note{font-family:"JetBrains Mono";font-size:12px;color:var(--muted)}
+
+  .wall{max-width:1240px;margin:0 auto;padding:18px 32px 40px;display:grid;grid-template-columns:repeat(2,1fr);gap:30px}
+  @media(max-width:820px){.wall{grid-template-columns:1fr}}
+  .tile{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#161618;
+    text-decoration:none;color:inherit;transition:transform .4s cubic-bezier(.2,.7,.2,1),border-color .4s,box-shadow .4s;display:block}
+  .tile:hover{transform:translateY(-8px);border-color:var(--new);box-shadow:0 30px 70px rgba(0,0,0,.5)}
+  .tile.kept{border-color:rgba(95,174,62,.4)}.tile.kept:hover{border-color:var(--good)}
+  .frame{position:relative;height:300px;overflow:hidden;background:#000;border-bottom:1px solid var(--line)}
+  .frame iframe{position:absolute;top:0;left:0;width:1440px;height:1080px;border:0;
+    transform:scale(.402);transform-origin:top left;pointer-events:none}
+  .frame .veil{position:absolute;inset:0;z-index:2}
+  .frame .num{position:absolute;top:14px;left:16px;z-index:3;font-family:"JetBrains Mono";font-size:12px;
+    letter-spacing:1px;color:#fff;background:rgba(0,0,0,.55);padding:5px 11px;border-radius:30px;backdrop-filter:blur(4px)}
+  .frame .badge{position:absolute;top:14px;right:16px;z-index:3;font-family:"JetBrains Mono";font-size:10.5px;
+    letter-spacing:1px;color:#0e0e10;padding:5px 11px;border-radius:30px}
+  .badge.new{background:var(--new)}.badge.keep{background:var(--good)}
+  .body{padding:22px 24px 26px}
+  .body h3{font-weight:400;font-size:25px;letter-spacing:-.3px}
+  .body .concept{color:var(--muted);font-size:15px;margin-top:7px;font-style:italic}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .chip{font-family:"JetBrains Mono";font-size:10.5px;letter-spacing:.5px;color:#cfc8b8;
+    border:1px solid var(--line);padding:4px 10px;border-radius:30px}
+  .open{display:inline-flex;align-items:center;gap:7px;margin-top:18px;font-family:"JetBrains Mono";font-size:12.5px;color:var(--accent);transition:gap .3s}
+  .tile:hover .open{gap:12px}
+
+  .archive{max-width:1240px;margin:0 auto;padding:10px 32px 30px}
+  .archive .row{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+  .archive a{font-family:"JetBrains Mono";font-size:12px;color:var(--muted);border:1px dashed var(--line);
+    padding:8px 14px;border-radius:30px;text-decoration:none;transition:.25s}
+  .archive a:hover{color:var(--ink);border-color:var(--muted)}
+
+  footer{max-width:1240px;margin:0 auto;padding:40px 32px 70px;border-top:1px solid var(--line);
+    color:var(--muted);font-family:"JetBrains Mono";font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px}
+  .reveal{opacity:0;transform:translateY(28px);transition:.7s cubic-bezier(.2,.7,.2,1)}.reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="tag">Nexus · Creative Direction · Round Three</div>
+  <h1>The Branding<br><em>Lab.</em></h1>
+  <p class="blurb">New direction: <b>modern, Awwwards-grade</b> craft instead of themed concepts. Six contemporary award-site registers — Swiss editorial, kinetic brutalist, fashion serif, neo-brutalism, bento product, and a black-&-white interactive-cursor agency look — all selling one <b>block-based knowledge workspace</b>.</p>
+  <div class="meta">
+    <span><b>6</b> modern looks</span>
+    <span><b>2</b> kept favorites</span>
+    <span><b>19</b> total explored</span>
+    <span class="mono">// high craft, no slop</span>
+  </div>
+</header>
+
+<!-- ROUND THREE — MODERN -->
+<div class="secbar"><h2>Modern / Awwwards</h2><span class="line"></span><span class="note">// round three · latest</span></div>
+<div class="wall">
+
+  <a class="tile reveal" href="14-swiss-editorial.html">
+    <div class="frame"><div class="veil"></div><div class="num">14 · SWISS</div><div class="badge new">NEW</div><iframe src="14-swiss-editorial.html" scrolling="no" loading="lazy" title="Swiss Editorial"></iframe></div>
+    <div class="body"><h3>Swiss Editorial</h3><div class="concept">"International style — knowledge as a strict, broken grid."</div>
+      <div class="chips"><span class="chip">Anton + Archivo</span><span class="chip">paper · ink · red</span><span class="chip">kinetic marquee</span></div>
+      <span class="open">Get access →</span></div>
+  </a>
+
+  <a class="tile reveal" href="15-kinetic-brutalist.html">
+    <div class="frame"><div class="veil"></div><div class="num">15 · KINETIC</div><div class="badge new">NEW</div><iframe src="15-kinetic-brutalist.html" scrolling="no" loading="lazy" title="Kinetic Brutalist"></iframe></div>
+    <div class="body"><h3>Kinetic Brutalist</h3><div class="concept">"Loud structure for a quiet mind."</div>
+      <div class="chips"><span class="chip">Bricolage + DM Mono</span><span class="chip">acid-lime on black</span><span class="chip">magnetic buttons</span></div>
+      <span class="open">Start free →</span></div>
+  </a>
+
+  <a class="tile reveal" href="16-editorial-serif.html">
+    <div class="frame"><div class="veil"></div><div class="num">16 · FASHION SERIF</div><div class="badge new">NEW</div><iframe src="16-editorial-serif.html" scrolling="no" loading="lazy" title="Editorial Serif"></iframe></div>
+    <div class="body"><h3>Editorial Serif</h3><div class="concept">"Less like software, more like a well-kept library."</div>
+      <div class="chips"><span class="chip">Fraunces + Hanken</span><span class="chip">cream · clay</span><span class="chip">quiet luxe</span></div>
+      <span class="open">Request access →</span></div>
+  </a>
+
+  <a class="tile reveal" href="17-neo-brutalism.html">
+    <div class="frame"><div class="veil"></div><div class="num">17 · NEO-BRUTAL</div><div class="badge new">NEW</div><iframe src="17-neo-brutalism.html" scrolling="no" loading="lazy" title="Neo-Brutalism"></iframe></div>
+    <div class="body"><h3>Neo-Brutalism</h3><div class="concept">"Snap your brain into chunky, colorful blocks."</div>
+      <div class="chips"><span class="chip">Archivo Black</span><span class="chip">hard shadows</span><span class="chip">sticker energy</span></div>
+      <span class="open">Start free →</span></div>
+  </a>
+
+  <a class="tile reveal" href="18-bento-product.html">
+    <div class="frame"><div class="veil"></div><div class="num">18 · BENTO</div><div class="badge new">NEW</div><iframe src="18-bento-product.html" scrolling="no" loading="lazy" title="Bento Product"></iframe></div>
+    <div class="body"><h3>Bento Product</h3><div class="concept">"The workspace that thinks in blocks."</div>
+      <div class="chips"><span class="chip">Hanken Grotesk</span><span class="chip">Linear/Apple dark</span><span class="chip">bento grid + glow</span></div>
+      <span class="open">Get started →</span></div>
+  </a>
+
+  <a class="tile reveal" href="19-mono-interactive.html">
+    <div class="frame"><div class="veil"></div><div class="num">19 · INTERACTIVE</div><div class="badge new">NEW</div><iframe src="19-mono-interactive.html" scrolling="no" loading="lazy" title="Mono Interactive"></iframe></div>
+    <div class="body"><h3>Mono Interactive</h3><div class="concept">"Structure for the mind — agency-of-the-year minimalism."</div>
+      <div class="chips"><span class="chip">Syne + DM Mono</span><span class="chip">black & white + grain</span><span class="chip">custom cursor · drag-scroll</span></div>
+      <span class="open">Begin →</span></div>
+  </a>
+
+</div>
+
+<!-- KEPT FAVORITES -->
+<div class="secbar"><h2>Kept favorites</h2><span class="line"></span><span class="note">// from earlier rounds</span></div>
+<div class="wall">
+  <a class="tile kept reveal" href="03-terminal-brutalist.html">
+    <div class="frame"><div class="veil"></div><div class="num">03 · BRUTALIST</div><div class="badge keep">✔ KEPT</div><iframe src="03-terminal-brutalist.html" scrolling="no" loading="lazy" title="Terminal"></iframe></div>
+    <div class="body"><h3>The Hacker Terminal</h3><div class="concept">"Raw infrastructure — a system you command."</div>
+      <div class="chips"><span class="chip">IBM Plex Mono</span><span class="chip">phosphor green</span><span class="chip">working CLI</span></div>
+      <span class="open">$ run nexus →</span></div>
+  </a>
+  <a class="tile kept reveal" href="05-evidence-board.html">
+    <div class="frame"><div class="veil"></div><div class="num">05 · ANALOG</div><div class="badge keep">✔ KEPT</div><iframe src="05-evidence-board.html" scrolling="no" loading="lazy" title="Evidence Board"></iframe></div>
+    <div class="body"><h3>The Evidence Board</h3><div class="concept">"Everything is connected — here's the red string."</div>
+      <div class="chips"><span class="chip">Special Elite</span><span class="chip">cork & yarn</span><span class="chip">string draws itself</span></div>
+      <span class="open">Open the case →</span></div>
+  </a>
+</div>
+
+<!-- ARCHIVE -->
+<div class="archive">
+  <div class="secbar" style="padding-left:0;padding-right:0"><h2 style="font-size:22px;color:var(--muted)">Archived — earlier concepts</h2><span class="line"></span><span class="note">// not selected</span></div>
+  <div class="row">
+    <a href="01-flashdrive-os.html">01 · Flash Drive OS ↗</a>
+    <a href="02-olympus-archive.html">02 · Olympus ↗</a>
+    <a href="04-cosmic-constellation.html">04 · Cosmic ↗</a>
+    <a href="06-mycelial-brain.html">06 · Mycelial ↗</a>
+    <a href="07-vaporwave-mall.html">07 · Vaporwave ↗</a>
+    <a href="08-card-catalog.html">08 · Card Catalog ↗</a>
+    <a href="09-blueprint.html">09 · Blueprint ↗</a>
+    <a href="10-transit-map.html">10 · Transit Map ↗</a>
+    <a href="11-modular-synth.html">11 · Modular Synth ↗</a>
+    <a href="12-newspaper.html">12 · Newspaper ★ (→ report feature) ↗</a>
+    <a href="13-dos-commander.html">13 · DOS Commander ↗</a>
+  </div>
+</div>
+
+<footer>
+  <span>Nexus — Creative Direction Lookbook · see ART_DIRECTION.md for the full bible</span>
+  <span>// 19 worlds explored · 1 product</span>
+</footer>
+
+<script>
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}}),{threshold:.08});
+  document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=((i%2)*90)+'ms';io.observe(el)});
+</script>
+</body>
+</html>

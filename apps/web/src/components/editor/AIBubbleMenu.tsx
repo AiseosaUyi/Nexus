@@ -201,7 +201,7 @@ export default function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
 
       {/* Error */}
       {error && (
-        <div className="absolute top-full left-0 mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-[12px] text-red-600 whitespace-nowrap">
+        <div className="absolute top-full left-0 mt-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-[12px] text-red-500 whitespace-nowrap">
           {error}
         </div>
       )}

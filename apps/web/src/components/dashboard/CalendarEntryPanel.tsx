@@ -37,7 +37,7 @@ interface Props {
 
 const STATUS_OPTIONS = [
   { value: 'draft',     label: 'Draft',     dot: 'bg-foreground/30', bg: 'bg-foreground/[0.08]', text: 'text-foreground/60' },
-  { value: 'scheduled', label: 'Scheduled', dot: 'bg-blue-400',      bg: 'bg-blue-500/15',       text: 'text-blue-400' },
+  { value: 'scheduled', label: 'Scheduled', dot: 'bg-amber-400',     bg: 'bg-amber-500/15',      text: 'text-amber-500' },
   { value: 'published', label: 'Published', dot: 'bg-green-400',     bg: 'bg-green-500/15',      text: 'text-green-400' },
   { value: 'cancelled', label: 'Cancelled', dot: 'bg-red-400',       bg: 'bg-red-500/15',        text: 'text-red-400' },
 ];

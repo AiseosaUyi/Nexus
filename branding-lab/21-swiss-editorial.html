@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — The workspace for everything you know</title>
+<style>
+  :root{
+    --paper:#f4f3ee; --ink:#101010; --ink2:#3a3a38; --muted:#86847c;
+    --line:#101010; --hair:rgba(16,16,16,.14); --accent:#e5331f; --card:#fbfaf6;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.45;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;letter-spacing:-.01em}
+  ::selection{background:var(--accent);color:#fff}
+  a{color:inherit;text-decoration:none}
+  .mono{font-family:var(--mono);letter-spacing:0}
+  .edge{max-width:1200px;margin:0 auto;padding:0 32px}
+
+  /* nav */
+  header{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:1px solid var(--line)}
+  nav{max-width:1200px;margin:0 auto;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 32px}
+  .brand{font-weight:800;font-size:20px;letter-spacing:-.03em}
+  nav .links{display:flex;gap:30px;font-size:13px;font-weight:500}
+  nav .links a{color:var(--ink2)}nav .links a:hover{color:var(--accent)}
+  @media(max-width:760px){nav .links{display:none}}
+  .navcta{display:flex;align-items:center;gap:20px;font-size:13px;font-weight:600}
+  .navcta .go{background:var(--ink);color:var(--paper);padding:9px 16px}
+  .navcta .go:hover{background:var(--accent)}
+
+  /* hero — editorial grid */
+  .hero{border-bottom:1px solid var(--line);position:relative}
+  .hero .grid{display:grid;grid-template-columns:1.05fr 0.95fr}
+  @media(max-width:860px){.hero .grid{grid-template-columns:1fr}}
+  .hero .left{padding:70px 32px 56px;border-right:1px solid var(--line)}
+  @media(max-width:860px){.hero .left{border-right:none;border-bottom:1px solid var(--line)}}
+  .kicker{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:30px}
+  .kicker .num{font-family:var(--mono);color:var(--muted);letter-spacing:0}
+  h1{font-size:clamp(44px,6.6vw,84px);line-height:.98;font-weight:800;letter-spacing:-.04em;margin-bottom:26px}
+  .hero p{font-size:18px;color:var(--ink2);max-width:46ch;line-height:1.5;margin-bottom:34px}
+  .cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .btn{font-size:15px;font-weight:600;padding:14px 26px;transition:.15s}
+  .btn.fill{background:var(--ink);color:var(--paper)}
+  .btn.fill:hover{background:var(--accent)}
+  .btn.out{border:1px solid var(--line)}
+  .btn.out:hover{background:var(--ink);color:var(--paper)}
+  .hero .right{padding:40px 32px;display:flex;flex-direction:column;justify-content:center;background:var(--card)}
+
+  /* honest flat product panel */
+  .panel{border:1px solid var(--line);background:#fff}
+  .panel .bar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .panel .bar .d{width:8px;height:8px;border:1px solid var(--line);border-radius:50%}
+  .panel .pb{display:grid;grid-template-columns:150px 1fr}
+  @media(max-width:520px){.panel .pb{grid-template-columns:1fr}.panel .ps{display:none}}
+  .ps{border-right:1px solid var(--line);padding:12px}
+  .ps .grp{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:0 0 8px 4px}
+  .ps .it{font-size:12px;color:var(--ink2);padding:4px 6px;border-radius:3px}
+  .ps .it.on{background:var(--ink);color:#fff}
+  .ps .it.ind{padding-left:18px}
+  .pm{padding:18px 20px}
+  .pm h4{font-size:17px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
+  .pm .meta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:14px}
+  .pm .ln{height:8px;background:var(--hair);margin-bottom:8px}
+  .pm .tag{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:var(--accent);padding:2px 7px;margin-top:6px}
+
+  /* utility ticker */
+  .ticker{border-bottom:1px solid var(--line);overflow:hidden;background:var(--ink);color:var(--paper)}
+  .ticker .row{display:flex;white-space:nowrap;animation:tk 26s linear infinite}
+  .ticker .row span{font-family:var(--mono);font-size:12px;letter-spacing:.04em;padding:11px 0;text-transform:uppercase}
+  .ticker .row span::after{content:"／";margin:0 26px;color:var(--accent)}
+  @keyframes tk{to{transform:translateX(-50%)}}
+
+  /* section label row */
+  .secrow{display:grid;grid-template-columns:1fr 2.4fr;border-bottom:1px solid var(--line)}
+  @media(max-width:760px){.secrow{grid-template-columns:1fr}}
+  .secrow .lbl{padding:48px 32px;border-right:1px solid var(--line)}
+  @media(max-width:760px){.secrow .lbl{border-right:none;padding-bottom:0}}
+  .secrow .lbl .n{font-family:var(--mono);font-size:12px;color:var(--accent)}
+  .secrow .lbl h2{font-size:clamp(26px,3.4vw,40px);font-weight:800;letter-spacing:-.03em;line-height:1.02;margin-top:12px}
+  .secrow .body{padding:48px 32px}
+  .secrow .body p.intro{font-size:18px;color:var(--ink2);max-width:60ch;margin-bottom:6px}
+
+  /* feature list editorial */
+  .flist{border-top:1px solid var(--hair);margin-top:30px}
+  .frow{display:grid;grid-template-columns:48px 200px 1fr;gap:20px;padding:22px 0;border-bottom:1px solid var(--hair);align-items:baseline}
+  @media(max-width:640px){.frow{grid-template-columns:36px 1fr}.frow .fd{grid-column:1/-1;padding-left:36px}}
+  .frow .fn{font-family:var(--mono);font-size:13px;color:var(--muted)}
+  .frow .ft{font-size:18px;font-weight:700;letter-spacing:-.02em}
+  .frow .fd{font-size:15px;color:var(--ink2);line-height:1.5}
+  .frow:hover .ft{color:var(--accent)}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+  @media(max-width:680px){.stats{grid-template-columns:1fr 1fr}}
+  .stat{padding:40px 32px;border-right:1px solid var(--hair)}
+  .stat:last-child{border-right:none}
+  .stat .n{font-size:clamp(32px,4vw,50px);font-weight:800;letter-spacing:-.03em}
+  .stat .l{font-size:13px;color:var(--muted);margin-top:6px}
+
+  /* steps */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}
+  @media(max-width:760px){.steps{grid-template-columns:1fr}}
+  .step{padding:44px 32px;border-right:1px solid var(--hair)}
+  .step:last-child{border-right:none}
+  .step .n{font-family:var(--mono);font-size:13px;color:var(--accent)}
+  .step h3{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:14px 0 8px}
+  .step p{font-size:15px;color:var(--ink2);line-height:1.5}
+
+  /* pricing table */
+  .pricing{border-bottom:1px solid var(--line)}
+  .ptable{display:grid;grid-template-columns:repeat(3,1fr)}
+  @media(max-width:760px){.ptable{grid-template-columns:1fr}}
+  .ptier{padding:40px 32px;border-right:1px solid var(--hair)}
+  .ptier:last-child{border-right:none}
+  .ptier.feat{background:var(--ink);color:var(--paper)}
+  .ptier .t{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+  .ptier.feat .t{color:#bdbcb5}
+  .ptier .amt{font-size:42px;font-weight:800;letter-spacing:-.03em;margin:14px 0 4px}
+  .ptier .amt small{font-size:14px;font-weight:500;color:var(--muted)}
+  .ptier .desc{font-size:14px;color:var(--ink2);margin-bottom:22px}
+  .ptier.feat .desc{color:#cfcec7}
+  .ptier ul{list-style:none;font-size:14px;display:flex;flex-direction:column;gap:9px;margin-bottom:24px}
+  .ptier li:before{content:"—  ";color:var(--accent)}
+  .ptier .pb{display:block;text-align:center;font-weight:600;font-size:14px;padding:12px;border:1px solid currentColor}
+  .ptier.feat .pb{background:var(--accent);border-color:var(--accent);color:#fff}
+  .ptier .pb:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  /* final */
+  .final{padding:90px 32px;text-align:center}
+  .final h2{font-size:clamp(34px,5.5vw,68px);font-weight:800;letter-spacing:-.04em;line-height:1;margin-bottom:24px}
+  .final h2 em{font-style:normal;color:var(--accent)}
+  footer{border-top:1px solid var(--line);padding:40px 32px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--muted)}
+  footer a{color:var(--ink2)}footer a:hover{color:var(--accent)}
+  .reveal{opacity:0;transform:translateY(22px);transition:.7s cubic-bezier(.2,.7,.2,1)}.reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<header><nav>
+  <div class="brand">NEXUS</div>
+  <div class="links"><a href="#product">Product</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#">Docs</a></div>
+  <div class="navcta"><a href="#">Sign in</a><a class="go" href="#">Start free</a></div>
+</nav></header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="grid">
+    <div class="left">
+      <div class="kicker"><span class="num">01</span> Block-based knowledge workspace</div>
+      <h1>The workspace for everything you know.</h1>
+      <p>Write, organize, and plan in one fast surface. Folders, documents, and blocks in a single tree — structured enough to scale from a stray note to a company's entire knowledge base.</p>
+      <div class="cta-row">
+        <a class="btn fill" href="#">Start free →</a>
+        <a class="btn out" href="#">Book a demo</a>
+      </div>
+    </div>
+    <div class="right">
+      <div class="panel">
+        <div class="bar"><span class="d"></span><span class="d"></span><span class="d"></span><span style="margin-left:auto">acme / engineering / architecture</span></div>
+        <div class="pb">
+          <div class="ps">
+            <div class="grp">Pages</div>
+            <div class="it">Product Roadmap</div>
+            <div class="it">Engineering</div>
+            <div class="it ind on">Architecture</div>
+            <div class="it ind">API Docs</div>
+            <div class="it">Marketing</div>
+          </div>
+          <div class="pm">
+            <h4>System Architecture</h4>
+            <div class="meta">EDITED 2M AGO · 3 EDITORS</div>
+            <div class="ln" style="width:94%"></div>
+            <div class="ln" style="width:80%"></div>
+            <div class="ln" style="width:88%"></div>
+            <span class="tag">CALLOUT</span>
+            <div class="ln" style="width:70%;margin-top:14px"></div>
+            <div class="ln" style="width:60%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker"><div class="row">
+  <span>Documents</span><span>Folders</span><span>Blocks</span><span>Calendar</span><span>Real-time</span><span>Notion import</span>
+  <span>Documents</span><span>Folders</span><span>Blocks</span><span>Calendar</span><span>Real-time</span><span>Notion import</span>
+</div></div>
+
+<!-- PRODUCT / FEATURES -->
+<section class="secrow reveal" id="product">
+  <div class="lbl"><div class="n">02 — Product</div><h2>One workspace, every kind of work.</h2></div>
+  <div class="body">
+    <p class="intro">No more juggling a notes app, a wiki, and a planner. Everything is a node in one tree — so it all stays consistent, searchable, and connected.</p>
+    <div class="flist">
+      <div class="frow"><span class="fn">01</span><span class="ft">Block editor</span><span class="fd">Headings, media, tasks, code, tables. Reorder by dragging; insert anything with “/”.</span></div>
+      <div class="frow"><span class="fn">02</span><span class="ft">Infinite nesting</span><span class="fd">Folders, documents and calendars are all nodes. Restructure your whole workspace with one drag.</span></div>
+      <div class="frow"><span class="fn">03</span><span class="ft">Real-time</span><span class="fd">Live cursors and instant updates. Edit together without collisions.</span></div>
+      <div class="frow"><span class="fn">04</span><span class="ft">Notion import</span><span class="fd">Paste a URL — the page is parsed straight into clean Nexus blocks.</span></div>
+      <div class="frow"><span class="fn">05</span><span class="ft">Content calendar</span><span class="fd">Attach any page to a date. Content, releases, and prep on one timeline.</span></div>
+      <div class="frow"><span class="fn">06</span><span class="ft">Roles &amp; access</span><span class="fd">Admin, editor, viewer — scoped per business, enforced at the source.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats reveal">
+  <div class="stat"><div class="n">10k+</div><div class="l">blocks per document</div></div>
+  <div class="stat"><div class="n">&lt;30ms</div><div class="l">sync latency</div></div>
+  <div class="stat"><div class="n">99.99%</div><div class="l">uptime</div></div>
+  <div class="stat"><div class="n">∞</div><div class="l">nesting depth</div></div>
+</section>
+
+<!-- HOW -->
+<section class="secrow reveal" id="how" style="border-bottom:none">
+  <div class="lbl"><div class="n">03 — How it works</div><h2>Blank page to second brain.</h2></div>
+  <div class="body" style="padding:0">
+    <div class="steps" style="border-bottom:none">
+      <div class="step"><div class="n">01</div><h3>Create a workspace</h3><p>Spin one up in seconds. Invite your team and set roles.</p></div>
+      <div class="step"><div class="n">02</div><h3>Capture everything</h3><p>Write docs, nest folders, import from Notion. Every idea becomes a node.</p></div>
+      <div class="step"><div class="n">03</div><h3>Plan &amp; ship</h3><p>Attach pages to a calendar and collaborate in real time.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing reveal" id="pricing">
+  <div class="secrow" style="border-bottom:1px solid var(--line)">
+    <div class="lbl"><div class="n">04 — Pricing</div><h2>Plans that scale with you.</h2></div>
+    <div class="body"><p class="intro">Start free, forever. Upgrade when your team does.</p></div>
+  </div>
+  <div class="ptable">
+    <div class="ptier">
+      <div class="t">Personal</div><div class="amt">$0 <small>/forever</small></div>
+      <div class="desc">Your first workspace and solo thinking.</div>
+      <ul><li>Unlimited pages &amp; blocks</li><li>Infinite nesting</li><li>Content calendar</li><li>1 workspace</li></ul>
+      <a class="pb" href="#">Get started</a>
+    </div>
+    <div class="ptier feat">
+      <div class="t">Team</div><div class="amt">$12 <small>/user/mo</small></div>
+      <div class="desc">For teams building a shared brain.</div>
+      <ul><li>Everything in Personal</li><li>Real-time collaboration</li><li>Roles &amp; permissions</li><li>Notion import</li></ul>
+      <a class="pb" href="#">Start free trial</a>
+    </div>
+    <div class="ptier">
+      <div class="t">Enterprise</div><div class="amt">Custom</div>
+      <div class="desc">Scale &amp; security needs.</div>
+      <ul><li>SSO &amp; SAML</li><li>Audit logs</li><li>Dedicated support</li><li>Data residency</li></ul>
+      <a class="pb" href="#">Contact sales</a>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL -->
+<section class="final reveal">
+  <h2>Give your thinking<br>a place to <em>live.</em></h2>
+  <a class="btn fill" href="#">Start free →</a>
+</section>
+
+<footer>
+  <span>© 2026 Nexus, Inc. — Block-based knowledge workspace</span>
+  <span><a href="index.html">← branding lab</a> · Privacy · Terms</span>
+</footer>
+
+<script>
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

@@ -48,8 +48,8 @@ const ARTICLES = [
     title: 'Nexus AI Power-ups',
     description: 'Using artificial intelligence to summarize, brainstorm, and generate content.',
     icon: Zap,
-    color: 'text-purple-500',
-    bg: 'bg-purple-500/10',
+    color: 'text-accent',
+    bg: 'bg-accent/10',
   }
 ];
 

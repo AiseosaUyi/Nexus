@@ -76,7 +76,7 @@ export default function NexusEditor({
   initialSnapshot,
   nodeId,
   userName,
-  userColor = '#2383e2',
+  userColor = '#b14e2c',
   onChange
 }: NexusEditorProps) {
   const supabase = createClient();
@@ -184,7 +184,7 @@ export default function NexusEditor({
       Link.configure({
         openOnClick: false,
         autolink: true,
-        HTMLAttributes: { class: 'text-[#2383e2] hover:underline cursor-pointer' },
+        HTMLAttributes: { class: 'text-accent hover:underline cursor-pointer' },
       }),
       TaskList,
       TaskItem.configure({ nested: true }),

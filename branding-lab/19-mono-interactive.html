@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Structure for the mind</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0a0a;--fg:#f4f4f2;--muted:#86857f;--line:#222;--inv:#0a0a0a}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Syne",sans-serif;background:var(--bg);color:var(--fg);overflow-x:hidden;line-height:1.35;-webkit-font-smoothing:antialiased;cursor:none}
+  ::selection{background:var(--fg);color:var(--bg)}
+  a{color:inherit;text-decoration:none}
+  .mono{font-family:"DM Mono",monospace}
+  .grain{position:fixed;inset:0;z-index:400;pointer-events:none;opacity:.045;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .edge{padding-left:clamp(18px,4vw,56px);padding-right:clamp(18px,4vw,56px)}
+
+  /* custom cursor */
+  #cur{position:fixed;top:0;left:0;width:14px;height:14px;border-radius:50%;background:var(--fg);z-index:500;pointer-events:none;
+    transform:translate(-50%,-50%);transition:width .25s,height .25s,background .25s;mix-blend-mode:difference}
+  #cur.big{width:80px;height:80px;background:var(--fg)}
+  #cur.lbl:after{content:attr(data-l);position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:"DM Mono";font-size:11px;color:var(--bg);text-transform:uppercase;letter-spacing:1px}
+  @media(pointer:coarse){body{cursor:auto}#cur{display:none}}
+
+  header{position:fixed;top:0;left:0;right:0;z-index:60;mix-blend-mode:difference}
+  nav{height:72px;display:flex;align-items:center;justify-content:space-between}
+  nav .lg{font-weight:800;font-size:22px;letter-spacing:-.02em}
+  nav .nx{display:flex;gap:30px;font-family:"DM Mono";font-size:12px;text-transform:uppercase;color:#fff}
+  @media(max-width:720px){nav .nx{display:none}}
+
+  /* HERO */
+  .hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;position:relative}
+  .hero .mtop{position:absolute;top:96px;left:clamp(18px,4vw,56px);font-family:"DM Mono";font-size:12px;color:var(--muted);text-transform:uppercase;line-height:1.8}
+  .hero h1{font-weight:800;font-size:clamp(52px,13vw,210px);line-height:.82;letter-spacing:-.04em;text-transform:uppercase}
+  .hero h1 .it{font-weight:400;font-style:italic;text-transform:none}
+  .hero h1 .o{-webkit-text-stroke:1.5px var(--fg);color:transparent}
+  .hero .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:50px;gap:30px;flex-wrap:wrap}
+  .hero .foot p{max-width:42ch;color:#cfcfca;font-size:clamp(15px,1.6vw,19px);font-weight:400}
+  .hero .scrolltag{font-family:"DM Mono";font-size:12px;color:var(--muted);text-transform:uppercase;animation:bob 2.2s infinite}
+  @keyframes bob{50%{transform:translateY(8px)}}
+
+  section{padding:110px 0;border-top:1px solid var(--line)}
+  .skick{font-family:"DM Mono";font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:22px;display:flex;gap:12px;align-items:center}
+  .skick:before{content:"";width:40px;height:1px;background:var(--muted)}
+  h2{font-weight:800;font-size:clamp(32px,6vw,90px);line-height:.92;letter-spacing:-.035em;text-transform:uppercase}
+  h2 .it{font-weight:400;font-style:italic;text-transform:none}
+
+  /* horizontal scroll feature gallery */
+  .hscroll{margin-top:50px;display:flex;gap:20px;overflow-x:auto;padding-bottom:20px;scroll-snap-type:x mandatory;cursor:none}
+  .hscroll::-webkit-scrollbar{height:4px}.hscroll::-webkit-scrollbar-thumb{background:var(--line)}
+  .hcard{flex:0 0 clamp(260px,32vw,380px);scroll-snap-align:start;border:1px solid var(--line);border-radius:14px;padding:30px;
+    aspect-ratio:3/3.6;display:flex;flex-direction:column;transition:background .35s,color .35s}
+  .hcard:hover{background:var(--fg);color:var(--bg)}
+  .hcard .n{font-family:"DM Mono";font-size:13px}
+  .hcard h3{font-weight:800;font-size:clamp(24px,2.6vw,32px);text-transform:uppercase;letter-spacing:-.02em;margin-top:auto}
+  .hcard p{margin-top:12px;font-size:15px;font-weight:400;opacity:.8}
+  .draghint{font-family:"DM Mono";font-size:12px;color:var(--muted);margin-top:16px;text-transform:uppercase}
+
+  /* tree — big interactive list */
+  .stack{border-top:1px solid var(--line);margin-top:50px}
+  .si{display:grid;grid-template-columns:60px 1fr auto;gap:20px;align-items:center;padding:26px 0;border-bottom:1px solid var(--line);transition:.35s}
+  .si:hover{background:var(--fg);color:var(--bg);padding-left:22px}
+  .si:hover .ty,.si:hover .no{color:var(--bg)}
+  .si .no{font-family:"DM Mono";color:var(--muted)}
+  .si .nm{font-weight:800;font-size:clamp(22px,3.6vw,46px);text-transform:uppercase;letter-spacing:-.03em}
+  .si .nm.d2{padding-left:clamp(16px,4vw,50px)}
+  .si .nm.d3{padding-left:clamp(32px,8vw,100px);font-weight:400;font-style:italic;text-transform:none}
+  .si .ty{font-family:"DM Mono";font-size:12px;color:var(--muted);text-transform:uppercase}
+
+  /* calendar */
+  .cal{border-top:1px solid var(--line);margin-top:50px}
+  .cr{display:grid;grid-template-columns:110px 1fr 150px;gap:20px;padding:24px 0;border-bottom:1px solid var(--line);align-items:center;transition:.35s}
+  .cr:hover{padding-left:18px}
+  .cr .d{font-family:"DM Mono";font-size:14px;color:var(--muted)}
+  .cr .t{font-weight:600;font-size:clamp(17px,2.2vw,26px)}
+  .cr .s{justify-self:end;font-family:"DM Mono";font-size:11px;text-transform:uppercase;border:1px solid var(--line);padding:6px 12px;border-radius:30px;color:var(--muted)}
+
+  .end{padding:130px 0 140px;text-align:center;border-top:1px solid var(--line)}
+  .end h2{font-size:clamp(48px,14vw,220px)}
+  .magbtn{margin-top:44px;display:inline-flex;align-items:center;gap:12px;font-family:"DM Mono";font-size:14px;text-transform:uppercase;
+    border:1px solid var(--fg);border-radius:40px;padding:18px 40px;will-change:transform;transition:background .3s,color .3s}
+  .magbtn:hover{background:var(--fg);color:var(--bg)}
+  footer{padding:30px clamp(18px,4vw,56px);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-family:"DM Mono";font-size:12px;color:var(--muted);text-transform:uppercase}
+  .reveal{opacity:0;transform:translateY(40px);transition:.9s cubic-bezier(.16,1,.3,1)}.reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div id="cur"></div>
+<header><nav class="edge"><div class="lg">NEXUS®</div>
+  <div class="nx"><a href="#sys" data-c>Index</a><a href="#tree" data-c>Tree</a><a href="#cal" data-c>Calendar</a><a href="#start" data-c>Start</a></div>
+</nav></header>
+
+<!-- HERO -->
+<div class="hero edge">
+  <div class="mtop">Block-based<br>knowledge OS<br>© 2026</div>
+  <h1>Structure<br><span class="it">for the</span><br><span class="o">mind.</span></h1>
+  <div class="foot">
+    <p>Nexus organises everything you know into one nestable tree of folders, documents and blocks — collaborative, real-time, and quietly relentless about order.</p>
+    <span class="scrolltag">↓ scroll</span>
+  </div>
+</div>
+
+<!-- FEATURES horizontal -->
+<section id="sys" class="edge reveal">
+  <div class="skick">Index / Capabilities</div>
+  <h2>Six <span class="it">parts,</span> one system.</h2>
+  <div class="hscroll" id="hs">
+    <div class="hcard" data-c><span class="n">01 / EDITOR</span><h3>Block Editor</h3><p>Text, image, video, embed — ordered and draggable, powered by Tiptap.</p></div>
+    <div class="hcard" data-c><span class="n">02 / TREE</span><h3>Infinite Nesting</h3><p>Folders within folders, with no maximum depth. The tree is the model.</p></div>
+    <div class="hcard" data-c><span class="n">03 / SYNC</span><h3>Real-Time</h3><p>Live cursors and instant block updates over WebSocket subscriptions.</p></div>
+    <div class="hcard" data-c><span class="n">04 / IMPORT</span><h3>Notion Import</h3><p>A pasted URL is parsed from DOM straight into clean Nexus blocks.</p></div>
+    <div class="hcard" data-c><span class="n">05 / ASSETS</span><h3>Asset CDN</h3><p>Images and video held per business, served from the nearest edge.</p></div>
+    <div class="hcard" data-c><span class="n">06 / ROLES</span><h3>Access Roles</h3><p>Admin, editor, viewer — scoped per business, enforced at the source.</p></div>
+  </div>
+  <div class="draghint">← drag / scroll horizontally →</div>
+</section>
+
+<!-- TREE -->
+<section id="tree" class="edge reveal">
+  <div class="skick">The structure</div>
+  <h2>One tree. <span class="it">No bottom.</span></h2>
+  <div class="stack">
+    <div class="si" data-c><span class="no">01</span><span class="nm">Acme, Inc.</span><span class="ty">Business</span></div>
+    <div class="si" data-c><span class="no">02</span><span class="nm d2">Marketing</span><span class="ty">Folder</span></div>
+    <div class="si" data-c><span class="no">03</span><span class="nm d3">Launch Plan — 142 blocks</span><span class="ty">Document</span></div>
+    <div class="si" data-c><span class="no">04</span><span class="nm d2">Engineering</span><span class="ty">Folder</span></div>
+    <div class="si" data-c><span class="no">05</span><span class="nm d3">Architecture — live</span><span class="ty">Document</span></div>
+    <div class="si" data-c><span class="no">06</span><span class="nm d2">Content Calendar</span><span class="ty">Calendar</span></div>
+  </div>
+</section>
+
+<!-- CALENDAR -->
+<section id="cal" class="edge reveal">
+  <div class="skick">The calendar</div>
+  <h2>Ship <span class="it">on time.</span></h2>
+  <div class="cal">
+    <div class="cr" data-c><span class="d">JUL 06</span><span class="t">Launch announcement → Blog</span><span class="s">Scheduled</span></div>
+    <div class="cr" data-c><span class="d">JUL 08</span><span class="t">Carousel → Instagram</span><span class="s">Draft</span></div>
+    <div class="cr" data-c><span class="d">JUL 09</span><span class="t">Field dispatch → Newsletter</span><span class="s">Live</span></div>
+    <div class="cr" data-c><span class="d">JUL 12</span><span class="t">Acme case study → Blog</span><span class="s">Scheduled</span></div>
+    <div class="cr" data-c><span class="d">JUL 14</span><span class="t">Demo film → Video</span><span class="s">Draft</span></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="end edge reveal" id="start">
+  <h2>Begin.</h2>
+  <a class="magbtn" id="mag" data-c>Get access →</a>
+</div>
+
+<footer><span>Nexus® 2026</span><span>Block-based knowledge workspace</span><a href="index.html" data-c>← branding lab</a></footer>
+
+<script>
+  // custom cursor
+  const cur=document.getElementById('cur');let cx=innerWidth/2,cy=innerHeight/2,tx=cx,ty=cy;
+  addEventListener('mousemove',e=>{tx=e.clientX;ty=e.clientY;});
+  (function loop(){cx+=(tx-cx)*.2;cy+=(ty-cy)*.2;cur.style.left=cx+'px';cur.style.top=cy+'px';requestAnimationFrame(loop);})();
+  document.querySelectorAll('[data-c]').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{cur.classList.add('big');if(el.classList.contains('hcard')||el.classList.contains('magbtn')){cur.classList.add('lbl');cur.dataset.l='view';}});
+    el.addEventListener('mouseleave',()=>{cur.classList.remove('big','lbl');});
+  });
+  // magnetic CTA
+  const mag=document.getElementById('mag');
+  mag.addEventListener('mousemove',e=>{const r=mag.getBoundingClientRect();
+    mag.style.transform=`translate(${(e.clientX-r.left-r.width/2)*.3}px,${(e.clientY-r.top-r.height/2)*.4}px)`;});
+  mag.addEventListener('mouseleave',()=>mag.style.transform='');
+  // drag-scroll the horizontal gallery
+  const hs=document.getElementById('hs');let down=false,sx,sl;
+  hs.addEventListener('mousedown',e=>{down=true;sx=e.pageX;sl=hs.scrollLeft;});
+  addEventListener('mouseup',()=>down=false);
+  hs.addEventListener('mousemove',e=>{if(down){hs.scrollLeft=sl-(e.pageX-sx);}});
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

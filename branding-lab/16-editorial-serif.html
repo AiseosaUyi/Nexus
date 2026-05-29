@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — A Considered Place for Thought</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Hanken+Grotesk:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--cream:#f6f3ec;--cream2:#efe9dd;--ink:#16140f;--ink2:#46423a;--clay:#b5613f;--muted:#8b8579;--line:rgba(22,20,15,.14)}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Hanken Grotesk",sans-serif;background:var(--cream);color:var(--ink);overflow-x:hidden;line-height:1.6;-webkit-font-smoothing:antialiased;font-weight:300}
+  ::selection{background:var(--clay);color:var(--cream)}
+  .fr{font-family:"Fraunces",serif}
+  a{color:inherit;text-decoration:none}
+  .edge{padding-left:clamp(24px,6vw,90px);padding-right:clamp(24px,6vw,90px)}
+
+  header{position:fixed;top:0;left:0;right:0;z-index:60;transition:background .4s}
+  header.solid{background:rgba(246,243,236,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav{height:86px;display:flex;align-items:center;justify-content:space-between}
+  nav .lg{font-family:"Fraunces";font-size:25px;font-weight:500;letter-spacing:.5px}
+  nav .nx{display:flex;gap:38px;font-size:13px;letter-spacing:.5px;color:var(--ink2)}
+  nav .nx a{position:relative}
+  nav .nx a:after{content:"";position:absolute;left:0;bottom:-5px;width:0;height:1px;background:var(--clay);transition:width .35s}
+  nav .nx a:hover:after{width:100%}
+  @media(max-width:760px){nav .nx{display:none}}
+  .lnk{font-size:13px;border-bottom:1px solid var(--ink);padding-bottom:3px}
+
+  /* HERO */
+  .hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-top:120px;padding-bottom:60px}
+  .hero .eb{font-family:"Fraunces";font-style:italic;font-size:17px;color:var(--clay);margin-bottom:30px;
+    display:flex;align-items:center;gap:14px}
+  .hero .eb:before{content:"";width:50px;height:1px;background:var(--clay)}
+  .hero h1{font-family:"Fraunces";font-weight:300;font-size:clamp(46px,8.5vw,128px);line-height:.96;letter-spacing:-.02em;max-width:15ch}
+  .hero h1 em{font-style:italic;color:var(--clay)}
+  .hero .row{display:grid;grid-template-columns:1fr auto;gap:40px;align-items:end;margin-top:52px;padding-top:30px;border-top:1px solid var(--line)}
+  @media(max-width:760px){.hero .row{grid-template-columns:1fr}}
+  .hero .row p{font-size:clamp(16px,1.6vw,20px);color:var(--ink2);max-width:48ch}
+  .cta{font-family:"Hanken Grotesk";font-weight:400;font-size:15px;background:var(--ink);color:var(--cream);padding:16px 32px;border-radius:40px;
+    display:inline-flex;align-items:center;gap:12px;transition:background .3s,transform .3s;white-space:nowrap}
+  .cta:hover{background:var(--clay);transform:translateY(-2px)}
+
+  /* big statement / quote */
+  .statement{padding:120px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .statement p{font-family:"Fraunces";font-weight:300;font-size:clamp(26px,4.4vw,58px);line-height:1.18;letter-spacing:-.01em;max-width:22ch}
+  .statement p em{font-style:italic;color:var(--clay)}
+
+  section{padding:110px 0;border-bottom:1px solid var(--line)}
+  .skick{font-family:"Fraunces";font-style:italic;font-size:15px;color:var(--clay);margin-bottom:14px}
+  .stitle{font-family:"Fraunces";font-weight:300;font-size:clamp(28px,4.4vw,52px);line-height:1.04;letter-spacing:-.01em;margin-bottom:50px;max-width:18ch}
+
+  /* tree as a refined contents list */
+  .contents{display:grid;grid-template-columns:1fr;gap:0;border-top:1px solid var(--line)}
+  .ci{display:grid;grid-template-columns:60px 1fr 180px;gap:24px;padding:26px 0;border-bottom:1px solid var(--line);align-items:baseline;transition:padding-left .4s}
+  @media(max-width:680px){.ci{grid-template-columns:40px 1fr}.ci .ty{display:none}}
+  .ci:hover{padding-left:14px}
+  .ci .no{font-family:"Fraunces";font-style:italic;color:var(--muted);font-size:18px}
+  .ci .nm{font-family:"Fraunces";font-weight:400;font-size:clamp(20px,2.8vw,32px);letter-spacing:-.01em}
+  .ci .nm.d2{padding-left:28px;font-size:clamp(18px,2.2vw,26px)}
+  .ci .nm.d3{padding-left:56px;font-family:"Hanken Grotesk";font-weight:400;font-size:clamp(16px,1.8vw,19px);color:var(--ink2)}
+  .ci .ty{font-size:13px;color:var(--muted);text-align:right}
+
+  /* features — editorial two-col */
+  .feat{display:grid;grid-template-columns:repeat(2,1fr);gap:60px 70px}
+  @media(max-width:760px){.feat{grid-template-columns:1fr;gap:44px}}
+  .fc{border-top:1px solid var(--ink);padding-top:22px}
+  .fc .fn{font-family:"Fraunces";font-style:italic;font-size:15px;color:var(--clay);margin-bottom:14px}
+  .fc h3{font-family:"Fraunces";font-weight:400;font-size:clamp(24px,3vw,34px);letter-spacing:-.01em;margin-bottom:12px}
+  .fc p{color:var(--ink2);font-size:16px;max-width:42ch}
+
+  /* calendar — agenda */
+  .agenda{border-top:1px solid var(--line)}
+  .ar{display:grid;grid-template-columns:130px 1fr 150px;gap:24px;padding:26px 0;border-bottom:1px solid var(--line);align-items:center;transition:padding-left .4s}
+  @media(max-width:680px){.ar{grid-template-columns:90px 1fr}.ar .st{display:none}}
+  .ar:hover{padding-left:14px}
+  .ar .dt{font-family:"Fraunces";font-style:italic;font-size:22px;color:var(--clay)}
+  .ar .ti{font-size:clamp(17px,2.2vw,24px);font-weight:400}
+  .ar .st{font-size:13px;color:var(--muted);text-align:right}
+
+  /* CTA */
+  .end{padding:140px 0 150px;text-align:center}
+  .end h2{font-family:"Fraunces";font-weight:300;font-size:clamp(40px,8vw,120px);line-height:.98;letter-spacing:-.02em}
+  .end h2 em{font-style:italic;color:var(--clay)}
+  .end .cta{margin-top:44px}
+  footer{padding:34px clamp(24px,6vw,90px);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted)}
+  footer a{color:var(--clay)}
+  .reveal{opacity:0;transform:translateY(34px);transition:1s cubic-bezier(.16,1,.3,1)}.reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<header id="hd"><nav class="edge"><div class="lg">Nexus</div>
+  <div class="nx"><a href="#contents">Contents</a><a href="#craft">Craft</a><a href="#agenda">Agenda</a></div>
+  <a class="lnk" href="#start">Request access</a>
+</nav></header>
+
+<!-- HERO -->
+<div class="hero edge">
+  <div class="eb">A considered place for thought</div>
+  <h1 class="fr">Everything you know, <em>kept beautifully.</em></h1>
+  <div class="row">
+    <p>Nexus is a quiet, structured home for your ideas — folders, documents and blocks gathered into one elegant tree. Nested without limit. Edited together, in real time.</p>
+    <a class="cta" href="#start">Request access →</a>
+  </div>
+</div>
+
+<!-- STATEMENT -->
+<div class="statement edge reveal">
+  <p class="fr">A workspace should feel less like software and <em>more like a well-kept library.</em></p>
+</div>
+
+<!-- CONTENTS / TREE -->
+<section id="contents" class="edge reveal">
+  <div class="skick">I — The structure</div>
+  <div class="stitle fr">One tree holds it all, nested as deep as thought goes.</div>
+  <div class="contents">
+    <div class="ci"><span class="no">i</span><span class="nm">Acme, Inc.</span><span class="ty">Business</span></div>
+    <div class="ci"><span class="no">ii</span><span class="nm d2">Marketing</span><span class="ty">Folder</span></div>
+    <div class="ci"><span class="no">iii</span><span class="nm d3">Launch Plan — 142 blocks</span><span class="ty">Document</span></div>
+    <div class="ci"><span class="no">iv</span><span class="nm d3">Brand Voice — 38 blocks</span><span class="ty">Document</span></div>
+    <div class="ci"><span class="no">v</span><span class="nm d2">Engineering</span><span class="ty">Folder</span></div>
+    <div class="ci"><span class="no">vi</span><span class="nm d3">Architecture — live</span><span class="ty">Document</span></div>
+    <div class="ci"><span class="no">vii</span><span class="nm d2">Content Calendar</span><span class="ty">Calendar</span></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="craft" class="edge reveal">
+  <div class="skick">II — The craft</div>
+  <div class="stitle fr">Six quiet capabilities, made with care.</div>
+  <div class="feat">
+    <div class="fc"><div class="fn">01</div><h3>The Block Editor</h3><p>Documents composed of ordered blocks — text, image, video, embed — reordered with a gentle drag.</p></div>
+    <div class="fc"><div class="fn">02</div><h3>Infinite Nesting</h3><p>Folders within folders, without end. The hierarchy holds as much as you give it.</p></div>
+    <div class="fc"><div class="fn">03</div><h3>Real-Time</h3><p>See your collaborators move through a document, their cursors drifting in real time.</p></div>
+    <div class="fc"><div class="fn">04</div><h3>Notion Import</h3><p>Bring a page from elsewhere; it is re-set, cleanly, into native Nexus blocks.</p></div>
+    <div class="fc"><div class="fn">05</div><h3>Asset Library</h3><p>Images and film, kept per business and delivered swiftly from the edge.</p></div>
+    <div class="fc"><div class="fn">06</div><h3>Roles &amp; Access</h3><p>Admin, editor, viewer — privileges granted thoughtfully, per workspace.</p></div>
+  </div>
+</section>
+
+<!-- AGENDA -->
+<section id="agenda" class="edge reveal">
+  <div class="skick">III — The calendar</div>
+  <div class="stitle fr">A schedule, kept in the same elegant hand.</div>
+  <div class="agenda">
+    <div class="ar"><span class="dt">Jul 06</span><span class="ti">Launch announcement → The Blog</span><span class="st">Scheduled</span></div>
+    <div class="ar"><span class="dt">Jul 08</span><span class="ti">Carousel → Instagram</span><span class="st">Draft</span></div>
+    <div class="ar"><span class="dt">Jul 09</span><span class="ti">Field dispatch → Newsletter</span><span class="st">Published</span></div>
+    <div class="ar"><span class="dt">Jul 12</span><span class="ti">Acme case study → The Blog</span><span class="st">Scheduled</span></div>
+    <div class="ar"><span class="dt">Jul 14</span><span class="ti">Demo film → Video</span><span class="st">Draft</span></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="end edge reveal" id="start">
+  <h2 class="fr">Keep it<br><em>beautifully.</em></h2>
+  <a class="cta" href="#">Request access →</a>
+</div>
+
+<footer><span>Nexus © 2026 — A block-based knowledge workspace</span><a href="index.html">← Branding lab</a></footer>
+
+<script>
+  const hd=document.getElementById('hd');
+  addEventListener('scroll',()=>hd.classList.toggle('solid',scrollY>60));
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

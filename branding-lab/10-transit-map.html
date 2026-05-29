@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Mind the Gap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f5f2e9; --paper2:#fffdf7; --ink:#1c1c1c; --muted:#6b6b66;
+    --red:#e02a35; --blue:#1d6fd6; --green:#0a9e62; --gold:#e8a322; --purple:#7b3fb0; --teal:#11b5c4;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Familjen Grotesk",sans-serif;color:var(--ink);background:var(--paper);overflow-x:hidden;line-height:1.55;
+    background-image:radial-gradient(circle at 1px 1px,rgba(0,0,0,.05) 1px,transparent 0);background-size:28px 28px}
+  ::selection{background:var(--gold);color:#fff}
+  .mono{font-family:"DM Mono",monospace}
+  a{color:inherit;text-decoration:none}
+
+  /* roundel */
+  .roundel{display:inline-flex;align-items:center;justify-content:center;position:relative;width:46px;height:46px}
+  .roundel:before{content:"";position:absolute;width:46px;height:46px;border-radius:50%;border:7px solid var(--red)}
+  .roundel:after{content:"";position:absolute;left:-6px;right:-6px;height:11px;background:var(--blue)}
+  .roundel span{position:relative;z-index:2;color:#fff;font-weight:700;font-size:11px}
+
+  header{position:sticky;top:0;z-index:50;background:rgba(245,242,233,.92);backdrop-filter:blur(6px);border-bottom:2px solid var(--ink)}
+  nav{max-width:1200px;margin:0 auto;height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 26px}
+  .brand{display:flex;align-items:center;gap:14px;font-weight:700;font-size:24px;letter-spacing:.5px}
+  nav .links{display:flex;gap:26px;font-weight:500;font-size:14px;color:var(--muted)}
+  nav .links a:hover{color:var(--ink)}
+  @media(max-width:780px){nav .links{display:none}}
+  .ticket{font-weight:700;font-size:13px;letter-spacing:.5px;background:var(--ink);color:var(--paper);padding:11px 20px;border-radius:30px}
+
+  main{max-width:1200px;margin:0 auto;padding:0 26px}
+
+  /* HERO */
+  .hero{padding:80px 0 60px;display:grid;grid-template-columns:1.05fr .95fr;gap:50px;align-items:center}
+  @media(max-width:900px){.hero{grid-template-columns:1fr;gap:30px}}
+  .kick{font-family:"DM Mono";font-size:12px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:18px}
+  h1{font-size:clamp(40px,6.6vw,80px);line-height:.98;font-weight:700;letter-spacing:-2px}
+  h1 .u{position:relative;white-space:nowrap}
+  h1 .u:after{content:"";position:absolute;left:0;right:0;bottom:6px;height:10px;background:var(--gold);z-index:-1;opacity:.55}
+  .hero p{font-size:18px;color:#3a3a36;max-width:48ch;margin:24px 0 30px}
+  .btnrow{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .btn{font-weight:700;font-size:14px;padding:14px 24px;border-radius:30px;cursor:pointer}
+  .btn.solid{background:var(--red);color:#fff;border:none;transition:transform .15s}
+  .btn.solid:hover{transform:translateY(-2px)}
+  .btn.line{background:transparent;border:2px solid var(--ink);color:var(--ink)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:28px;font-family:"DM Mono";font-size:12px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:7px}.legend i{width:18px;height:5px;border-radius:3px;display:inline-block}
+
+  /* the map (hero visual) */
+  .mapwrap{background:var(--paper2);border:2px solid var(--ink);border-radius:14px;padding:10px;box-shadow:8px 8px 0 rgba(0,0,0,.12)}
+  .maptitle{font-family:"DM Mono";font-size:11px;letter-spacing:1px;color:var(--muted);padding:8px 10px 4px;display:flex;justify-content:space-between}
+  svg.map{width:100%;height:auto;display:block}
+  .map .line{fill:none;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:1200;stroke-dashoffset:1200;transition:stroke-dashoffset 1.6s ease}
+  .map .line.drawn{stroke-dashoffset:0}
+  .map .station{fill:#fff;stroke:var(--ink);stroke-width:2.4}
+  .map .interchange{fill:#fff;stroke:var(--ink);stroke-width:3}
+  .map text{font-family:"Familjen Grotesk";font-weight:600;font-size:12px;fill:var(--ink)}
+  .map .you{fill:var(--red)}
+
+  /* SECTIONS */
+  section{padding:80px 0;border-top:2px solid var(--ink)}
+  .seckick{font-family:"DM Mono";font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+  h2{font-size:clamp(28px,4.4vw,46px);font-weight:700;letter-spacing:-1px;line-height:1.04;margin:12px 0 14px}
+  .lead{font-size:17px;color:#3a3a36;max-width:62ch;margin-bottom:34px}
+
+  /* lines as features */
+  .lines{display:flex;flex-direction:column;gap:0}
+  .lrow{display:grid;grid-template-columns:200px 1fr;gap:22px;align-items:center;padding:22px 0;border-bottom:1px solid rgba(0,0,0,.12)}
+  @media(max-width:680px){.lrow{grid-template-columns:1fr;gap:6px}}
+  .lname{display:flex;align-items:center;gap:12px;font-weight:700;font-size:18px}
+  .lname .bul{width:26px;height:26px;border-radius:50%;flex-shrink:0}
+  .lrow p{color:#3a3a36;font-size:16px}
+  .lrow .stops{font-family:"DM Mono";font-size:11px;color:var(--muted);margin-top:4px}
+
+  /* timetable / calendar */
+  .timetable{border:2px solid var(--ink);border-radius:12px;overflow:hidden}
+  .tt-head{background:var(--ink);color:var(--paper);display:grid;grid-template-columns:90px 1fr 150px;gap:14px;padding:14px 20px;
+    font-family:"DM Mono";font-size:12px;letter-spacing:1px}
+  .tt-row{display:grid;grid-template-columns:90px 1fr 150px;gap:14px;padding:15px 20px;border-bottom:1px solid rgba(0,0,0,.1);align-items:center;font-size:16px}
+  .tt-row:last-child{border-bottom:none}
+  .tt-row:nth-child(even){background:rgba(0,0,0,.025)}
+  .tt-row .dep{font-family:"DM Mono";font-weight:500;color:var(--blue)}
+  .tt-row .pf{justify-self:end;font-family:"DM Mono";font-size:11px;padding:4px 10px;border-radius:30px;color:#fff}
+  .pf.on{background:var(--green)}.pf.due{background:var(--gold)}.pf.del{background:var(--red)}
+
+  /* CTA */
+  .cta{padding:90px 0 110px;text-align:center;border-top:2px solid var(--ink)}
+  .cta h2{font-size:clamp(30px,5.5vw,62px)}
+  .cta p{font-size:18px;color:#3a3a36;max-width:46ch;margin:18px auto 32px}
+  footer{border-top:2px solid var(--ink);padding:30px 0;text-align:center;font-family:"DM Mono";font-size:12px;color:var(--muted)}
+  footer a{color:var(--red)}
+  .reveal{opacity:0;transform:translateY(22px);transition:.7s cubic-bezier(.2,.7,.2,1)}.reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<header>
+  <nav>
+    <div class="brand"><span class="roundel"><span>NX</span></span>Nexus Underground</div>
+    <div class="links"><a href="#network">The Network</a><a href="#lines">Lines</a><a href="#timetable">Timetable</a></div>
+    <a class="ticket" href="#cta">Buy a ticket →</a>
+  </nav>
+</header>
+
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <div>
+      <div class="kick">⊙ Service every 0 minutes · all zones</div>
+      <h1>Mind the <span class="u">gap</span> in your knowledge.</h1>
+      <p>Nexus maps everything you know like a transit network — documents are stations, folders are interchanges, links are the lines that carry you between them. One map, every connection, no dead ends.</p>
+      <div class="btnrow">
+        <a class="btn solid" href="#cta">Buy a ticket</a>
+        <a class="btn line" href="#network">View the map</a>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--red)"></i> Docs Line</span>
+        <span><i style="background:var(--blue)"></i> Folder Line</span>
+        <span><i style="background:var(--green)"></i> Calendar Line</span>
+        <span><i style="background:var(--gold)"></i> Assets Line</span>
+      </div>
+    </div>
+    <div class="mapwrap">
+      <div class="maptitle"><span>NEXUS NETWORK MAP</span><span>ZONE ∞</span></div>
+      <svg class="map" id="map" viewBox="0 0 520 400">
+        <!-- lines -->
+        <path class="line" stroke="var(--blue)"  d="M70 90 L70 200 L200 200 L320 200 L320 120"/>
+        <path class="line" stroke="var(--red)"   d="M70 200 L70 320 L240 320 L380 320 L380 200"/>
+        <path class="line" stroke="var(--green)" d="M200 200 L200 320"/>
+        <path class="line" stroke="var(--gold)"  d="M320 200 L380 200 L450 200 L450 110"/>
+        <path class="line" stroke="var(--purple)" d="M320 120 L320 200 L380 200"/>
+        <!-- stations -->
+        <g>
+          <circle class="interchange" cx="70" cy="200" r="9"/>
+          <circle class="interchange" cx="200" cy="200" r="9"/>
+          <circle class="interchange" cx="320" cy="200" r="9"/>
+          <circle class="interchange" cx="380" cy="200" r="9"/>
+          <circle class="station" cx="70" cy="90" r="6"/>
+          <circle class="station" cx="320" cy="120" r="6"/>
+          <circle class="station" cx="450" cy="110" r="6"/>
+          <circle class="station" cx="240" cy="320" r="6"/>
+          <circle class="station" cx="380" cy="320" r="6"/>
+          <circle class="you" cx="200" cy="320" r="8"/>
+        </g>
+        <!-- labels -->
+        <text x="82" y="86">Acme HQ</text>
+        <text x="48" y="220" text-anchor="end">Workspace</text>
+        <text x="190" y="190" text-anchor="end">Marketing</text>
+        <text x="332" y="196">Engineering</text>
+        <text x="332" y="116">Architecture</text>
+        <text x="462" y="106">Assets</text>
+        <text x="252" y="324">Brand Voice</text>
+        <text x="392" y="324">Roadmap</text>
+        <text x="210" y="338" font-weight="700" fill="var(--red)">◉ You are here</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- NETWORK / TREE -->
+  <section id="network" class="reveal">
+    <div class="seckick">⊙ The Network</div>
+    <h2>Interchanges nest the<br>whole network together.</h2>
+    <p class="lead">A business is the central terminus. Every folder is an interchange where lines meet; every document a station down the line. Because they share one map, you can always plot a route from any thought to any other — and restructure the whole network by moving a single interchange.</p>
+  </section>
+
+  <!-- LINES / FEATURES -->
+  <section id="lines" class="reveal">
+    <div class="seckick">⊙ Lines in Service</div>
+    <h2>Six lines, always running.</h2>
+    <p class="lead">Each capability is a line on the network — colour-coded, frequent, and connecting everything you know.</p>
+    <div class="lines">
+      <div class="lrow"><div class="lname"><span class="bul" style="background:var(--red)"></span>The Blocks Line</div><div><p>Build documents from ordered blocks — text, image, video, embed — and reorder the carriages by dragging.</p><div class="stops">15 stops · runs express</div></div></div>
+      <div class="lrow"><div class="lname"><span class="bul" style="background:var(--blue)"></span>The Folder Line</div><div><p>Infinite interchanges. Nest folders within folders with no end of the line in sight.</p><div class="stops">∞ stops · all zones</div></div></div>
+      <div class="lrow"><div class="lname"><span class="bul" style="background:var(--green)"></span>The Live Line</div><div><p>Real-time service: see other passengers' cursors move along the platform as blocks update.</p><div class="stops">every 0 seconds</div></div></div>
+      <div class="lrow"><div class="lname"><span class="bul" style="background:var(--gold)"></span>The Import Line</div><div><p>Direct from Notion: a URL pulls in and is re-routed into clean Nexus blocks on arrival.</p><div class="stops">connecting service</div></div></div>
+      <div class="lrow"><div class="lname"><span class="bul" style="background:var(--purple)"></span>The Assets Line</div><div><p>Images and video held at the depot, delivered fast from the nearest CDN edge.</p><div class="stops">freight + media</div></div></div>
+      <div class="lrow"><div class="lname"><span class="bul" style="background:var(--teal)"></span>The Access Line</div><div><p>Admin, Editor, Viewer — ticket types that decide which platforms you can board, per business.</p><div class="stops">staff + public</div></div></div>
+    </div>
+  </section>
+
+  <!-- TIMETABLE / CALENDAR -->
+  <section id="timetable" class="reveal">
+    <div class="seckick">⊙ Departures</div>
+    <h2>The publishing timetable.</h2>
+    <p class="lead">A content calendar reading like a live departures board — each entry a node, scheduled to leave the platform for its destination.</p>
+    <div class="timetable">
+      <div class="tt-head"><span>DEPARTS</span><span>SERVICE → DESTINATION</span><span>STATUS</span></div>
+      <div class="tt-row"><span class="dep">JUL 06</span><span>Launch announcement → The Blog</span><span class="pf on">ON TIME</span></div>
+      <div class="tt-row"><span class="dep">JUL 08</span><span>Carousel → Instagram</span><span class="pf due">BOARDING</span></div>
+      <div class="tt-row"><span class="dep">JUL 09</span><span>Field dispatch → Newsletter</span><span class="pf on">DEPARTED</span></div>
+      <div class="tt-row"><span class="dep">JUL 12</span><span>Acme case study → The Blog</span><span class="pf del">DELAYED</span></div>
+      <div class="tt-row"><span class="dep">JUL 14</span><span>Demo film → Video</span><span class="pf due">BOARDING</span></div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta reveal" id="cta">
+    <h2>Your journey starts here.</h2>
+    <p>Tap in with your first workspace and ride every line of everything you know. Service is frequent, and the map is always up to date.</p>
+    <div class="btnrow" style="justify-content:center">
+      <a class="btn solid" href="#">Buy a ticket</a>
+      <a class="btn line" href="#">Download the map</a>
+    </div>
+  </div>
+
+  <footer>NEXUS UNDERGROUND — a block-based knowledge workspace · mind the gap · <a href="index.html">← back to the branding lab</a></footer>
+</main>
+
+<script>
+  const map=document.getElementById('map');
+  const lines=[...map.querySelectorAll('.line')];
+  function drawLines(){lines.forEach((l,i)=>setTimeout(()=>l.classList.add('drawn'),i*260));}
+  const heroObs=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){drawLines();heroObs.disconnect();}}),{threshold:.2});
+  heroObs.observe(map);
+  setTimeout(drawLines,400);
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting)x.target.classList.add('in')}),{threshold:.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

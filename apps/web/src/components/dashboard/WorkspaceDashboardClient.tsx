@@ -70,8 +70,8 @@ export default function WorkspaceDashboardClient({
       icon: Plus,
       label: 'New Page',
       description: 'Start with a blank canvas',
-      iconColor: 'text-blue-400',
-      iconBg: 'bg-blue-500/10 group-hover:bg-blue-500/20',
+      iconColor: 'text-accent',
+      iconBg: 'bg-accent/10 group-hover:bg-accent/20',
       onClick: () => setIsNewPageOpen(true),
     },
     {
@@ -98,9 +98,9 @@ export default function WorkspaceDashboardClient({
         {/* Joined Success Toast */}
         {showJoinedSuccess && (
           <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 duration-500">
-            <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-[#1a1a1a] border border-cta/30 shadow-2xl shadow-cta/10">
-              <div className="w-8 h-8 rounded-full bg-cta/10 flex items-center justify-center">
-                <Zap className="w-4 h-4 text-cta" />
+            <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-card border border-border shadow-popover">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'color-mix(in oklab, var(--nb-green) 20%, transparent)' }}>
+                <Zap className="w-4 h-4" style={{ color: 'var(--nb-green)' }} />
               </div>
               <div className="flex flex-col">
                 <p className="text-sm font-bold text-foreground">Welcome to the team!</p>

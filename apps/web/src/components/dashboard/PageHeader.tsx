@@ -427,7 +427,7 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
                 onClick={() => setIsShareMenuOpen(prev => !prev)}
                 className={cn(
                   "flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-hover text-foreground transition-colors cursor-pointer",
-                  isPublic && "text-blue-500"
+                  isPublic && "text-accent"
                 )}
               >
                 <Share2 className="w-3.5 h-3.5 opacity-80" />

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS.EXE — Knowledge Commander</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#0000a8; --blue-l:#0808d0; --cyan:#00a8a8; --cyan-l:#54fcfc; --white:#fcfcfc;
+    --yellow:#fcfc54; --gray:#a8a8a8; --dgray:#545454; --red:#fc5454; --green:#54fc54; --black:#000;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"VT323",monospace;background:var(--black);color:var(--gray);
+    font-size:21px;line-height:1.15;overflow-x:hidden;letter-spacing:.5px}
+  /* CRT */
+  body:before{content:"";position:fixed;inset:0;z-index:300;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px)}
+  body:after{content:"";position:fixed;inset:0;z-index:301;pointer-events:none;
+    background:radial-gradient(130% 100% at 50% 50%,transparent 60%,rgba(0,0,0,.6) 100%)}
+  ::selection{background:var(--cyan-l);color:var(--blue)}
+  a{color:inherit;text-decoration:none}
+  .yellow{color:var(--yellow)}.white{color:var(--white)}.cyan{color:var(--cyan-l)}.green{color:var(--green)}.red{color:var(--red)}.gray{color:var(--gray)}
+
+  .screen{max-width:1000px;margin:0 auto;padding:10px 14px 60px;background:var(--blue);min-height:100vh;
+    box-shadow:0 0 60px rgba(0,0,160,.5)}
+
+  /* top menu bar */
+  .menubar{background:var(--cyan);color:var(--black);display:flex;gap:0;padding:0;margin-bottom:8px;flex-wrap:wrap}
+  .menubar .mi{padding:2px 14px;cursor:pointer}
+  .menubar .mi:hover{background:var(--black);color:var(--cyan-l)}
+  .menubar .mi b{color:var(--red)}
+  .menubar .right{margin-left:auto;padding:2px 14px;color:var(--dgray)}
+
+  /* box drawing panel */
+  .box{border:2px solid var(--cyan-l);position:relative;background:var(--blue);margin-bottom:8px}
+  .box>.bt{position:absolute;top:-15px;left:50%;transform:translateX(-50%);background:var(--blue);color:var(--yellow);padding:0 10px;white-space:nowrap}
+  .box .bc{padding:14px 16px}
+
+  /* HERO */
+  .hero{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+  @media(max-width:820px){.hero{grid-template-columns:1fr}}
+  .hero-copy{padding:8px 4px}
+  .hero h1{font-size:clamp(40px,8vw,78px);line-height:.9;color:var(--white);text-shadow:0 0 12px rgba(84,252,252,.4);margin:8px 0}
+  .hero h1 .c{color:var(--cyan-l)}
+  .ascii-logo{color:var(--cyan-l);font-size:clamp(8px,1.8vw,15px);line-height:1.05;margin-bottom:6px;white-space:pre;text-shadow:0 0 8px rgba(84,252,252,.5)}
+  .hero p{color:var(--gray);max-width:42ch;margin:14px 0 18px;font-size:20px}
+  .hero p .white{color:var(--white)}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap}
+  .key{background:var(--cyan);color:var(--black);padding:5px 14px;cursor:pointer;border:none;font-family:"VT323";font-size:20px;
+    box-shadow:3px 3px 0 var(--black)}
+  .key:active{transform:translate(3px,3px);box-shadow:none}
+  .key .fk{color:var(--red);font-weight:bold}
+  .key.alt{background:var(--blue-l);color:var(--white)}
+
+  /* file manager dual pane */
+  .panes{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid var(--cyan-l)}
+  @media(max-width:680px){.panes{grid-template-columns:1fr}}
+  .pane{border-right:2px solid var(--cyan-l)}
+  .pane:last-child{border-right:none}
+  .pane .ph{background:var(--cyan);color:var(--black);text-align:center;padding:0 4px}
+  .pane .ph.active{background:var(--cyan-l)}
+  .colhead{display:grid;grid-template-columns:1fr 70px 60px;border-bottom:1px solid var(--cyan);color:var(--yellow);padding:0 8px}
+  .frow{display:grid;grid-template-columns:1fr 70px 60px;padding:0 8px;cursor:pointer}
+  .frow:hover,.frow.sel{background:var(--cyan-l);color:var(--blue)}
+  .frow .nm{color:var(--white)}.frow:hover .nm,.frow.sel .nm{color:var(--blue)}
+  .frow .dir{color:var(--yellow)}.frow:hover .dir{color:var(--blue)}
+  .paneinfo{padding:2px 8px;color:var(--gray);border-top:1px solid var(--cyan)}
+
+  /* section title */
+  .sect{margin:22px 0 8px;color:var(--yellow);font-size:24px}
+  .sect:before{content:"■ "}
+  .lead{color:var(--gray);max-width:64ch;margin-bottom:10px;font-size:20px}
+  .lead .white{color:var(--white)}
+
+  /* features as DOS list */
+  .feats{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid var(--cyan-l)}
+  @media(max-width:680px){.feats{grid-template-columns:1fr}}
+  .feat{padding:10px 14px;border-right:2px solid var(--cyan-l);border-bottom:2px solid var(--cyan-l)}
+  .feat:nth-child(2n){border-right:none}
+  .feat .fh{color:var(--cyan-l)}
+  .feat .fh b{color:var(--yellow)}
+  .feat p{color:var(--gray);font-size:19px;margin-top:3px}
+
+  /* calendar = batch schedule */
+  .sched{border:2px solid var(--cyan-l)}
+  .sched .srow{display:grid;grid-template-columns:90px 1fr 130px;gap:10px;padding:2px 12px;border-bottom:1px solid var(--blue-l)}
+  .sched .srow.h{background:var(--cyan);color:var(--black)}
+  .sched .dt{color:var(--cyan-l)}
+  .sched .st{justify-self:end}
+  .st.run{color:var(--green)}.st.que{color:var(--yellow)}.st.don{color:var(--gray)}
+
+  /* CTA */
+  .cta{border:2px double var(--cyan-l);padding:24px;text-align:center;margin-top:22px}
+  .cta h2{color:var(--white);font-size:clamp(28px,5vw,48px);margin-bottom:8px}
+  .cta p{color:var(--gray);max-width:46ch;margin:0 auto 16px;font-size:20px}
+
+  /* bottom F-key bar */
+  .fbar{position:fixed;bottom:0;left:0;right:0;z-index:200;display:flex;background:var(--black);font-size:18px}
+  .fbar .f{display:flex;flex:1;min-width:0}
+  .fbar .f .n{color:var(--white);padding:2px 2px 2px 6px}
+  .fbar .f .l{background:var(--cyan);color:var(--black);flex:1;padding:2px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  @media(max-width:680px){.fbar .f:nth-child(n+7){display:none}}
+
+  .cursor{display:inline-block;width:11px;height:20px;background:var(--cyan-l);vertical-align:middle;animation:bl 1s steps(1) infinite}
+  @keyframes bl{50%{opacity:0}}
+  footer{color:var(--dgray);text-align:center;margin-top:18px;font-size:18px}
+  footer a{color:var(--cyan-l)}
+  .reveal{opacity:0;transition:.4s}.reveal.in{opacity:1}
+</style>
+</head>
+<body>
+<div class="screen">
+  <!-- MENU BAR -->
+  <div class="menubar">
+    <span class="mi"><b>L</b>eft</span><span class="mi"><b>F</b>iles</span><span class="mi"><b>C</b>ommands</span>
+    <span class="mi"><b>O</b>ptions</span><span class="mi"><b>R</b>ight</span>
+    <span class="right">NEXUS.EXE v2.0 — MEM: 640K OK</span>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-copy">
+<div class="ascii-logo"> _   _ _______  ___   _ ___
+| \ | | ____\ \/ / | | / __|
+|  \| |  _|  \  /| | | \__ \
+| |\  | |___ /  \| |_| |___) |
+|_| \_|_____/_/\_\\___/|____/</div>
+      <h1>YOUR BRAIN,<br><span class="c">COMMANDED.</span></h1>
+      <p>NEXUS is the file commander for everything you know. No mouse required. Nest folders, stack blocks, schedule jobs — <span class="white">all from one blue screen that never crashes on your memory.</span><span class="cursor"></span></p>
+      <div class="btnrow">
+        <a class="key" href="#cta"><span class="fk">F2</span> RUN NEXUS</a>
+        <a class="key alt" href="#tree"><span class="fk">F3</span> VIEW TREE</a>
+      </div>
+    </div>
+    <div class="box">
+      <div class="bt">≡ SYSTEM INFO ≡</div>
+      <div class="bc" style="font-size:19px">
+        <div class="white">C:\NEXUS&gt; nexus /status</div>
+        <div class="green">► Workspace mounted ........ OK</div>
+        <div class="green">► Block editor loaded ...... OK</div>
+        <div class="green">► Realtime channel ......... OK</div>
+        <div class="green">► Notion importer .......... OK</div>
+        <div class="yellow">► Nodes indexed ........ 1,284</div>
+        <div class="gray">► Free space ............... ∞ MB</div>
+        <div class="white" style="margin-top:6px">C:\NEXUS&gt;<span class="cursor"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DUAL PANE FILE MANAGER / TREE -->
+  <div class="sect" id="tree">THE COMMANDER — EVERYTHING IS A NODE</div>
+  <div class="lead">Two panes, one tree. Folders, documents and calendar entries are the same kind of file. <span class="white">Use TAB to switch panes, arrows to move, ENTER to descend — nest as deep as the disk allows.</span></div>
+  <div class="panes">
+    <div class="pane">
+      <div class="ph active"> C:\ACME\MARKETING </div>
+      <div class="colhead"><span>Name</span><span>Size</span><span>Type</span></div>
+      <div class="frow sel"><span class="nm">..</span><span></span><span class="dir">UP-DIR</span></div>
+      <div class="frow"><span class="nm dir">ASSETS</span><span></span><span class="dir">&lt;DIR&gt;</span></div>
+      <div class="frow"><span class="nm">LAUNCH.DOC</span><span>142blk</span><span>DOC</span></div>
+      <div class="frow"><span class="nm">VOICE.DOC</span><span>38blk</span><span>DOC</span></div>
+      <div class="frow"><span class="nm">HERO.PNG</span><span>412K</span><span>IMG</span></div>
+      <div class="paneinfo">LAUNCH.DOC ......... 142 blocks</div>
+    </div>
+    <div class="pane">
+      <div class="ph"> C:\ACME\ENGINEERING </div>
+      <div class="colhead"><span>Name</span><span>Size</span><span>Type</span></div>
+      <div class="frow"><span class="nm">..</span><span></span><span class="dir">UP-DIR</span></div>
+      <div class="frow"><span class="nm dir">SPECS</span><span></span><span class="dir">&lt;DIR&gt;</span></div>
+      <div class="frow"><span class="nm">ARCH.DOC</span><span>LIVE</span><span>DOC</span></div>
+      <div class="frow"><span class="nm">ROADMAP.DOC</span><span>2m</span><span>DOC</span></div>
+      <div class="frow"><span class="nm dir">CALENDAR</span><span></span><span class="dir">&lt;CAL&gt;</span></div>
+      <div class="paneinfo">ARCH.DOC ...... 3 editors live</div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <div class="sect">INSTALLED MODULES</div>
+  <div class="lead">Six TSR programs loaded into memory, ready on command.</div>
+  <div class="feats">
+    <div class="feat"><div class="fh">[<b>BLOCKS.SYS</b>]</div><p>Documents built from ordered blocks — text, image, video, embed. Reorder with +/- keys.</p></div>
+    <div class="feat"><div class="fh">[<b>NEST.SYS</b>]</div><p>Subdirectories without a depth limit. The tree fills the whole volume.</p></div>
+    <div class="feat"><div class="fh">[<b>SYNC.COM</b>]</div><p>Real-time multi-user editing. Live cursors broadcast over the channel.</p></div>
+    <div class="feat"><div class="fh">[<b>IMPORT.BAT</b>]</div><p>Pipe a Notion URL → parse → write clean Nexus blocks to disk.</p></div>
+    <div class="feat"><div class="fh">[<b>ASSETS.DRV</b>]</div><p>Image and video device, served fast from the CDN cache.</p></div>
+    <div class="feat"><div class="fh">[<b>ROLES.CFG</b>]</div><p>ADMIN / EDITOR / VIEWER permissions, set per business volume.</p></div>
+  </div>
+
+  <!-- SCHEDULE / CALENDAR -->
+  <div class="sect">SCHEDULED JOBS — AUTOEXEC</div>
+  <div class="lead">The content calendar runs like a batch scheduler — each entry a node, queued to ship on its date.</div>
+  <div class="sched">
+    <div class="srow h"><span>DATE</span><span>JOB → TARGET</span><span class="st">STATUS</span></div>
+    <div class="srow"><span class="dt">JUL 06</span><span>LAUNCH.DOC → BLOG</span><span class="st que">QUEUED</span></div>
+    <div class="srow"><span class="dt">JUL 08</span><span>CAROUSEL.DOC → IG</span><span class="st que">QUEUED</span></div>
+    <div class="srow"><span class="dt">JUL 09</span><span>DISPATCH.DOC → MAIL</span><span class="st run">RUNNING</span></div>
+    <div class="srow"><span class="dt">JUL 12</span><span>CASESTUDY.DOC → BLOG</span><span class="st don">DONE</span></div>
+    <div class="srow"><span class="dt">JUL 14</span><span>DEMO.MP4 → VIDEO</span><span class="st que">QUEUED</span></div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta" id="cta">
+    <h2>C:\&gt; FORMAT BRAIN /Q</h2>
+    <p>Press any key to mount your first workspace. Warning: organising your entire mind cannot be undone (and you won't want to).</p>
+    <div class="btnrow" style="justify-content:center">
+      <a class="key" href="#"><span class="fk">F2</span> RUN NEXUS.EXE</a>
+      <a class="key alt" href="#"><span class="fk">F1</span> HELP</a>
+    </div>
+  </div>
+
+  <footer>NEXUS.EXE — block-based knowledge workspace · (C) MMXXVI · no mouse needed · <a href="index.html">← A:\BRANDING-LAB</a></footer>
+</div>
+
+<!-- F-KEY BAR -->
+<div class="fbar">
+  <a class="f" href="#cta"><span class="n">2</span><span class="l">Run</span></a>
+  <a class="f" href="#tree"><span class="n">3</span><span class="l">Tree</span></a>
+  <a class="f" href="#"><span class="n">4</span><span class="l">Edit</span></a>
+  <a class="f" href="#"><span class="n">5</span><span class="l">Copy</span></a>
+  <a class="f" href="#tree"><span class="n">6</span><span class="l">Move</span></a>
+  <a class="f" href="#"><span class="n">7</span><span class="l">MkDir</span></a>
+  <a class="f" href="#"><span class="n">8</span><span class="l">Del</span></a>
+  <a class="f" href="index.html"><span class="n">10</span><span class="l">Quit</span></a>
+</div>
+
+<script>
+  // arrow-key navigation of the file rows for flavor
+  const rows=[...document.querySelectorAll('.pane .frow')];
+  let idx=rows.findIndex(r=>r.classList.contains('sel'));if(idx<0)idx=0;
+  document.addEventListener('keydown',e=>{
+    if(['ArrowDown','ArrowUp'].includes(e.key)){
+      e.preventDefault();rows[idx]?.classList.remove('sel');
+      idx=(idx+(e.key==='ArrowDown'?1:-1)+rows.length)%rows.length;
+      rows[idx]?.classList.add('sel');rows[idx]?.scrollIntoView({block:'nearest'});
+    }
+  });
+  rows.forEach((r,i)=>r.addEventListener('click',()=>{rows[idx]?.classList.remove('sel');idx=i;r.classList.add('sel');}));
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting)x.target.classList.add('in')}),{threshold:.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

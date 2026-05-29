@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Map the Universe in Your Head</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,400&family=Spline+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#05060f; --void2:#0a0c1c; --violet:#6d5bd0; --cyan:#33e0ff;
+    --star:#f4f7ff; --ember:#ff7a59; --muted:#8b90b8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Spline Sans",sans-serif;background:var(--void);color:var(--star);
+    overflow-x:hidden;line-height:1.6;
+    background-image:radial-gradient(140% 100% at 50% -10%,#171a3a 0,#0a0c1c 45%,#05060f 100%)}
+  ::selection{background:var(--cyan);color:#05060f}
+  a{text-decoration:none;color:inherit}
+  .display{font-family:"Fraunces",serif}
+
+  /* persistent starfield + drifting constellation behind everything */
+  #sky{position:fixed;inset:0;z-index:0}
+  #graph{position:fixed;inset:0;z-index:1;cursor:grab}
+  #graph:active{cursor:grabbing}
+  .content{position:relative;z-index:5;pointer-events:none}
+  .content a,.content button,.content .card,.content nav{pointer-events:auto}
+
+  /* NAV */
+  header{position:fixed;top:0;left:0;right:0;z-index:40}
+  nav{max-width:1180px;margin:0 auto;height:78px;display:flex;align-items:center;justify-content:space-between;padding:0 30px}
+  .brand{font-family:"Fraunces";font-weight:600;font-size:23px;letter-spacing:.5px;display:flex;align-items:center;gap:11px}
+  .brand .o{width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,var(--cyan) 45%,var(--violet));box-shadow:0 0 16px var(--cyan)}
+  nav .links{display:flex;gap:30px;font-size:14px;color:var(--muted)}
+  nav .links a:hover{color:var(--star)}
+  @media(max-width:760px){nav .links{display:none}}
+  .chart{font-size:13px;padding:10px 20px;border-radius:40px;color:#05060f;font-weight:600;
+    background:linear-gradient(110deg,var(--cyan),var(--violet));box-shadow:0 0 24px rgba(51,224,255,.4)}
+
+  /* HERO */
+  .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:140px 24px 90px}
+  .pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--cyan);border:1px solid rgba(51,224,255,.35);padding:7px 16px;border-radius:40px;margin-bottom:30px;
+    background:rgba(51,224,255,.06);backdrop-filter:blur(4px)}
+  .pill .d{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);animation:tw 1.8s infinite}
+  @keyframes tw{50%{opacity:.3}}
+  h1{font-family:"Fraunces";font-weight:300;font-size:clamp(42px,8vw,104px);line-height:.98;letter-spacing:-1px}
+  h1 b{font-weight:600;font-style:italic;
+    background:linear-gradient(110deg,#fff,var(--cyan) 40%,var(--violet) 90%);-webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 60px rgba(109,91,208,.5)}
+  .hero p{color:#c3c8ee;font-size:clamp(17px,2vw,21px);max-width:58ch;margin:30px auto 40px;font-weight:300}
+  .ctas{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+  .btn{font-size:15px;padding:15px 30px;border-radius:46px;font-weight:500}
+  .btn.solid{color:#05060f;background:linear-gradient(110deg,var(--cyan),var(--violet));box-shadow:0 10px 40px rgba(109,91,208,.5);transition:transform .25s}
+  .btn.solid:hover{transform:translateY(-3px)}
+  .btn.ghost{border:1px solid rgba(255,255,255,.25);color:var(--star)}
+  .btn.ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+  .drag-hint{margin-top:42px;font-size:12.5px;color:var(--muted);letter-spacing:.5px}
+  .drag-hint b{color:var(--cyan);font-weight:500}
+
+  /* SECTIONS */
+  section{max-width:1180px;margin:0 auto;padding:110px 30px;position:relative}
+  .kick{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--violet)}
+  h2{font-family:"Fraunces";font-weight:400;font-size:clamp(30px,5vw,58px);line-height:1.04;margin:14px 0 18px}
+  h2 em{font-style:italic;color:var(--cyan)}
+  .lede{color:#c3c8ee;font-size:19px;max-width:64ch;font-weight:300}
+
+  .glass{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:22px;
+    backdrop-filter:blur(14px);box-shadow:0 30px 80px rgba(0,0,0,.4)}
+
+  /* galaxy/tree split */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center;margin-top:30px}
+  @media(max-width:880px){.split{grid-template-columns:1fr}}
+  .orbits{aspect-ratio:1;position:relative;padding:30px}
+  .orbits .ring{position:absolute;border:1px solid rgba(255,255,255,.1);border-radius:50%}
+  .r1{inset:10%}.r2{inset:24%}.r3{inset:40%}
+  .core{position:absolute;top:50%;left:50%;width:64px;height:64px;transform:translate(-50%,-50%);border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#fff,var(--violet) 55%,#2a1f6b);box-shadow:0 0 50px var(--violet);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff}
+  .node-o{position:absolute;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;
+    background:rgba(51,224,255,.12);border:1px solid rgba(51,224,255,.5);box-shadow:0 0 18px rgba(51,224,255,.35)}
+  .orbit-spin{position:absolute;inset:0;animation:spin 28s linear infinite}
+  .orbit-spin.s2{animation-duration:44s;animation-direction:reverse}
+  .orbit-spin.s3{animation-duration:64s}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .split p{color:#c3c8ee;font-size:19px;font-weight:300}.split p+p{margin-top:16px}
+  .split em{color:var(--cyan);font-style:italic}
+
+  /* constellation features */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:18px}
+  @media(max-width:840px){.grid3{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.grid3{grid-template-columns:1fr}}
+  .card{padding:30px 26px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+    transition:transform .35s,border-color .35s,box-shadow .35s;position:relative;overflow:hidden}
+  .card:hover{transform:translateY(-6px);border-color:rgba(51,224,255,.5);box-shadow:0 24px 60px rgba(109,91,208,.25)}
+  .card .ico{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;
+    background:linear-gradient(135deg,rgba(109,91,208,.4),rgba(51,224,255,.25));border:1px solid rgba(255,255,255,.14)}
+  .card h3{font-family:"Fraunces";font-weight:500;font-size:21px;margin:18px 0 8px}
+  .card p{color:#aeb3da;font-size:15px;font-weight:300}
+  .card .con{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--violet);margin-bottom:2px}
+
+  /* almanac / calendar */
+  .almanac{padding:46px;border-radius:24px}
+  .alm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:26px}
+  @media(max-width:720px){.alm-grid{grid-template-columns:1fr 1fr}}
+  .phase{padding:20px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);text-align:center}
+  .phase .moon{font-size:30px}
+  .phase .dt{font-size:12px;color:var(--muted);margin-top:6px;letter-spacing:1px}
+  .phase .ev{font-size:14px;margin-top:6px;color:var(--star)}
+  .phase .ch{font-size:11px;color:var(--cyan);margin-top:4px}
+
+  /* CTA */
+  .finale{text-align:center;padding:140px 30px}
+  .finale h2{font-size:clamp(34px,7vw,80px);font-weight:300}
+  .finale p{color:#c3c8ee;font-size:20px;max-width:50ch;margin:22px auto 40px;font-weight:300}
+  footer{border-top:1px solid rgba(255,255,255,.08);padding:40px 20px;text-align:center;color:var(--muted);font-size:14px}
+  footer a{color:var(--cyan)}
+  .reveal{opacity:0;transform:translateY(30px);transition:.8s cubic-bezier(.2,.7,.2,1)}.reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+<canvas id="graph"></canvas>
+
+<div class="content">
+<header>
+  <nav>
+    <div class="brand"><span class="o"></span>Nexus</div>
+    <div class="links"><a href="#galaxies">Galaxies</a><a href="#powers">Constellations</a><a href="#almanac">The Almanac</a></div>
+    <a class="chart" href="#finale">Chart your first star</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="pill"><span class="d"></span>A personal cosmos of knowledge</div>
+  <h1 class="display">Map the universe<br><b>in your head.</b></h1>
+  <p>Your notes are stars. Your folders are galaxies. The links between them are gravity. Nexus turns the scattered constellation of what you know into one navigable sky — nested infinitely, edited in real time.</p>
+  <div class="ctas">
+    <a class="btn solid" href="#finale">Chart your first star</a>
+    <a class="btn ghost" href="#galaxies">Explore the map</a>
+  </div>
+  <div class="drag-hint">✦ <b>Drag the stars</b> behind this text — the whole graph responds to gravity</div>
+</div>
+
+<!-- GALAXIES / TREE -->
+<section id="galaxies" class="reveal">
+  <div class="kick">★ The hierarchy</div>
+  <h2 class="display">Stars in orbit,<br><em>galaxies in a tree.</em></h2>
+  <div class="split">
+    <div class="glass orbits">
+      <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+      <div class="core">Workspace</div>
+      <div class="orbit-spin"><div class="node-o" style="top:6%;left:48%">📁</div></div>
+      <div class="orbit-spin s2"><div class="node-o" style="top:24%;left:84%">📄</div><div class="node-o" style="top:76%;left:12%">📅</div></div>
+      <div class="orbit-spin s3"><div class="node-o" style="top:42%;left:4%">🖼️</div><div class="node-o" style="top:90%;left:62%">⚡</div></div>
+    </div>
+    <div>
+      <p>Every node orbits a parent. A business is a galaxy; its folders are solar systems; documents are planets; blocks are the moons that make them whole.</p>
+      <p>Drag any body and its satellites follow — <em>restructure a galaxy in one gesture.</em> The tree has no edge, so the sky never runs out of room.</p>
+    </div>
+  </div>
+</section>
+
+<!-- POWERS / FEATURES -->
+<section id="powers" class="reveal">
+  <div class="kick">★ The constellations</div>
+  <h2 class="display">Nine points of light,<br><em>one navigable sky.</em></h2>
+  <p class="lede">Each capability is a constellation — meaningless as scattered dots, powerful once you draw the lines between them.</p>
+  <div class="grid3">
+    <div class="card"><div class="ico">🧱</div><div class="con">Lyra</div><h3>Block editor</h3><p>Compose in blocks — text, image, video, embed — and drag them into any order.</p></div>
+    <div class="card"><div class="ico">♾️</div><div class="con">Andromeda</div><h3>Infinite nesting</h3><p>Galaxies within galaxies. The hierarchy expands forever, like the cosmos itself.</p></div>
+    <div class="card"><div class="ico">⚡</div><div class="con">Orion</div><h3>Real-time</h3><p>Watch collaborators' cursors streak across the document like meteors.</p></div>
+    <div class="card"><div class="ico">🌐</div><div class="con">Cygnus</div><h3>Notion import</h3><p>Pull a distant page into your orbit — parsed cleanly into native blocks.</p></div>
+    <div class="card"><div class="ico">🛰️</div><div class="con">Pavo</div><h3>Asset CDN</h3><p>Images and video held in stable orbit, delivered from the nearest edge.</p></div>
+    <div class="card"><div class="ico">🛡️</div><div class="con">Draco</div><h3>Roles & access</h3><p>Admin, editor, viewer — gravity wells that keep each workspace contained.</p></div>
+  </div>
+</section>
+
+<!-- ALMANAC / CALENDAR -->
+<section id="almanac" class="reveal">
+  <div class="glass almanac">
+    <div class="kick">★ The almanac</div>
+    <h2 class="display">Schedule by the <em>phases of the moon.</em></h2>
+    <p class="lede">A content calendar where every entry is a node, bound to the document it will one day broadcast.</p>
+    <div class="alm-grid">
+      <div class="phase"><div class="moon">🌑</div><div class="dt">JUL 06</div><div class="ev">Launch hymn</div><div class="ch">→ Blog</div></div>
+      <div class="phase"><div class="moon">🌓</div><div class="dt">JUL 08</div><div class="ev">Carousel</div><div class="ch">→ Instagram</div></div>
+      <div class="phase"><div class="moon">🌔</div><div class="dt">JUL 09</div><div class="ev">Dispatch</div><div class="ch">→ Newsletter</div></div>
+      <div class="phase"><div class="moon">🌕</div><div class="dt">JUL 14</div><div class="ev">Demo film</div><div class="ch">→ Video</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FINALE -->
+<div class="finale reveal" id="finale">
+  <h2 class="display">Your mind is already<br><b>a galaxy.</b></h2>
+  <p>Stop letting it drift. Chart the first star and watch the constellations of everything you know come into focus.</p>
+  <div class="ctas">
+    <a class="btn solid" href="#">Chart your first star</a>
+    <a class="btn ghost" href="#">Read the star charts</a>
+  </div>
+</div>
+
+<footer>Nexus — a personal cosmos of knowledge · block-based workspace · <a href="index.html">← back to the branding lab</a></footer>
+</div>
+
+<script>
+  // ---------- background starfield ----------
+  const sky=document.getElementById('sky'),sx=sky.getContext('2d');
+  let stars=[];
+  function sizeSky(){sky.width=innerWidth;sky.height=innerHeight;
+    stars=Array.from({length:Math.min(220,Math.floor(innerWidth*innerHeight/9000))},()=>({
+      x:Math.random()*sky.width,y:Math.random()*sky.height,r:Math.random()*1.3+.2,
+      a:Math.random(),s:Math.random()*.02+.004,d:Math.random()*0.25+0.05}));}
+  sizeSky();
+  function drawSky(){sx.clearRect(0,0,sky.width,sky.height);
+    for(const st of stars){st.a+=st.s;const al=.4+Math.abs(Math.sin(st.a))*.6;
+      sx.beginPath();sx.arc(st.x,st.y,st.r,0,7);sx.fillStyle='rgba(244,247,255,'+al+')';sx.fill();}
+    requestAnimationFrame(drawSky);}
+  drawSky();
+
+  // ---------- draggable constellation graph ----------
+  const g=document.getElementById('graph'),gx=g.getContext('2d');
+  let nodes=[],edges=[],parX=0,parY=0;
+  function sizeGraph(){g.width=innerWidth;g.height=innerHeight;buildGraph();}
+  function buildGraph(){
+    const N=Math.min(46,Math.floor(innerWidth/30));
+    nodes=Array.from({length:N},()=>({
+      x:Math.random()*g.width,y:Math.random()*g.height,
+      vx:(Math.random()-.5)*.12,vy:(Math.random()-.5)*.12,
+      r:Math.random()*2.4+1.6,hue:Math.random()<.5?'51,224,255':'109,91,208'}));
+  }
+  sizeGraph();
+  let drag=null;
+  function pos(e){const t=e.touches?e.touches[0]:e;return{x:t.clientX,y:t.clientY};}
+  g.addEventListener('mousedown',start);g.addEventListener('touchstart',start,{passive:true});
+  function start(e){const p=pos(e);let best=null,bd=900;
+    nodes.forEach(n=>{const d=(n.x-p.x)**2+(n.y-p.y)**2;if(d<bd){bd=d;best=n;}});
+    if(best)drag=best;}
+  window.addEventListener('mousemove',e=>{if(drag){const p=pos(e);drag.x=p.x;drag.y=p.y;drag.vx=drag.vy=0;}});
+  window.addEventListener('touchmove',e=>{if(drag){const p=pos(e);drag.x=p.x;drag.y=p.y;}},{passive:true});
+  window.addEventListener('mouseup',()=>drag=null);window.addEventListener('touchend',()=>drag=null);
+
+  function drawGraph(){
+    gx.clearRect(0,0,g.width,g.height);
+    // edges by proximity (gravity lines)
+    for(let i=0;i<nodes.length;i++){
+      for(let j=i+1;j<nodes.length;j++){
+        const a=nodes[i],b=nodes[j];const dx=a.x-b.x,dy=a.y-b.y;const dist=Math.hypot(dx,dy);
+        if(dist<150){const al=(1-dist/150)*.5;
+          gx.strokeStyle='rgba(120,140,255,'+al+')';gx.lineWidth=.6;
+          gx.beginPath();gx.moveTo(a.x,a.y);gx.lineTo(b.x,b.y);gx.stroke();}
+      }
+    }
+    for(const n of nodes){
+      if(n!==drag){n.x+=n.vx;n.y+=n.vy;
+        if(n.x<0||n.x>g.width)n.vx*=-1;if(n.y<0||n.y>g.height)n.vy*=-1;}
+      const grd=gx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r*4);
+      grd.addColorStop(0,'rgba('+n.hue+',.9)');grd.addColorStop(1,'rgba('+n.hue+',0)');
+      gx.fillStyle=grd;gx.beginPath();gx.arc(n.x,n.y,n.r*4,0,7);gx.fill();
+      gx.fillStyle='rgba(244,247,255,.95)';gx.beginPath();gx.arc(n.x,n.y,n.r*.6,0,7);gx.fill();
+    }
+    requestAnimationFrame(drawGraph);
+  }
+  drawGraph();
+  addEventListener('resize',()=>{sizeSky();sizeGraph();});
+
+  // reveal
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting)x.target.classList.add('in')}),{threshold:.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

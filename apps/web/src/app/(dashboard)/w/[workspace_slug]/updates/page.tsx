@@ -50,8 +50,8 @@ const ACTIVITIES = [
     target: 'Internal Research',
     time: '1h ago',
     icon: Sparkles,
-    color: 'text-purple-500',
-    bg: 'bg-purple-500/10',
+    color: 'text-accent',
+    bg: 'bg-accent/10',
   },
   {
     id: 4,
@@ -88,9 +88,9 @@ export default async function UpdatesPage({ params }: UpdatesProps) {
         </div>
 
         {/* AI Summary Banner */}
-        <div className="mb-12 p-6 rounded-2xl bg-linear-to-br from-purple-500/5 to-transparent border border-purple-500/10 flex items-center justify-between group cursor-pointer hover:border-purple-500/20 transition-all animate-in fade-in zoom-in-95 duration-1000 delay-200">
+        <div className="mb-12 p-6 rounded-2xl bg-linear-to-br from-accent/5 to-transparent border border-accent/10 flex items-center justify-between group cursor-pointer hover:border-accent/20 transition-all animate-in fade-in zoom-in-95 duration-1000 delay-200">
            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center text-purple-500">
+              <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center text-accent">
                  <Zap className="w-6 h-6 animate-pulse" />
               </div>
               <div className="space-y-0.5">
@@ -98,7 +98,7 @@ export default async function UpdatesPage({ params }: UpdatesProps) {
                  <p className="text-[11px] text-muted font-medium">3 documents updated, 1 new member added today.</p>
               </div>
            </div>
-           <ChevronRight className="w-5 h-5 text-muted/20 group-hover:text-purple-500 transition-colors" />
+           <ChevronRight className="w-5 h-5 text-muted/20 group-hover:text-accent transition-colors" />
         </div>
 
         {/* Activity Timeline */}

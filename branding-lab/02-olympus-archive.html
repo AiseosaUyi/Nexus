@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — The Archive of Mnemosyne</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --marble:#f4f1ea; --marble2:#ece6d8; --aegean:#1b2a4a; --aegean2:#0f1c34;
+    --gold:#c9a14a; --gold-l:#e7cd8a; --bronze:#5e6b54; --ink:#2a2620;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Cormorant Garamond",serif;color:var(--ink);background:var(--marble);
+    overflow-x:hidden;font-size:19px;line-height:1.55;
+    background-image:
+      radial-gradient(circle at 20% 10%,rgba(201,161,74,.08),transparent 40%),
+      radial-gradient(circle at 80% 90%,rgba(27,42,74,.07),transparent 45%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.6 0 0 0 0 0.55 0 0 0 0 0.45 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  ::selection{background:var(--gold);color:#fff}
+  .meander{height:18px;background-size:36px 18px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='18' viewBox='0 0 36 18'%3E%3Cpath d='M2 16h12V4h8v12h12M2 4V2h32' fill='none' stroke='%23c9a14a' stroke-width='2'/%3E%3C/svg%3E")}
+
+  /* NAV */
+  header{position:fixed;top:0;left:0;right:0;z-index:50;
+    background:linear-gradient(180deg,rgba(244,241,234,.96),rgba(244,241,234,.82));
+    backdrop-filter:blur(6px);border-bottom:1px solid rgba(201,161,74,.4)}
+  nav{max-width:1160px;margin:0 auto;height:74px;display:flex;align-items:center;justify-content:space-between;padding:0 30px}
+  .brand{font-family:"Cinzel";font-weight:900;font-size:24px;letter-spacing:5px;color:var(--aegean);display:flex;align-items:center;gap:12px}
+  .brand .laurel{color:var(--gold);font-size:20px}
+  nav ul{display:flex;gap:30px;list-style:none}
+  nav a{font-family:"Cinzel";font-size:12px;letter-spacing:2px;color:var(--aegean);text-decoration:none;text-transform:uppercase;transition:color .3s}
+  nav a:hover{color:var(--gold)}
+  @media(max-width:760px){nav ul{display:none}}
+  .enter{font-family:"Cinzel";font-size:11px;letter-spacing:2px;padding:11px 22px;border:1.5px solid var(--gold);
+    color:var(--aegean);text-decoration:none;text-transform:uppercase;border-radius:2px;transition:.3s;background:transparent}
+  .enter:hover{background:var(--gold);color:#fff;box-shadow:0 6px 20px rgba(201,161,74,.4)}
+
+  /* HERO */
+  .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:120px 24px 80px;position:relative;overflow:hidden;
+    background:radial-gradient(120% 90% at 50% 0,#fbf9f3 0,#efe9db 55%,#e3dac6 100%)}
+  /* columns */
+  .columns{position:absolute;inset:0;display:flex;justify-content:space-between;pointer-events:none;z-index:1}
+  .col{width:120px;height:100%;position:relative;opacity:.5}
+  .col:before{content:"";position:absolute;inset:0;
+    background:repeating-linear-gradient(90deg,#d8cdb4 0 6px,#cabd9f 6px 9px,#e6ddc8 9px 18px);
+    box-shadow:inset 12px 0 18px rgba(0,0,0,.06),inset -12px 0 18px rgba(0,0,0,.06)}
+  .col:after{content:"";position:absolute;top:0;left:-14px;right:-14px;height:34px;
+    background:linear-gradient(180deg,#efe7d4,#d2c6ab);border-bottom:3px solid #b9a880}
+  .col.r{transform:scaleX(-1)}
+  @media(max-width:900px){.columns{opacity:.35}}
+  .stars{position:absolute;inset:0;z-index:0;opacity:.5}
+  .hero-inner{position:relative;z-index:3;max-width:900px;
+    opacity:0;transform:translateY(24px);animation:rise 1.1s .2s cubic-bezier(.2,.7,.2,1) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .eyebrow{font-family:"Cinzel";letter-spacing:6px;font-size:12px;color:var(--gold);margin-bottom:26px;text-transform:uppercase}
+  .hero h1{font-family:"Cinzel";font-weight:900;color:var(--aegean);
+    font-size:clamp(40px,7.2vw,92px);line-height:1.02;letter-spacing:1px;text-shadow:0 2px 0 #fff,0 3px 14px rgba(27,42,74,.12)}
+  .hero h1 em{font-style:normal;color:var(--gold);display:block}
+  .hero p.lede{font-size:clamp(20px,2.4vw,26px);color:#46413a;max-width:60ch;margin:28px auto 38px;font-weight:500}
+  .hero p.lede em{color:var(--aegean);font-style:italic}
+  .cta-row{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+  .btn-gold{font-family:"Cinzel";font-size:13px;letter-spacing:2px;text-transform:uppercase;text-decoration:none;
+    padding:15px 34px;color:#fff;border-radius:2px;position:relative;
+    background:linear-gradient(180deg,#e7cd8a,#c9a14a 60%,#a9842f);
+    box-shadow:0 8px 24px rgba(169,132,47,.4),inset 0 1px 0 rgba(255,255,255,.5);transition:transform .2s}
+  .btn-gold:hover{transform:translateY(-2px)}
+  .btn-stone{font-family:"Cinzel";font-size:13px;letter-spacing:2px;text-transform:uppercase;text-decoration:none;
+    padding:15px 32px;color:var(--aegean);border:1.5px solid var(--bronze);border-radius:2px;transition:.3s}
+  .btn-stone:hover{background:var(--aegean);color:var(--marble);border-color:var(--aegean)}
+  .scrollcue{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-family:"Cinzel";font-size:10px;
+    letter-spacing:3px;color:var(--bronze);z-index:3;text-transform:uppercase;animation:bob 2.4s infinite}
+  @keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,8px)}}
+
+  /* SECTION SCAFFOLD */
+  section{max-width:1160px;margin:0 auto;padding:96px 30px;position:relative}
+  .sec-num{font-family:"Cinzel";font-size:13px;letter-spacing:4px;color:var(--gold)}
+  h2{font-family:"Cinzel";font-weight:700;color:var(--aegean);font-size:clamp(30px,4.6vw,50px);
+    line-height:1.08;margin:14px 0 18px}
+  .sec-lede{font-size:22px;color:#524c43;max-width:64ch;margin-bottom:46px}
+  .sec-lede em{color:var(--gold);font-style:italic}
+
+  /* PANTHEON / TREE */
+  .pantheon{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+  @media(max-width:880px){.pantheon{grid-template-columns:1fr}}
+  .tablet{background:linear-gradient(180deg,#efe9db,#e0d7c2);border:1px solid #cabd9f;border-radius:6px;
+    padding:34px;box-shadow:inset 0 1px 0 #fff,0 18px 40px rgba(42,38,32,.12);position:relative}
+  .tablet:before{content:"";position:absolute;inset:8px;border:1px solid rgba(201,161,74,.45);border-radius:3px;pointer-events:none}
+  .lineage{font-family:"Cinzel";color:var(--aegean)}
+  .lineage .god{display:flex;align-items:center;gap:12px;padding:7px 0}
+  .lineage .tier1{font-size:19px;font-weight:700}
+  .lineage .tier2{font-size:15px;padding-left:30px;color:#3a4666}
+  .lineage .tier3{font-size:13px;padding-left:60px;color:var(--bronze);font-weight:500}
+  .lineage .dot{width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 3px rgba(201,161,74,.25)}
+  .lineage .line{color:var(--gold);opacity:.6}
+  .pantheon p{font-size:20px;color:#4a443c}
+  .pantheon p+p{margin-top:16px}
+
+  /* THE NINE MUSES (features) */
+  .muses{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:10px}
+  @media(max-width:860px){.muses{grid-template-columns:1fr 1fr}}
+  @media(max-width:540px){.muses{grid-template-columns:1fr}}
+  .muse{padding:32px 26px;border:1px solid rgba(201,161,74,.4);border-radius:4px;
+    background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(244,241,234,.5));
+    transition:transform .35s,box-shadow .35s,border-color .35s}
+  .muse:hover{transform:translateY(-6px);box-shadow:0 22px 44px rgba(42,38,32,.14);border-color:var(--gold)}
+  .muse .sym{font-size:34px;color:var(--gold)}
+  .muse h3{font-family:"Cinzel";font-size:18px;color:var(--aegean);margin:14px 0 6px;letter-spacing:.5px}
+  .muse .role{font-family:"Cinzel";font-size:10px;letter-spacing:2px;color:var(--bronze);text-transform:uppercase}
+  .muse p{font-size:18px;color:#524c43;margin-top:8px}
+
+  /* ORACLE / calendar */
+  .oracle{background:linear-gradient(165deg,var(--aegean) 0,var(--aegean2) 100%);color:var(--marble);
+    border-radius:8px;padding:60px clamp(28px,5vw,64px);position:relative;overflow:hidden;
+    box-shadow:0 30px 70px rgba(15,28,52,.4)}
+  .oracle .stars2{position:absolute;inset:0;opacity:.55}
+  .oracle h2{color:var(--gold-l)}
+  .oracle .sec-num{color:var(--gold-l)}
+  .oracle .sec-lede{color:#cfd6e6}
+  .oracle .sec-lede em{color:var(--gold-l)}
+  .scrolltable{position:relative;z-index:2;background:rgba(244,241,234,.96);color:var(--ink);
+    border-radius:6px;overflow:hidden;border:2px solid var(--gold);box-shadow:0 14px 40px rgba(0,0,0,.4)}
+  .scrolltable .hd{font-family:"Cinzel";display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;
+    padding:14px 22px;background:linear-gradient(180deg,#e7cd8a,#c9a14a);color:#3a2e10;
+    font-size:11px;letter-spacing:2px;text-transform:uppercase}
+  .scrolltable .rw{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;padding:14px 22px;
+    border-top:1px solid rgba(201,161,74,.3);font-size:18px;align-items:center}
+  .scrolltable .rw:nth-child(even){background:rgba(201,161,74,.06)}
+  .tag{font-family:"Cinzel";font-size:10px;letter-spacing:1px;padding:3px 10px;border-radius:2px;text-transform:uppercase}
+  .tag.told{background:var(--bronze);color:#fff}.tag.fore{background:var(--gold);color:#3a2e10}.tag.dec{background:var(--aegean);color:var(--marble)}
+
+  /* QUOTE / oath */
+  .oath{text-align:center;max-width:880px;margin:0 auto;padding:110px 30px}
+  .oath .q{font-size:clamp(28px,4.4vw,46px);font-style:italic;color:var(--aegean);line-height:1.25}
+  .oath .q span{color:var(--gold)}
+  .oath .by{font-family:"Cinzel";letter-spacing:3px;font-size:12px;color:var(--bronze);margin-top:26px;text-transform:uppercase}
+
+  /* FINAL CTA */
+  .gate{text-align:center;background:radial-gradient(120% 100% at 50% 0,#efe9db,#ddd2bb);padding:120px 30px 130px;position:relative;overflow:hidden}
+  .gate .columns{opacity:.45}
+  .gate h2{font-size:clamp(34px,6vw,72px);margin-bottom:18px;position:relative;z-index:3}
+  .gate p{font-size:23px;color:#4a443c;max-width:52ch;margin:0 auto 38px;position:relative;z-index:3}
+  .gate .cta-row{position:relative;z-index:3}
+
+  footer{background:var(--aegean2);color:#9fb0cf;text-align:center;padding:40px 20px;font-size:15px}
+  footer a{color:var(--gold-l);text-decoration:none}
+  .reveal{opacity:0;transform:translateY(30px);transition:.8s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <div class="brand"><span class="laurel">🏛️</span>NEXUS</div>
+    <ul>
+      <li><a href="#pantheon">The Pantheon</a></li>
+      <li><a href="#muses">The Muses</a></li>
+      <li><a href="#oracle">The Oracle</a></li>
+      <li><a href="#oath">The Oath</a></li>
+    </ul>
+    <a class="enter" href="#gate">Enter the Archive</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <svg class="stars" preserveAspectRatio="none" viewBox="0 0 1000 700"><g fill="#c9a14a" opacity="0.5"><circle cx="120" cy="90" r="1.4"/><circle cx="300" cy="160" r="1"/><circle cx="520" cy="70" r="1.6"/><circle cx="700" cy="140" r="1"/><circle cx="860" cy="80" r="1.3"/><circle cx="940" cy="220" r="1"/><circle cx="80" cy="300" r="1"/><circle cx="220" cy="380" r="1.2"/></g></svg>
+  <div class="columns"><div class="col l"></div><div class="col r"></div></div>
+  <div class="hero-inner">
+    <div class="eyebrow">✦ The Archive of Mnemosyne ✦</div>
+    <h1>Every thought,<em>made immortal.</em></h1>
+    <p class="lede">Nexus is the library of the gods for everything you know — a <em>hierarchy of folders, documents and blocks</em> as ordered as the pantheon itself, where nothing worth remembering is ever lost to the river Lethe.</p>
+    <div class="cta-row">
+      <a class="btn-gold" href="#gate">Enter the Archive</a>
+      <a class="btn-stone" href="#pantheon">Behold the structure</a>
+    </div>
+  </div>
+  <div class="scrollcue">▼ Descend the steps</div>
+</div>
+<div class="meander"></div>
+
+<!-- PANTHEON / TREE -->
+<section id="pantheon" class="reveal">
+  <div class="sec-num">I · THE PANTHEON</div>
+  <h2>A lineage of gods<br>is a tree of nodes.</h2>
+  <p class="sec-lede">In Olympus every deity descends from another. In Nexus every node descends from a parent — folders, documents, calendars, all one bloodline. <em>Nest forever; the lineage never breaks.</em></p>
+  <div class="pantheon">
+    <div class="tablet">
+      <div class="lineage">
+        <div class="god tier1"><span class="dot"></span>Chaos — your Workspace</div>
+        <div class="god tier2"><span class="line">└</span>Gaia · Marketing</div>
+        <div class="god tier3"><span class="line">└</span>Cronus · Launch Plan</div>
+        <div class="god tier3"><span class="line">└</span>Rhea · Brand Voice</div>
+        <div class="god tier2"><span class="line">└</span>Uranus · Engineering</div>
+        <div class="god tier3"><span class="line">└</span>Zeus · Architecture Spec</div>
+        <div class="god tier3"><span class="line">└</span>Hera · The Roadmap</div>
+        <div class="god tier2"><span class="line">└</span>Helios · Content Calendar</div>
+      </div>
+    </div>
+    <div>
+      <p>Drag a temple and its whole dynasty moves with it. Restructure your cosmos with a single gesture — the children follow their parent, as the myths demand.</p>
+      <p>One unified tree means no false walls between "files" and "pages." A calendar entry and a thousand-block epic are the same divine substance: a <em>node</em>.</p>
+    </div>
+  </div>
+</section>
+<div class="meander"></div>
+
+<!-- THE MUSES -->
+<section id="muses" class="reveal">
+  <div class="sec-num">II · THE NINE MUSES</div>
+  <h2>Nine powers attend<br>your every word.</h2>
+  <p class="sec-lede">The Muses presided over knowledge and the arts. In Nexus, they preside over your craft.</p>
+  <div class="muses">
+    <div class="muse"><div class="sym">𓂀</div><div class="role">Calliope</div><h3>The Block Editor</h3><p>Epic prose assembled block by block — headings, media, embeds — reordered by a touch.</p></div>
+    <div class="muse"><div class="sym">♾</div><div class="role">Clio</div><h3>Infinite History</h3><p>Nest folders without end. The archive of all you've recorded has no floor.</p></div>
+    <div class="muse"><div class="sym">⚡</div><div class="role">Urania</div><h3>Living Collaboration</h3><p>See the cursors of your fellow scribes move across the marble in real time.</p></div>
+    <div class="muse"><div class="sym">🏛</div><div class="role">Polyhymnia</div><h3>The Asset Sanctum</h3><p>Images, scrolls and visions, kept safe and served swiftly from the CDN.</p></div>
+    <div class="muse"><div class="sym">🌿</div><div class="role">Thalia</div><h3>Notion Importation</h3><p>Speak a URL and watch foreign pages translated into clean Nexus blocks.</p></div>
+    <div class="muse"><div class="sym">⚖</div><div class="role">Melpomene</div><h3>The Three Roles</h3><p>Admin, Editor, Viewer — boundaries decreed at the level of each business.</p></div>
+  </div>
+</section>
+<div class="meander"></div>
+
+<!-- ORACLE / calendar -->
+<section id="oracle" class="reveal">
+  <div class="oracle">
+    <svg class="stars2" preserveAspectRatio="none" viewBox="0 0 1000 400"><g fill="#e7cd8a"><circle cx="80" cy="60" r="1.3"/><circle cx="240" cy="120" r="1"/><circle cx="430" cy="40" r="1.6"/><circle cx="610" cy="100" r="1"/><circle cx="780" cy="60" r="1.3"/><circle cx="900" cy="160" r="1"/><circle cx="160" cy="260" r="1"/><circle cx="520" cy="300" r="1.2"/><circle cx="860" cy="320" r="1"/></g></svg>
+    <div class="sec-num">III · THE ORACLE</div>
+    <h2>Foretell what you will publish.</h2>
+    <p class="sec-lede">The Oracle of Delphi spoke of what was to come. Your content calendar does the same — <em>each prophecy bound to the very document it foretells.</em></p>
+    <div class="scrolltable">
+      <div class="hd"><span>The Prophecy</span><span>Channel</span><span>Fate</span></div>
+      <div class="rw"><span>Hymn to the Launch</span><span>The Blog</span><span class="tag dec">Decreed · Jul 6</span></div>
+      <div class="rw"><span>The Carousel of Demeter</span><span>Instagram</span><span class="tag fore">Foretold · Jul 8</span></div>
+      <div class="rw"><span>Epistle to the Faithful</span><span>Newsletter</span><span class="tag told">Inscribed · Jul 9</span></div>
+      <div class="rw"><span>The Chronicle of Acme</span><span>Case Study</span><span class="tag fore">Foretold · Jul 12</span></div>
+      <div class="rw"><span>Vision in Moving Light</span><span>Demo Film</span><span class="tag dec">Decreed · Jul 14</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- OATH -->
+<div class="oath reveal">
+  <p class="q">"Memory is the mother of all wisdom.<br>Give yours a <span>temple worthy</span> of it."</p>
+  <div class="by">— inscribed above the gates of the Archive</div>
+</div>
+
+<!-- GATE / CTA -->
+<div class="gate" id="gate">
+  <div class="columns"><div class="col l"></div><div class="col r"></div></div>
+  <h2 style="font-family:'Cinzel';color:var(--aegean)">Cross the threshold.</h2>
+  <p>The Archive of Mnemosyne opens to all who keep their knowledge in order. Found your first workspace and inscribe your name among the immortal.</p>
+  <div class="cta-row">
+    <a class="btn-gold" href="#">Enter the Archive</a>
+    <a class="btn-stone" href="#">Consult the docs</a>
+  </div>
+</div>
+
+<footer>
+  Nexus — the Archive of Mnemosyne · a block-based knowledge workspace · raised in marble, kept in the cloud<br>
+  <a href="index.html">← return to the branding lab</a>
+</footer>
+
+<script>
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting)x.target.classList.add('in')}),{threshold:.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  // parallax columns
+  window.addEventListener('scroll',()=>{
+    const y=window.scrollY;
+    document.querySelectorAll('.hero .col').forEach((c,i)=>{c.style.transform=(c.classList.contains('r')?'scaleX(-1) ':'')+'translateY('+(y*0.12)+'px)';});
+  });
+</script>
+</body>
+</html>

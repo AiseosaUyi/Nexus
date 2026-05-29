@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>nexus — raw infrastructure for thought</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0a; --bg2:#0e120e; --grid:#141914; --fg:#33ff66; --fg-dim:#1f8f3f;
+    --amber:#ffb000; --red:#ff3b3b; --cyan:#39d7ff; --white:#d7ffe0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"IBM Plex Mono",monospace;background:var(--bg);color:var(--fg);
+    font-size:15px;line-height:1.6;overflow-x:hidden;
+    background-image:
+      linear-gradient(var(--grid) 1px,transparent 1px),
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:32px 32px;
+  }
+  body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:200;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);mix-blend-mode:multiply;opacity:.6}
+  body:after{content:"";position:fixed;inset:0;pointer-events:none;z-index:201;
+    background:radial-gradient(120% 90% at 50% 40%,transparent 55%,rgba(0,0,0,.55) 100%)}
+  ::selection{background:var(--fg);color:#000}
+  a{color:var(--cyan);text-decoration:none}
+  .amber{color:var(--amber)}.red{color:var(--red)}.cyan{color:var(--cyan)}.white{color:var(--white)}.dim{color:var(--fg-dim)}
+
+  /* top bar */
+  header{position:fixed;top:0;left:0;right:0;z-index:100;border-bottom:1px solid var(--fg-dim);
+    background:rgba(8,10,8,.92);backdrop-filter:blur(2px)}
+  nav{max-width:1080px;margin:0 auto;height:46px;display:flex;align-items:center;gap:20px;padding:0 20px;font-size:13px}
+  nav .logo{font-weight:700;color:var(--fg);letter-spacing:1px}
+  nav .logo b{background:var(--fg);color:#000;padding:0 5px}
+  nav .sp{flex:1}
+  nav a.lnk{color:var(--fg-dim)}nav a.lnk:hover{color:var(--fg)}
+  nav .install{border:1px solid var(--fg);padding:4px 12px;color:var(--fg)}
+  nav .install:hover{background:var(--fg);color:#000}
+  .blink{animation:bl 1s steps(1) infinite}@keyframes bl{50%{opacity:0}}
+
+  main{max-width:1080px;margin:0 auto;padding:80px 20px 60px}
+
+  /* HERO terminal */
+  .term{border:1px solid var(--fg-dim);background:rgba(6,9,6,.85);box-shadow:0 0 0 1px #000,0 0 40px rgba(51,255,102,.06)}
+  .term .bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--fg-dim);font-size:12px;color:var(--fg-dim)}
+  .term .bar .dot{width:10px;height:10px;border:1px solid var(--fg-dim);border-radius:50%}
+  .term .bar .dot.r{background:var(--red);border-color:var(--red)}
+  .term .bar .dot.y{background:var(--amber);border-color:var(--amber)}
+  .term .bar .dot.g{background:var(--fg);border-color:var(--fg)}
+  .term .bar .ttl{margin-left:8px}
+  .term .scr{padding:22px 20px;min-height:340px;font-size:14px;white-space:pre-wrap}
+  .term .scr .l{display:block}
+  .ascii{color:var(--fg);font-size:clamp(8px,1.7vw,15px);line-height:1.15;text-shadow:0 0 8px rgba(51,255,102,.45);margin:6px 0 18px}
+  .tag{color:var(--amber)}
+  .prompt-line{display:flex;gap:8px;align-items:baseline;margin-top:14px}
+  .prompt-line .ps1{color:var(--cyan);white-space:nowrap}
+  #cmd{background:transparent;border:none;outline:none;color:var(--white);font:inherit;flex:1;caret-color:var(--fg)}
+  .hint{color:var(--fg-dim);font-size:12px;margin-top:14px}
+  .hint code{color:var(--amber);background:rgba(255,176,0,.08);padding:1px 5px}
+
+  .hero-copy{margin:30px 0 10px}
+  .hero-copy h1{font-size:clamp(26px,4.4vw,46px);font-weight:700;line-height:1.1;color:var(--fg);text-shadow:0 0 18px rgba(51,255,102,.3)}
+  .hero-copy h1 .c{color:var(--white)}
+  .hero-copy p{color:var(--white);max-width:64ch;margin-top:16px;font-size:15px}
+  .hero-copy p .dim{color:var(--fg-dim)}
+  .btnrow{display:flex;gap:14px;margin-top:24px;flex-wrap:wrap}
+  .b{font:inherit;font-size:14px;padding:11px 20px;border:1px solid var(--fg);background:transparent;color:var(--fg);cursor:pointer;text-decoration:none;display:inline-block}
+  .b:hover{background:var(--fg);color:#000}
+  .b.ghost{border-color:var(--fg-dim);color:var(--fg-dim)}.b.ghost:hover{border-color:var(--cyan);background:transparent;color:var(--cyan)}
+
+  /* section header */
+  .sh{margin:80px 0 22px;border-bottom:1px solid var(--fg-dim);padding-bottom:10px}
+  .sh .k{color:var(--amber);font-size:13px}
+  .sh h2{font-size:clamp(22px,3.4vw,34px);font-weight:700;color:var(--fg);margin-top:6px}
+  .sh p{color:var(--white);max-width:70ch;margin-top:8px;font-size:14.5px}
+
+  /* tree block */
+  .panel{border:1px solid var(--fg-dim);background:rgba(6,9,6,.7);padding:20px 22px}
+  .filetree{font-size:14px;line-height:1.85;white-space:pre}
+  .filetree .d{color:var(--cyan)}.filetree .f{color:var(--white)}.filetree .meta{color:var(--fg-dim)}
+
+  /* man-page feature list */
+  .man{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--fg-dim)}
+  @media(max-width:720px){.man{grid-template-columns:1fr}}
+  .opt{border-bottom:1px solid var(--grid);border-right:1px solid var(--grid);padding:20px 22px}
+  .opt .flag{color:var(--amber);font-weight:700}
+  .opt .desc{color:var(--white);margin-top:8px;font-size:14px}
+  .opt:hover{background:rgba(51,255,102,.04)}
+
+  /* logs */
+  .logs{border:1px solid var(--fg-dim);background:#050705;padding:16px 18px;font-size:13px;height:230px;overflow:hidden;position:relative}
+  .logs .ln{display:block;opacity:.9}
+  .logs .ts{color:var(--fg-dim)}
+  .logs .ok{color:var(--fg)}.logs .ev{color:var(--cyan)}.logs .wn{color:var(--amber)}
+  .logs:after{content:"";position:absolute;left:0;right:0;bottom:0;height:60px;background:linear-gradient(180deg,transparent,#050705)}
+
+  /* calendar as cron table */
+  .cron{border:1px solid var(--fg-dim);font-size:13.5px}
+  .cron .row{display:grid;grid-template-columns:130px 1fr 120px;gap:14px;padding:11px 18px;border-bottom:1px solid var(--grid)}
+  .cron .row.h{background:rgba(51,255,102,.06);color:var(--amber);font-weight:600}
+  .cron .row .st{color:var(--cyan)}
+  .cron .pill{color:#000;padding:1px 8px;font-size:11px;display:inline-block}
+  .cron .pill.q{background:var(--amber)}.cron .pill.l{background:var(--fg)}.cron .pill.r{background:var(--cyan)}
+
+  /* CTA */
+  .cta{margin-top:90px;border:1px solid var(--fg);padding:46px 34px;text-align:center;background:rgba(51,255,102,.03);box-shadow:0 0 50px rgba(51,255,102,.05) inset}
+  .cta h2{font-size:clamp(24px,4vw,40px);color:var(--fg);text-shadow:0 0 18px rgba(51,255,102,.3)}
+  .cta p{color:var(--white);margin:14px 0 26px}
+  .cta .cmd{display:inline-block;border:1px dashed var(--fg-dim);padding:12px 22px;color:var(--amber);margin-bottom:24px}
+  .cta .cmd:before{content:"$ ";color:var(--fg-dim)}
+
+  footer{border-top:1px solid var(--fg-dim);margin-top:70px;padding:26px 20px;text-align:center;color:var(--fg-dim);font-size:12.5px}
+  .reveal{opacity:0;transform:translateY(16px);transition:.5s}.reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<header>
+  <nav>
+    <span class="logo"><b>nexus</b> v2.0.0</span>
+    <span class="sp"></span>
+    <a class="lnk" href="#tree">tree</a>
+    <a class="lnk" href="#man">man</a>
+    <a class="lnk" href="#logs">logs</a>
+    <a class="lnk" href="#cron">cron</a>
+    <a class="install" href="#cta">$ install</a>
+  </nav>
+</header>
+
+<main>
+  <!-- HERO TERMINAL -->
+  <div class="term reveal">
+    <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">— knowledge@nexus: ~/second-brain — zsh</span></div>
+    <div class="scr" id="scr">
+<div class="ascii">  _ __   _____  ___   _ ___
+ | '_ \ / _ \ \/ / | | / __|
+ | | | |  __/>  <| |_| \__ \
+ |_| |_|\___/_/\_\\__,_|___/  <span class="tag">block-based knowledge, no GUI required</span></div>
+<span class="l dim">last login: a moment ago on ttys001</span>
+<span class="l"><span class="dim">knowledge@nexus</span>:<span class="cyan">~</span>$ <span class="white">nexus --version</span></span>
+<span class="l">nexus <span class="amber">2.0.0</span> — everything is a node.</span>
+      <div class="prompt-line">
+        <span class="ps1"><span class="dim">knowledge@nexus</span>:<span class="cyan">~</span>$</span>
+        <input id="cmd" autocomplete="off" spellcheck="false" autofocus aria-label="terminal input">
+      </div>
+    </div>
+  </div>
+  <p class="hint">type <code>help</code> · try <code>nexus tree</code>, <code>nexus init</code>, <code>whoami</code>, <code>about</code>, <code>clear</code></p>
+
+  <div class="hero-copy reveal">
+    <h1>&gt; thoughts are <span class="c">files.</span><br>&gt; your mind deserves a <span class="c">filesystem.</span></h1>
+    <p>Nexus is raw infrastructure for what you know — a tree of nodes you <span class="dim">command, not click</span>. Folders, documents, blocks; nested without limit, edited in real time, versioned like code. No bloat. No chrome. Just structure.</p>
+    <div class="btnrow">
+      <a class="b" href="#cta">$ npm i -g nexus</a>
+      <a class="b ghost" href="#tree">cat ./architecture.md</a>
+    </div>
+  </div>
+
+  <!-- TREE -->
+  <div id="tree" class="sh reveal"><div class="k">## 01 — THE TREE</div><h2>$ nexus tree</h2><p>Folders, documents and calendar entries are the same primitive: a node with a parent. So the whole workspace is one filesystem you can nest forever and `mv` anywhere.</p></div>
+  <div class="panel reveal">
+<div class="filetree"><span class="d">acme-inc/</span>                      <span class="meta"># business · isolated boundary</span>
+├── <span class="d">marketing/</span>
+│   ├── <span class="f">launch-plan.doc</span>        <span class="meta">142 blocks</span>
+│   ├── <span class="f">brand-voice.doc</span>        <span class="meta">38 blocks</span>
+│   └── <span class="d">assets/</span>
+│       ├── <span class="f">hero.png</span>            <span class="meta">image/png</span>
+│       └── <span class="f">demo.mp4</span>            <span class="meta">video/mp4</span>
+├── <span class="d">engineering/</span>
+│   ├── <span class="f">architecture.doc</span>       <span class="meta">realtime · 3 editors</span>
+│   └── <span class="f">roadmap.doc</span>            <span class="meta">last edit 2m ago</span>
+└── <span class="d">content-calendar/</span>          <span class="meta"># type: calendar</span>
+    └── <span class="f">q3-2004.cal</span>            <span class="meta">12 entries</span></div>
+  </div>
+
+  <!-- MAN PAGE FEATURES -->
+  <div id="man" class="sh reveal"><div class="k">## 02 — MANUAL</div><h2>$ man nexus</h2><p>NAME — nexus — assemble, nest and broadcast knowledge. The flags you'll actually use:</p></div>
+  <div class="man reveal">
+    <div class="opt"><span class="flag">--blocks</span><div class="desc">Documents are ordered blocks: heading, paragraph, list, image, video, file, embed, divider. Reorder by dragging; insert with `/`.</div></div>
+    <div class="opt"><span class="flag">--nest=∞</span><div class="desc">Infinite hierarchy. No max depth, no "you can't put a page there." The tree is the only data model.</div></div>
+    <div class="opt"><span class="flag">--realtime</span><div class="desc">WebSocket subscriptions broadcast block_added, block_updated, cursor_position. Edit together, conflict-free.</div></div>
+    <div class="opt"><span class="flag">--import=notion</span><div class="desc">Pipe a Notion URL → fetch HTML → parse DOM → emit clean Nexus blocks. h1→heading, p→paragraph, img→image.</div></div>
+    <div class="opt"><span class="flag">--events</span><div class="desc">Every mutation appended to an event log: DOCUMENT_CREATED, FOLDER_MOVED… audit, replay, automate.</div></div>
+    <div class="opt"><span class="flag">--role=admin|editor|viewer</span><div class="desc">Permissions scoped per business. RLS at the source, not bolted on the client.</div></div>
+  </div>
+
+  <!-- LOGS -->
+  <div id="logs" class="sh reveal"><div class="k">## 03 — STREAM</div><h2>$ nexus logs --follow</h2><p>The event log is the heartbeat. Watch the workspace mutate in real time:</p></div>
+  <div class="logs reveal" id="logbox"></div>
+
+  <!-- CRON / CALENDAR -->
+  <div id="cron" class="sh reveal"><div class="k">## 04 — SCHEDULE</div><h2>$ crontab -l   <span class="dim"># the content calendar</span></h2><p>Calendar entries are nodes with a publish_date, linked straight to the document they ship.</p></div>
+  <div class="cron reveal">
+    <div class="row h"><span>WHEN</span><span>NODE</span><span>STATUS</span></div>
+    <div class="row"><span class="st">0 9 * 7 6</span><span>marketing/launch-plan.doc</span><span><i class="pill r">SCHEDULED</i></span></div>
+    <div class="row"><span class="st">0 9 * 7 8</span><span>social/ig-carousel.doc</span><span><i class="pill q">QUEUED</i></span></div>
+    <div class="row"><span class="st">0 7 * 7 9</span><span>email/newsletter.doc</span><span><i class="pill l">LIVE</i></span></div>
+    <div class="row"><span class="st">0 9 * 7 12</span><span>marketing/case-study.doc</span><span><i class="pill r">SCHEDULED</i></span></div>
+    <div class="row"><span class="st">0 12 * 7 14</span><span>video/demo.mp4</span><span><i class="pill q">QUEUED</i></span></div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta reveal" id="cta">
+    <h2>$ npm i -g nexus</h2>
+    <p>One command. Your whole brain, version-controlled.</p>
+    <div class="cmd">nexus init my-second-brain && cd $_ && nexus open</div><br>
+    <a class="b" href="#">run nexus init</a>
+    <a class="b ghost" href="#">read the docs &gt;</a>
+  </div>
+
+  <footer>
+    nexus — block-based knowledge workspace · MIT-ish · built with next, supabase, tiptap · no cookies, only structure<br>
+    <a href="index.html">cd ../branding-lab</a>
+  </footer>
+</main>
+
+<script>
+  // ---- fake CLI ----
+  const scr=document.getElementById('scr');
+  const input=document.getElementById('cmd');
+  const promptHTML='<span class="dim">knowledge@nexus</span>:<span class="cyan">~</span>$';
+  const tree=`acme-inc/
+├── marketing/
+│   ├── launch-plan.doc
+│   └── brand-voice.doc
+├── engineering/
+│   └── architecture.doc
+└── content-calendar/
+    └── q3-2004.cal`;
+  const cmds={
+    help:()=>`available commands:
+  <span class="amber">nexus tree</span>    print the workspace node tree
+  <span class="amber">nexus init</span>    scaffold a new second brain
+  <span class="amber">nexus open</span>    launch the block editor
+  <span class="amber">whoami</span>        who is logged in
+  <span class="amber">about</span>         what is nexus
+  <span class="amber">clear</span>         wipe the screen`,
+    'nexus tree':()=>`<span class="cyan">${tree.replace(/\//g,'<span class="dim">/</span>')}</span>
+<span class="dim">3 folders, 4 documents, 1 calendar — nested ∞</span>`,
+    'nexus init':()=>`<span class="ok">✓</span> created node: <span class="cyan">my-second-brain/</span>
+<span class="ok">✓</span> installed block editor (tiptap)
+<span class="ok">✓</span> connected realtime channel
+<span class="ok">✓</span> ready. run <span class="amber">nexus open</span> to begin.`,
+    'nexus open':()=>`<span class="dim">opening editor… type "/" to add a block.</span> <span class="blink">▋</span>`,
+    whoami:()=>`<span class="white">knowledge</span> — keeper of <span class="amber">1,284</span> nodes across <span class="amber">3</span> businesses.`,
+    about:()=>`<span class="white">nexus</span> is a block-based knowledge workspace.
+everything is a <span class="amber">node</span>: folders, documents, calendars.
+documents are <span class="amber">blocks</span>: text, media, embeds.
+nest forever. edit in real time. import from notion.`,
+    clear:'CLEAR'
+  };
+  function out(html){
+    const div=document.createElement('span');div.className='l';div.innerHTML=html;
+    scr.insertBefore(div,promptline);
+  }
+  function echo(c){
+    const div=document.createElement('span');div.className='l';
+    div.innerHTML=promptHTML+' <span class="white">'+c.replace(/</g,'&lt;')+'</span>';
+    scr.insertBefore(div,promptline);
+  }
+  const promptline=scr.querySelector('.prompt-line');
+  input.addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;
+    const raw=input.value.trim();input.value='';
+    if(!raw){echo('');return;}
+    echo(raw);
+    const key=raw.toLowerCase();
+    let res=cmds[key];
+    if(res==='CLEAR'){scr.querySelectorAll('.l').forEach(n=>n.remove());input.focus();return;}
+    if(typeof res==='function')out(res());
+    else out('<span class="red">command not found: '+raw.replace(/</g,'&lt;')+'</span> — try <span class="amber">help</span>');
+    scr.scrollIntoView({block:'end'});input.focus();
+  });
+  document.querySelector('.term').addEventListener('click',()=>input.focus());
+
+  // ---- streaming logs ----
+  const lb=document.getElementById('logbox');
+  const evs=[
+    ['ev','BLOCK_ADDED','heading → engineering/architecture.doc'],
+    ['ok','DOCUMENT_SAVED','marketing/launch-plan.doc'],
+    ['ev','CURSOR_POSITION','editor@2 moved to block 14'],
+    ['ok','BLOCK_UPDATED','content jsonb patched (38 bytes)'],
+    ['wn','FOLDER_MOVED','assets/ → marketing/assets/'],
+    ['ev','CALENDAR_ENTRY_CREATED','q3-2004.cal +1'],
+    ['ok','ASSET_UPLOADED','hero.png 412kb → cdn'],
+    ['ev','BLOCK_ADDED','image → marketing/brand-voice.doc'],
+    ['ok','DOCUMENT_CREATED','engineering/roadmap.doc'],
+    ['wn','IMPORT_NOTION','parsed 61 nodes from url'],
+  ];
+  let li=0,clock=42130;
+  function pad(n){return n<10?'0'+n:n;}
+  function logline(){
+    clock+=Math.floor(7+Math.random()*40);
+    const t=Math.floor(clock/100);
+    const ts='12:'+pad(Math.floor(t/60)%60)+':'+pad(t%60);
+    const [cls,ev,msg]=evs[li%evs.length];li++;
+    const ln=document.createElement('span');ln.className='ln';
+    ln.innerHTML=`<span class="ts">[${ts}]</span> <span class="${cls}">${ev}</span> <span class="white">${msg}</span>`;
+    lb.appendChild(ln);
+    while(lb.children.length>11)lb.removeChild(lb.firstChild);
+  }
+  for(let i=0;i<9;i++)logline();
+  setInterval(logline,1400);
+
+  // reveal
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting)x.target.classList.add('in')}),{threshold:.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

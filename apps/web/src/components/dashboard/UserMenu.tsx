@@ -1,11 +1,11 @@
 'use client';
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { LogOut, Settings, ChevronUp } from 'lucide-react';
+import { LogOut, Settings, ChevronUp, Sun, Moon } from 'lucide-react';
 import { signOut } from '@/app/(auth)/actions';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 
 interface UserMenuProps {
   userName: string;
@@ -18,6 +18,14 @@ export default function UserMenu({ userName, userEmail, avatarColor }: UserMenuP
   const workspaceSlug = params?.workspace_slug as string;
   const initial = userName.charAt(0).toUpperCase();
   const [isPending, startTransition] = useTransition();
+  const [dark, setDark] = useState(false);
+  useEffect(() => setDark(document.documentElement.classList.contains('dark')), []);
+  const toggleTheme = () => {
+    const next = !document.documentElement.classList.contains('dark');
+    document.documentElement.classList.toggle('dark', next);
+    try { localStorage.setItem('nexus-theme', next ? 'dark' : 'light'); } catch { /* ignore */ }
+    setDark(next);
+  };
 
   return (
     <div className="px-2 pt-2 pb-1 border-t border-border">
@@ -77,6 +85,15 @@ export default function UserMenu({ userName, userEmail, avatarColor }: UserMenuP
                 Settings
               </DropdownMenu.Item>
             </Link>
+
+            {/* Theme toggle */}
+            <DropdownMenu.Item
+              onSelect={(e) => { e.preventDefault(); toggleTheme(); }}
+              className="flex items-center gap-2 px-2.5 py-1.5 text-[13px] rounded-md cursor-pointer hover:bg-hover outline-none text-foreground/70 hover:text-foreground"
+            >
+              {dark ? <Sun className="w-3.5 h-3.5" strokeWidth={1.8} /> : <Moon className="w-3.5 h-3.5" strokeWidth={1.8} />}
+              {dark ? 'Light mode' : 'Dark mode'}
+            </DropdownMenu.Item>
 
             <DropdownMenu.Separator className="h-px bg-border mx-1 my-1" />
 

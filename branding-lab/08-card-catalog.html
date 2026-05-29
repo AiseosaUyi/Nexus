@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — The Card Catalog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Cutive+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --oak:#6b4f2e; --oak-d:#4e3920; --oak-l:#8a6a40; --brass:#b08d4f;
+    --card:#f5ecd7; --card2:#efe3c6; --ink:#2b2620; --red:#8a2f2a; --stamp:#4a3b6b; --muted:#7a6a4f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"Crimson Pro",serif;color:var(--ink);font-size:19px;line-height:1.6;overflow-x:hidden;
+    background-color:#3f2f1c;
+    background-image:
+      linear-gradient(90deg,rgba(0,0,0,.22) 0 2px,transparent 2px 4px),
+      repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 3px,rgba(0,0,0,.05) 3px 8px),
+      linear-gradient(180deg,#5a4327,#3f2f1c);
+    background-size:7px 100%,100% 9px,100% 100%;}
+  ::selection{background:var(--stamp);color:var(--card)}
+  .mono{font-family:"Cutive Mono",monospace}
+  .serif{font-family:"DM Serif Display",serif}
+
+  /* NAV — brass drawer label rail */
+  header{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,#6b4f2e,#523c22);
+    border-bottom:3px solid var(--oak-d);box-shadow:0 6px 16px rgba(0,0,0,.4)}
+  nav{max-width:1180px;margin:0 auto;height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+  .brand{font-family:"DM Serif Display";font-size:25px;color:var(--card);letter-spacing:.5px;display:flex;align-items:center;gap:12px}
+  .brand .plate{font-family:"Cutive Mono";font-size:11px;color:var(--oak-d);background:var(--brass);padding:3px 9px;border-radius:2px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+  nav .links{display:flex;gap:26px;font-family:"Cutive Mono";font-size:12px;color:#e3d6b8;letter-spacing:1px}
+  nav .links a:hover{color:#fff}
+  @media(max-width:740px){nav .links{display:none}}
+  .checkout{font-family:"Cutive Mono";font-size:12px;letter-spacing:1px;color:var(--card);background:var(--red);
+    padding:10px 18px;border-radius:3px;box-shadow:0 3px 0 #5e1f1b}
+
+  main{max-width:1180px;margin:0 auto;padding:46px 28px 90px}
+
+  /* HERO — the cabinet */
+  .hero{display:grid;grid-template-columns:1fr 1fr;gap:42px;align-items:center;margin-bottom:30px}
+  @media(max-width:880px){.hero{grid-template-columns:1fr}}
+  .hero-copy .kick{font-family:"Cutive Mono";font-size:12px;letter-spacing:3px;color:#e3d6b8;text-transform:uppercase}
+  .hero-copy h1{font-family:"DM Serif Display";color:var(--card);font-size:clamp(36px,5.6vw,66px);line-height:1.02;margin:16px 0 14px;
+    text-shadow:0 2px 0 rgba(0,0,0,.3)}
+  .hero-copy h1 em{font-style:italic;color:var(--brass)}
+  .hero-copy p{color:#ecdfc2;font-size:19px;max-width:46ch;margin-bottom:26px}
+  .btnrow{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .btn{font-family:"Cutive Mono";font-size:13px;letter-spacing:1px;padding:13px 22px;text-decoration:none;cursor:pointer;border:none;border-radius:3px}
+  .btn.red{background:var(--red);color:var(--card);box-shadow:0 4px 0 #5e1f1b;transition:transform .08s}
+  .btn.red:active{transform:translateY(3px);box-shadow:none}
+  .btn.out{background:var(--card);color:var(--ink);box-shadow:0 4px 0 var(--oak-d)}
+
+  /* the cabinet of drawers */
+  .cabinet{background:linear-gradient(160deg,#7a5a33,#5e4527);border:4px solid var(--oak-d);border-radius:8px;padding:14px;
+    box-shadow:0 24px 50px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.12)}
+  .drawer{background:linear-gradient(180deg,#8a6a40,#6b4f2e);border:1px solid var(--oak-d);border-radius:4px;
+    margin-bottom:9px;padding:12px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;position:relative;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 2px 4px rgba(0,0,0,.3);transition:transform .25s}
+  .drawer:hover{transform:translateX(6px)}
+  .drawer .knob{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e8cf95,var(--brass) 60%,#7a5e2e);
+    box-shadow:0 1px 2px rgba(0,0,0,.5);flex-shrink:0}
+  .drawer .lbl{font-family:"Cutive Mono";font-size:13px;color:#f3e6c8;letter-spacing:1px;flex:1}
+  .drawer .dewey{font-family:"Cutive Mono";font-size:11px;color:#d8c49a}
+  .drawer .cards{display:none;position:absolute;left:0;right:0;top:100%;z-index:5;padding-top:8px}
+  .drawer.open .cards{display:block;animation:slide .3s ease-out}
+  @keyframes slide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+
+  /* SECTION SCAFFOLD */
+  .panel{background:var(--card);border-radius:8px;padding:40px clamp(24px,4vw,46px);margin-top:34px;
+    box-shadow:0 18px 40px rgba(0,0,0,.4);position:relative}
+  .panel:before{content:"";position:absolute;inset:8px;border:1px solid rgba(107,79,46,.25);border-radius:4px;pointer-events:none}
+  .seckick{font-family:"Cutive Mono";font-size:12px;letter-spacing:3px;color:var(--red);text-transform:uppercase}
+  h2{font-family:"DM Serif Display";color:var(--ink);font-size:clamp(26px,4vw,42px);line-height:1.06;margin:12px 0 14px}
+  .lead{color:#4a4035;font-size:19px;max-width:62ch;margin-bottom:30px}
+
+  /* catalog card */
+  .catcard{background:var(--card2);border:1px solid #d8c49a;border-radius:3px;padding:18px 20px;position:relative;
+    box-shadow:2px 3px 8px rgba(0,0,0,.18);background-image:repeating-linear-gradient(transparent 0 27px,rgba(74,59,107,.14) 27px 28px);
+    background-position:0 38px}
+  .catcard .hole{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:13px;height:13px;border-radius:50%;
+    background:#3f2f1c;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+  .catcard .call{font-family:"Cutive Mono";font-size:12px;color:var(--red);letter-spacing:1px}
+  .catcard h3{font-family:"DM Serif Display";font-size:21px;line-height:1.1;margin:4px 0 6px}
+  .catcard p{font-family:"Cutive Mono";font-size:12.5px;line-height:1.9;color:#4a4035}
+  .catcard .stamp{position:absolute;top:14px;right:16px;font-family:"Cutive Mono";font-size:10px;color:var(--stamp);
+    border:2px solid var(--stamp);padding:2px 7px;border-radius:2px;transform:rotate(8deg);opacity:.8;text-transform:uppercase}
+
+  /* feature cards grid */
+  .cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media(max-width:820px){.cards-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.cards-grid{grid-template-columns:1fr}}
+  .cards-grid .catcard{padding-bottom:34px}
+  .cards-grid .catcard:hover{transform:translateY(-5px) rotate(-.6deg);transition:transform .3s}
+
+  /* due-date / calendar */
+  .slip{background:var(--card2);border:1px dashed var(--oak);border-radius:4px;overflow:hidden}
+  .slip .top{background:var(--oak);color:var(--card);font-family:"Cutive Mono";font-size:12px;letter-spacing:2px;padding:10px 18px;text-transform:uppercase}
+  .slip .row{display:grid;grid-template-columns:120px 1fr 120px;gap:14px;padding:13px 18px;border-bottom:1px dotted #c9b487;
+    font-family:"Cutive Mono";font-size:13px;align-items:center}
+  .slip .row:last-child{border-bottom:none}
+  .slip .date{color:var(--stamp);font-weight:600}
+  .slip .due{justify-self:end;border:2px solid var(--red);color:var(--red);padding:2px 8px;border-radius:2px;transform:rotate(-3deg);font-size:11px}
+  .slip .due.ret{border-color:#2f6b3f;color:#2f6b3f}
+
+  /* CTA */
+  .cta{margin-top:60px;text-align:center}
+  .cta .panel{display:inline-block;max-width:640px;padding:48px 42px}
+  .cta h2{font-size:clamp(28px,4.6vw,44px)}
+  .cta p{color:#4a4035;max-width:46ch;margin:0 auto 26px}
+  footer{margin-top:50px;text-align:center;color:#d8c49a;font-family:"Cutive Mono";font-size:12px;letter-spacing:1px}
+  footer a{color:var(--brass)}
+  .reveal{opacity:0;transform:translateY(22px);transition:.7s cubic-bezier(.2,.7,.2,1)}.reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<header>
+  <nav>
+    <div class="brand">Nexus <span class="plate">REF / 025.04</span></div>
+    <div class="links"><a href="#catalog">Catalog</a><a href="#holdings">Holdings</a><a href="#duedates">Due Dates</a></div>
+    <a class="checkout" href="#cta">CHECK OUT ▸</a>
+  </nav>
+</header>
+
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-copy">
+      <div class="kick">EST. 1876 · OPEN STACKS · SILENCE PLEASE</div>
+      <h1>Every thought, <em>catalogued.</em></h1>
+      <p>Before the cloud there was the card catalog — the most beautiful index ever built. Nexus brings it back: every note a typed card, every folder a drawer you slide open, every idea filed exactly where you'll find it again.</p>
+      <div class="btnrow">
+        <a class="btn red" href="#cta">Apply for a card</a>
+        <a class="btn out" href="#catalog">Browse the stacks</a>
+      </div>
+    </div>
+    <div class="cabinet">
+      <div class="drawer"><span class="knob"></span><span class="lbl">A — ACME, INC. / Marketing</span><span class="dewey">658.8</span></div>
+      <div class="drawer"><span class="knob"></span><span class="lbl">E — Engineering / Architecture</span><span class="dewey">004.2</span></div>
+      <div class="drawer"><span class="knob"></span><span class="lbl">C — Content Calendar / Q3</span><span class="dewey">070.5</span></div>
+      <div class="drawer"><span class="knob"></span><span class="lbl">A — Assets / Media Reserve</span><span class="dewey">779.0</span></div>
+      <p class="mono" style="font-size:11px;color:#d8c49a;text-align:center;margin-top:10px">▸ click a drawer to open it</p>
+    </div>
+  </div>
+
+  <!-- CATALOG / TREE -->
+  <div class="panel reveal" id="catalog">
+    <div class="seckick">CARD CATALOG · CLASSIFICATION</div>
+    <h2>One classification scheme,<br>nested all the way down.</h2>
+    <p class="lead">Folders, documents and calendar entries share one filing system — a node with a parent. Like the Dewey Decimal hierarchy, everything has a call number and a place on the shelf, no matter how deep you nest.</p>
+    <div class="cards-grid">
+      <div class="catcard"><div class="call">658.8 / ACME</div><h3>Acme, Inc.</h3><p>BUSINESS — top of the stacks.<br>Contains: Marketing, Eng,<br>Content Calendar. See also: ∞</p><span class="stamp">Main</span><div class="hole"></div></div>
+      <div class="catcard"><div class="call">658.82 / MKT</div><h3>Marketing</h3><p>FOLDER — filed under Acme.<br>Holds: Launch Plan, Brand Voice.<br>Subdivides without limit.</p><span class="stamp">Folder</span><div class="hole"></div></div>
+      <div class="catcard"><div class="call">658.822 / LP</div><h3>Launch Plan</h3><p>DOCUMENT — 142 blocks.<br>Headings, paragraphs, media,<br>embeds — ordered & reflowable.</p><span class="stamp">Doc</span><div class="hole"></div></div>
+    </div>
+  </div>
+
+  <!-- HOLDINGS / FEATURES -->
+  <div class="panel reveal" id="holdings">
+    <div class="seckick">HOLDINGS · WHAT'S ON THE SHELVES</div>
+    <h2>Six cards every patron pulls.</h2>
+    <p class="lead">The reference desk's most-requested capabilities, each filed and ready for checkout.</p>
+    <div class="cards-grid">
+      <div class="catcard"><div class="call">REF / BLK</div><h3>The Block Editor</h3><p>Compose in ordered blocks —<br>text, image, video, embed.<br>Reorder by hand.</p><div class="hole"></div></div>
+      <div class="catcard"><div class="call">REF / NST</div><h3>Infinite Nesting</h3><p>Drawers within drawers.<br>The classification scheme<br>never runs out of digits.</p><div class="hole"></div></div>
+      <div class="catcard"><div class="call">REF / RLT</div><h3>Real-Time Reading</h3><p>Multiple patrons at one card.<br>Live cursors, instant edits,<br>no shushing required.</p><div class="hole"></div></div>
+      <div class="catcard"><div class="call">REF / IMP</div><h3>Notion Import</h3><p>Inter-library loan: a URL<br>arrives and is re-catalogued<br>into clean Nexus blocks.</p><div class="hole"></div></div>
+      <div class="catcard"><div class="call">REF / AST</div><h3>The Media Reserve</h3><p>Images, video and PDFs<br>kept on reserve, served fast<br>from the CDN.</p><div class="hole"></div></div>
+      <div class="catcard"><div class="call">REF / ROL</div><h3>Borrower Cards</h3><p>Admin, Editor, Viewer —<br>privileges issued per<br>business membership.</p><div class="hole"></div></div>
+    </div>
+  </div>
+
+  <!-- DUE DATES / CALENDAR -->
+  <div class="panel reveal" id="duedates">
+    <div class="seckick">CIRCULATION · DUE DATES</div>
+    <h2>Stamped, dated, due to ship.</h2>
+    <p class="lead">A content calendar reads like the slip in the back of the book — each entry a node, stamped with the day it goes out into the world.</p>
+    <div class="slip">
+      <div class="top">DATE DUE — PLEASE RETURN BY</div>
+      <div class="row"><span class="date">JUL 06</span><span>Launch announcement → The Blog</span><span class="due">DUE</span></div>
+      <div class="row"><span class="date">JUL 08</span><span>Carousel → Instagram</span><span class="due">DUE</span></div>
+      <div class="row"><span class="date">JUL 09</span><span>Field dispatch → Newsletter</span><span class="due ret">SHIPPED</span></div>
+      <div class="row"><span class="date">JUL 12</span><span>Acme case study → The Blog</span><span class="due">DUE</span></div>
+      <div class="row"><span class="date">JUL 14</span><span>Demo film → Video</span><span class="due">DUE</span></div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta" id="cta">
+    <div class="panel reveal">
+      <div class="seckick" style="text-align:center">REGISTRATION DESK</div>
+      <h2>Apply for your card.</h2>
+      <p>Your first workspace is free to any patron. Sign the register, pull a drawer, and start filing everything you know where you'll always find it.</p>
+      <div class="btnrow" style="justify-content:center">
+        <a class="btn red" href="#">Apply for a card</a>
+        <a class="btn out" href="#">Read the catalog rules</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>Nexus — a block-based knowledge workspace, filed by hand · please return on time · <a href="index.html">← back to the branding lab</a></footer>
+</main>
+
+<script>
+  // drawers open/close + populate cards
+  const drawerData=[
+    [['658.822','Launch Plan','142 blocks · realtime'],['658.823','Brand Voice','38 blocks']],
+    [['004.21','Architecture Spec','realtime · 3 editors'],['004.22','Roadmap','last edit 2m ago']],
+    [['070.51','Q3 Schedule','12 entries'],['070.52','July Sprint','5 entries']],
+    [['779.01','hero.png','image/png'],['779.02','demo.mp4','video/mp4']],
+  ];
+  document.querySelectorAll('.drawer').forEach((d,i)=>{
+    const wrap=document.createElement('div');wrap.className='cards';
+    (drawerData[i]||[]).forEach(c=>{
+      const card=document.createElement('div');card.className='catcard';card.style.marginBottom='8px';
+      card.innerHTML=`<div class="call">${c[0]}</div><h3 style="font-size:17px">${c[1]}</h3><p style="background:none">${c[2]}</p><div class="hole"></div>`;
+      wrap.appendChild(card);
+    });
+    d.appendChild(wrap);
+    d.addEventListener('click',()=>d.classList.toggle('open'));
+  });
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting)x.target.classList.add('in')}),{threshold:.1});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

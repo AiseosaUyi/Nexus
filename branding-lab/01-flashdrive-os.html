@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus OS — Insert Your Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal:#3a6ea5; --plastic:#ece9d8; --aqua:#5ba4e6;
+    --tbar1:#245edb; --tbar2:#3f8cf3; --go:#73d216; --go-d:#4e9006;
+    --frame:#0831d9; --win-blue:#0a246a; --ink:#0b1b3a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:Tahoma,"Trebuchet MS",Geneva,sans-serif;
+    color:var(--ink); overflow-x:hidden;
+    background:
+      radial-gradient(120% 80% at 50% 0%, #7bb0e8 0%, #4f86c6 38%, #2f6b3f 70%, #5a9e4e 100%);
+    background-attachment:fixed; min-height:100vh;
+  }
+  /* ---------- BOOT SCREEN ---------- */
+  #boot{position:fixed;inset:0;z-index:9999;background:#000;color:#cfe3ff;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:"Press Start 2P",monospace;transition:opacity .6s ease;}
+  #boot .logo{font-size:34px;letter-spacing:2px;color:#fff;text-shadow:0 0 18px #3f8cf3;
+    margin-bottom:38px;animation:flick 2.4s steps(2) 1;}
+  @keyframes flick{0%,8%{opacity:.2}4%,100%{opacity:1}}
+  #boot .bar{width:300px;height:22px;border:2px solid #2b4d8a;border-radius:11px;
+    overflow:hidden;background:#06122b;padding:2px;}
+  #boot .bar > i{display:block;height:100%;width:0;border-radius:8px;
+    background:repeating-linear-gradient(90deg,#3f8cf3 0 14px,#245edb 14px 18px);
+    animation:fill 2.2s ease-out forwards;}
+  @keyframes fill{to{width:100%}}
+  #boot small{margin-top:18px;font-size:8px;color:#6f8fc7;letter-spacing:1px}
+
+  /* ---------- DESKTOP CHROME ---------- */
+  .scanlines{position:fixed;inset:0;pointer-events:none;z-index:60;mix-blend-mode:overlay;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.06) 0 1px,transparent 1px 3px);opacity:.5}
+
+  /* desktop icons */
+  .desktop{position:fixed;inset:0;z-index:5;pointer-events:none}
+  .dicon{position:absolute;width:78px;text-align:center;cursor:grab;pointer-events:auto;
+    color:#fff;font-size:11px;text-shadow:1px 1px 2px rgba(0,0,0,.6);user-select:none;
+    -webkit-user-select:none;}
+  .dicon .glyph{width:48px;height:42px;margin:0 auto 4px;display:flex;align-items:center;
+    justify-content:center;font-size:34px;filter:drop-shadow(2px 3px 2px rgba(0,0,0,.35))}
+  .dicon span{display:inline-block;padding:1px 4px;border-radius:2px}
+  .dicon.sel span{background:var(--frame);outline:1px dotted #fff;outline-offset:1px}
+
+  /* taskbar */
+  .taskbar{position:fixed;left:0;right:0;bottom:0;height:42px;z-index:80;
+    display:flex;align-items:center;
+    background:linear-gradient(180deg,#3f8cf3 0,#245edb 8%,#1941a5 92%,#15347f 100%);
+    border-top:1px solid #5b9bf0;box-shadow:0 -2px 6px rgba(0,0,0,.3)}
+  .startbtn{height:100%;padding:0 26px 0 14px;display:flex;align-items:center;gap:8px;
+    font-style:italic;font-weight:bold;font-size:17px;color:#fff;cursor:pointer;
+    text-shadow:1px 1px 1px rgba(0,0,0,.4);border:none;
+    border-radius:0 14px 14px 0/0 18px 18px 0;
+    background:linear-gradient(180deg,#7dc15a 0,#5fae3e 45%,#4e9006 100%)}
+  .startbtn:hover{filter:brightness(1.08)}
+  .startbtn .orb{width:22px;height:22px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#fff,#9fe07a 40%,#3c7a12);
+    box-shadow:0 0 4px #2c5a0c}
+  .tasks{display:flex;gap:6px;padding:0 10px;flex:1}
+  .task{background:linear-gradient(180deg,#4e93f0,#2b62c9);border:1px solid #1c47a0;
+    color:#fff;font-size:12px;padding:5px 12px;border-radius:4px;box-shadow:inset 0 1px 0 #7fb3f7;
+    max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .task.active{background:linear-gradient(180deg,#1d49a8,#3a72d6);box-shadow:inset 1px 1px 3px rgba(0,0,0,.4)}
+  .tray{display:flex;align-items:center;gap:10px;padding:0 14px 0 12px;height:100%;
+    background:linear-gradient(180deg,#1b8ec4,#1567a9);border-left:1px solid #5b9bf0;color:#fff;font-size:12px}
+  .tray .ico{font-size:14px;opacity:.9}
+
+  /* start menu */
+  .startmenu{position:fixed;left:6px;bottom:46px;width:300px;z-index:90;display:none;
+    border-radius:8px 8px 6px 6px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.5);
+    border:1px solid #0b3a8f}
+  .startmenu.open{display:block;animation:pop .15s ease-out}
+  @keyframes pop{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+  .sm-head{background:linear-gradient(180deg,#4f93f0,#1941a5);color:#fff;padding:10px 14px;
+    display:flex;align-items:center;gap:10px;font-weight:bold;text-shadow:1px 1px 1px rgba(0,0,0,.4)}
+  .sm-head .av{width:34px;height:34px;border-radius:5px;background:radial-gradient(circle at 30% 25%,#ffd98a,#e8a13c);
+    display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid #fff}
+  .sm-body{background:#fff;display:flex}
+  .sm-col{flex:1;padding:8px}
+  .sm-col.r{background:linear-gradient(180deg,#d3e5fb,#cfe0f7);flex:.85}
+  .sm-item{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:4px;font-size:12.5px;cursor:pointer}
+  .sm-item:hover{background:var(--frame);color:#fff}
+  .sm-item b{font-weight:bold}.sm-item small{display:block;font-weight:normal;opacity:.7;font-size:11px}
+  .sm-item:hover small{opacity:.9}
+  .sm-foot{background:linear-gradient(180deg,#3f8cf3,#1941a5);padding:7px 14px;display:flex;
+    justify-content:flex-end;gap:14px;color:#fff;font-size:12px}
+  .sm-foot span{display:flex;align-items:center;gap:6px;cursor:pointer}
+
+  /* ---------- WINDOW PRIMITIVE ---------- */
+  .win{background:var(--plastic);border:1px solid #003ce0;border-radius:8px 8px 3px 3px;
+    box-shadow:0 8px 26px rgba(0,0,0,.35);overflow:hidden}
+  .titlebar{height:30px;display:flex;align-items:center;gap:7px;padding:0 6px 0 8px;color:#fff;
+    font-weight:bold;font-size:13px;text-shadow:1px 1px 1px rgba(0,0,0,.35);
+    background:linear-gradient(180deg,#3f8cf3 0,#2b62d6 9%,#0831d9 90%,#062bb0 100%)}
+  .titlebar .ti{font-size:14px}
+  .titlebar .sp{flex:1}
+  .wbtn{width:21px;height:20px;border-radius:3px;border:1px solid #fff;font-size:11px;font-weight:bold;
+    color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    background:linear-gradient(180deg,#5b9bf0,#1f50c0)}
+  .wbtn.x{background:linear-gradient(180deg,#f08a6a,#d6401a)}
+  .wbody{padding:18px}
+
+  /* ---------- PAGE FLOW ---------- */
+  main{position:relative;z-index:10;max-width:1080px;margin:0 auto;padding:84px 20px 120px}
+
+  /* hero */
+  .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:26px;align-items:stretch}
+  @media(max-width:860px){.hero{grid-template-columns:1fr}}
+  .hero-copy .wbody{padding:30px 30px 34px}
+  .kick{font-family:"Press Start 2P";font-size:10px;color:var(--teal);letter-spacing:1px;margin-bottom:18px}
+  h1{font-size:clamp(34px,5vw,58px);line-height:.96;color:var(--win-blue);letter-spacing:-1px;
+    font-weight:bold;margin-bottom:14px}
+  h1 .b{color:var(--go-d)}
+  .sub{font-size:15px;line-height:1.5;color:#34425e;max-width:46ch;margin-bottom:22px}
+  .btnrow{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .xpbtn{font-family:Tahoma;font-weight:bold;font-size:14px;color:#143d12;cursor:pointer;
+    padding:11px 22px;border-radius:7px;border:1px solid #3c7a12;
+    background:linear-gradient(180deg,#a6e87d 0,#73d216 45%,#4e9006 100%);
+    box-shadow:inset 0 1px 0 #d6f7b3,0 2px 4px rgba(0,0,0,.25);transition:transform .06s}
+  .xpbtn:active{transform:translateY(1px)}
+  .xpbtn.ghost{color:#0a246a;background:linear-gradient(180deg,#fbfbfb,#dfe6f2);border-color:#7d96c8;
+    box-shadow:inset 0 1px 0 #fff,0 2px 4px rgba(0,0,0,.18)}
+
+  /* USB drive */
+  .usb-win .wbody{display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 20px 26px}
+  .usb{width:120px;height:230px;position:relative;filter:drop-shadow(0 10px 14px rgba(0,0,0,.3))}
+  .usb .cap{position:absolute;top:0;left:18px;right:18px;height:64px;border-radius:9px 9px 4px 4px;
+    background:linear-gradient(180deg,#cfe0f7,#7fa6d8);border:1px solid #4f76b0}
+  .usb .metal{position:absolute;top:30px;left:34px;right:34px;height:46px;border-radius:3px;
+    background:linear-gradient(180deg,#f6f7fa,#aeb4bd);border:1px solid #8a8f98;
+    box-shadow:inset 0 0 0 4px #d8dbe0}
+  .usb .body{position:absolute;top:66px;left:6px;right:6px;bottom:0;border-radius:8px 8px 16px 16px;
+    background:linear-gradient(180deg,rgba(90,158,78,.32),rgba(58,110,165,.28));
+    border:1px solid rgba(255,255,255,.5);backdrop-filter:blur(2px);
+    box-shadow:inset 0 2px 6px rgba(255,255,255,.55),inset 0 -8px 14px rgba(0,0,0,.18);overflow:hidden}
+  .usb .liquid{position:absolute;left:0;right:0;bottom:0;height:0%;
+    background:linear-gradient(180deg,#9be86b,#5cb82e);transition:height .25s ease-out;
+    box-shadow:0 0 12px #73d216}
+  .usb .liquid:after{content:"";position:absolute;top:-6px;left:0;right:0;height:8px;border-radius:50%;
+    background:#b6f08e}
+  .usb .led{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);width:8px;height:8px;
+    border-radius:50%;background:#1f3a17;z-index:3}
+  .usb .led.on{background:#9be86b;box-shadow:0 0 8px #73d216,0 0 14px #73d216}
+  .cap-read{font-family:"Press Start 2P";font-size:13px;color:var(--win-blue)}
+  .cap-sub{font-size:12px;color:#34425e}
+
+  /* section windows */
+  section.block{margin-top:34px}
+  .winhead{display:flex;align-items:center;gap:12px;margin-bottom:0}
+  h2{font-size:clamp(24px,3.4vw,36px);color:var(--win-blue);letter-spacing:-.5px;font-weight:bold}
+  .lead{color:#34425e;font-size:14.5px;line-height:1.5;max-width:62ch;margin:8px 0 20px}
+
+  /* explorer tree */
+  .explorer{display:grid;grid-template-columns:200px 1fr;gap:0;border:1px solid #9bb3d6;border-radius:4px;overflow:hidden}
+  @media(max-width:680px){.explorer{grid-template-columns:1fr}}
+  .ex-side{background:linear-gradient(180deg,#fff,#eef3fb);padding:12px;border-right:1px solid #c4d3ea;font-size:13px}
+  .ex-side .grp{color:var(--teal);font-weight:bold;margin:10px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  .tree{font-size:13.5px;line-height:2.05;color:#1f3050}
+  .tree .row{padding-left:0;cursor:default;white-space:nowrap}
+  .tree .ind1{padding-left:22px}.tree .ind2{padding-left:44px}
+  .tree .ico{margin-right:6px}
+  .ex-main{background:#fff;padding:16px}
+  .filegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:14px}
+  .file{text-align:center;font-size:12px;color:#1f3050;cursor:pointer;padding:8px 4px;border-radius:5px}
+  .file:hover{background:#dcebfb}
+  .file .g{font-size:38px;line-height:1}
+
+  /* feature pills as control-panel cards */
+  .cpl{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:760px){.cpl{grid-template-columns:1fr 1fr}}
+  @media(max-width:460px){.cpl{grid-template-columns:1fr}}
+  .cp{background:#fff;border:1px solid #9bb3d6;border-radius:6px;padding:16px;
+    box-shadow:inset 0 1px 0 #fff}
+  .cp .g{font-size:32px}
+  .cp h3{font-size:15px;color:var(--win-blue);margin:8px 0 5px}
+  .cp p{font-size:12.5px;color:#46546e;line-height:1.45}
+
+  /* calendar window */
+  .cal{border:1px solid #9bb3d6;border-radius:4px;overflow:hidden;background:#fff}
+  .cal .cbar{background:linear-gradient(180deg,#eaf1fb,#d6e3f7);padding:8px 12px;font-weight:bold;
+    color:var(--win-blue);font-size:13px;display:flex;justify-content:space-between;border-bottom:1px solid #c4d3ea}
+  .cgrid{display:grid;grid-template-columns:repeat(7,1fr)}
+  .cgrid .dow{background:#f3f6fc;font-size:11px;color:#6a7894;text-align:center;padding:6px 0;font-weight:bold;border-bottom:1px solid #e3e9f3}
+  .cell{min-height:62px;border:1px solid #eef2f8;padding:5px 6px;font-size:11px;color:#7a87a0;position:relative}
+  .cell .d{font-weight:bold;color:#34425e}
+  .chip{display:block;margin-top:4px;font-size:10px;color:#fff;border-radius:3px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip.blue{background:#2b62d6}.chip.green{background:#4e9006}.chip.orange{background:#d6731a}
+
+  /* dialog CTA */
+  .dialog{max-width:560px;margin:40px auto 0}
+  .dialog .wbody{display:flex;gap:18px;align-items:flex-start;padding:24px}
+  .dialog .qm{font-size:46px;line-height:1}
+  .dialog h2{font-size:22px;margin-bottom:6px}
+  .dialog p{font-size:13.5px;color:#46546e;line-height:1.5;margin-bottom:18px}
+
+  /* status strip */
+  .statusbar{display:flex;gap:18px;font-size:11px;color:#5a6885;border-top:1px solid #c4d3ea;
+    margin-top:6px;padding-top:8px}
+  footer{margin-top:50px;text-align:center;color:#dce8f6;font-size:11px;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+  footer a{color:#fff}
+  .reveal{opacity:0;transform:translateY(22px);transition:.6s cubic-bezier(.2,.7,.3,1)}
+  .reveal.in{opacity:1;transform:none}
+  ::selection{background:var(--frame);color:#fff}
+</style>
+</head>
+<body>
+
+<!-- BOOT -->
+<div id="boot">
+  <div class="logo">NEXUS&nbsp;OS</div>
+  <div class="bar"><i></i></div>
+  <small>loading your second brain…</small>
+</div>
+
+<div class="scanlines"></div>
+
+<!-- DESKTOP ICONS -->
+<div class="desktop" id="desktop">
+  <div class="dicon" style="top:24px;left:24px"><div class="glyph">🗂️</div><span>My&nbsp;Workspace</span></div>
+  <div class="dicon" style="top:130px;left:24px"><div class="glyph">📄</div><span>Untitled.doc</span></div>
+  <div class="dicon" style="top:236px;left:24px"><div class="glyph">🧠</div><span>second_brain</span></div>
+  <div class="dicon" style="top:24px;right:24px"><div class="glyph">🗑️</div><span>Recycle&nbsp;Bin</span></div>
+  <div class="dicon" style="top:130px;right:24px"><div class="glyph">🌐</div><span>Import&nbsp;Notion</span></div>
+</div>
+
+<!-- START MENU -->
+<div class="startmenu" id="startmenu">
+  <div class="sm-head"><div class="av">🧠</div><div>Knowledge Worker</div></div>
+  <div class="sm-body">
+    <div class="sm-col">
+      <div class="sm-item"><span style="font-size:20px">📁</span><b>New Folder<small>Nest it as deep as you like</small></b></div>
+      <div class="sm-item"><span style="font-size:20px">📝</span><b>New Document<small>Start stacking blocks</small></b></div>
+      <div class="sm-item"><span style="font-size:20px">📅</span><b>Content Calendar<small>Schedule what ships</small></b></div>
+      <div class="sm-item"><span style="font-size:20px">⚡</span><b>Real-Time Room<small>Edit together, live</small></b></div>
+    </div>
+    <div class="sm-col r">
+      <div class="sm-item"><span>🗂️</span>My Workspace</div>
+      <div class="sm-item"><span>🖼️</span>Assets</div>
+      <div class="sm-item"><span>🔌</span>Import / Export</div>
+      <div class="sm-item"><span>⚙️</span>Settings</div>
+    </div>
+  </div>
+  <div class="sm-foot"><span>🔒 Lock</span><span>⏻ Run nexus.exe</span></div>
+</div>
+
+<!-- TASKBAR -->
+<div class="taskbar">
+  <button class="startbtn" id="startbtn"><span class="orb"></span>start</button>
+  <div class="tasks">
+    <div class="task active">🧠 Nexus — Insert your brain</div>
+    <div class="task">🗂️ My Workspace</div>
+    <div class="task">📅 Calendar.cal</div>
+  </div>
+  <div class="tray">
+    <span class="ico">🔊</span><span class="ico">🛡️</span><span class="ico">🔌</span>
+    <span id="clock">12:00 PM</span>
+  </div>
+</div>
+
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="win hero-copy">
+      <div class="titlebar"><span class="ti">🧠</span> nexus.exe — welcome <span class="sp"></span>
+        <span class="wbtn">_</span><span class="wbtn">□</span><span class="wbtn x">✕</span></div>
+      <div class="wbody">
+        <div class="kick">▶ NEXUS OS · v2.0 · 256-BIT MEMORY</div>
+        <h1>Insert your <span class="b">brain.</span></h1>
+        <p class="sub">Nexus is the operating system for everything you know. Folders inside folders, documents made of blocks, a calendar for what ships next — all on one little drive that never runs out of room.</p>
+        <div class="btnrow">
+          <button class="xpbtn">▶ Run nexus.exe</button>
+          <button class="xpbtn ghost">📂 Open a demo workspace</button>
+        </div>
+        <div class="statusbar"><span>● Connected</span><span>Auto-saving…</span><span>Free space: ∞</span></div>
+      </div>
+    </div>
+
+    <div class="win usb-win">
+      <div class="titlebar"><span class="ti">🔌</span> Removable Disk (E:) <span class="sp"></span>
+        <span class="wbtn">_</span><span class="wbtn x">✕</span></div>
+      <div class="wbody">
+        <div class="usb">
+          <div class="body"><div class="liquid" id="liquid"></div></div>
+          <div class="cap"></div>
+          <div class="metal"></div>
+          <div class="led" id="led"></div>
+        </div>
+        <div class="cap-read" id="capread">0% — 0 nodes</div>
+        <div class="cap-sub">Scroll to fill the drive ↓</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPLORER / TREE -->
+  <section class="block reveal">
+    <div class="win">
+      <div class="titlebar"><span class="ti">🗂️</span> My Workspace — Nexus Explorer <span class="sp"></span>
+        <span class="wbtn">_</span><span class="wbtn">□</span><span class="wbtn x">✕</span></div>
+      <div class="wbody">
+        <h2>Everything is a node in one tree.</h2>
+        <p class="lead">No "pages here, files there." In Nexus a folder, a document, and a calendar entry are the same kind of thing — a node — so you can nest forever and drag anything anywhere.</p>
+        <div class="explorer">
+          <div class="ex-side">
+            <div class="grp">Folders</div>
+            <div class="tree">
+              <div class="row"><span class="ico">📂</span>Acme Inc.</div>
+              <div class="row ind1"><span class="ico">📁</span>Marketing</div>
+              <div class="row ind2"><span class="ico">📄</span>Launch Plan</div>
+              <div class="row ind2"><span class="ico">📄</span>Brand Voice</div>
+              <div class="row ind1"><span class="ico">📁</span>Engineering</div>
+              <div class="row ind2"><span class="ico">📄</span>Architecture</div>
+              <div class="row ind1"><span class="ico">📅</span>Content Cal</div>
+            </div>
+          </div>
+          <div class="ex-main">
+            <div class="filegrid">
+              <div class="file"><div class="g">📄</div>Launch Plan</div>
+              <div class="file"><div class="g">📄</div>Brand Voice</div>
+              <div class="file"><div class="g">🖼️</div>hero.png</div>
+              <div class="file"><div class="g">🎬</div>demo.mp4</div>
+              <div class="file"><div class="g">📎</div>specs.pdf</div>
+              <div class="file"><div class="g">🔗</div>embed</div>
+              <div class="file"><div class="g">📅</div>Q3 Cal</div>
+              <div class="file"><div class="g">📁</div>Archive</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTROL PANEL FEATURES -->
+  <section class="block reveal">
+    <div class="win">
+      <div class="titlebar"><span class="ti">⚙️</span> Control Panel — Pick a tool <span class="sp"></span>
+        <span class="wbtn">_</span><span class="wbtn">□</span><span class="wbtn x">✕</span></div>
+      <div class="wbody">
+        <h2>Snap your thoughts together like blocks.</h2>
+        <p class="lead">Every document is just ordered blocks — headings, text, images, video, files, embeds. Drag to reorder. Type "/" to add. It's LEGO for what you know.</p>
+        <div class="cpl">
+          <div class="cp"><div class="g">🧱</div><h3>Block editor</h3><p>Paragraphs, headings, media, dividers — reorder by dragging, powered by Tiptap.</p></div>
+          <div class="cp"><div class="g">♾️</div><h3>Infinite nesting</h3><p>Folders in folders in folders. The tree never bottoms out.</p></div>
+          <div class="cp"><div class="g">⚡</div><h3>Real-time</h3><p>See cursors move and blocks update live as your team types.</p></div>
+          <div class="cp"><div class="g">🌐</div><h3>Notion import</h3><p>Paste a URL — we parse the DOM into clean Nexus blocks.</p></div>
+          <div class="cp"><div class="g">🖼️</div><h3>Asset vault</h3><p>Images, video, PDFs — served fast from the CDN, organized by business.</p></div>
+          <div class="cp"><div class="g">🛡️</div><h3>Roles</h3><p>Admin, Editor, Viewer — clean boundaries per workspace.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CALENDAR -->
+  <section class="block reveal">
+    <div class="win">
+      <div class="titlebar"><span class="ti">📅</span> Content Calendar.cal <span class="sp"></span>
+        <span class="wbtn">_</span><span class="wbtn">□</span><span class="wbtn x">✕</span></div>
+      <div class="wbody">
+        <h2>Plan what ships, right where you write it.</h2>
+        <p class="lead">Calendar entries are nodes too — link a publish date straight to the document it belongs to.</p>
+        <div class="cal">
+          <div class="cbar"><span>◀ July 2004 ▶</span><span>Week · Month · Agenda</span></div>
+          <div class="cgrid">
+            <div class="dow">Mon</div><div class="dow">Tue</div><div class="dow">Wed</div><div class="dow">Thu</div><div class="dow">Fri</div><div class="dow">Sat</div><div class="dow">Sun</div>
+            <div class="cell"><span class="d">5</span></div>
+            <div class="cell"><span class="d">6</span><span class="chip blue">Blog: Launch</span></div>
+            <div class="cell"><span class="d">7</span></div>
+            <div class="cell"><span class="d">8</span><span class="chip green">IG carousel</span></div>
+            <div class="cell"><span class="d">9</span><span class="chip orange">Newsletter</span></div>
+            <div class="cell"><span class="d">10</span></div>
+            <div class="cell"><span class="d">11</span></div>
+            <div class="cell"><span class="d">12</span><span class="chip blue">Case study</span></div>
+            <div class="cell"><span class="d">13</span></div>
+            <div class="cell"><span class="d">14</span><span class="chip green">Demo video</span></div>
+            <div class="cell"><span class="d">15</span></div>
+            <div class="cell"><span class="d">16</span><span class="chip orange">Webinar</span></div>
+            <div class="cell"><span class="d">17</span></div>
+            <div class="cell"><span class="d">18</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA DIALOG -->
+  <div class="win dialog reveal">
+    <div class="titlebar"><span class="ti">❔</span> nexus.exe <span class="sp"></span><span class="wbtn x">✕</span></div>
+    <div class="wbody">
+      <div class="qm">💾</div>
+      <div>
+        <h2>Ready to mount your mind?</h2>
+        <p>Nexus will create your first workspace, install the block editor, and keep every node auto-saved to the drive. This cannot be undone — and you won't want it to be.</p>
+        <div class="btnrow">
+          <button class="xpbtn">▶ Run nexus.exe</button>
+          <button class="xpbtn ghost">Maybe later</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Nexus OS — a block-based knowledge workspace · © 2004–∞ · Best viewed at 1024×768<br>
+    <a href="index.html">← back to the branding lab</a>
+  </footer>
+</main>
+
+<script>
+  // boot
+  window.addEventListener('load',()=>{
+    setTimeout(()=>{const b=document.getElementById('boot');b.style.opacity=0;
+      setTimeout(()=>b.remove(),650);},2300);
+  });
+  // clock
+  function tick(){const d=new Date();let h=d.getHours(),m=d.getMinutes();const ap=h>=12?'PM':'AM';
+    h=h%12||12;m=m<10?'0'+m:m;document.getElementById('clock').textContent=h+':'+m+' '+ap;}
+  tick();setInterval(tick,10000);
+  // start menu
+  const sb=document.getElementById('startbtn'),sm=document.getElementById('startmenu');
+  sb.addEventListener('click',e=>{e.stopPropagation();sm.classList.toggle('open');});
+  document.addEventListener('click',()=>sm.classList.remove('open'));
+  sm.addEventListener('click',e=>e.stopPropagation());
+  // USB fill on scroll
+  const liquid=document.getElementById('liquid'),cap=document.getElementById('capread'),led=document.getElementById('led');
+  function scrollFill(){
+    const max=document.body.scrollHeight-window.innerHeight;
+    const p=Math.min(100,Math.round((window.scrollY/max)*100))||0;
+    liquid.style.height=p+'%';
+    const nodes=Math.round(p*128);
+    cap.textContent=p+'% — '+nodes.toLocaleString()+' nodes';
+    led.classList.toggle('on',p>2);
+  }
+  window.addEventListener('scroll',scrollFill);scrollFill();
+  // reveal
+  const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting)x.target.classList.add('in')}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  // selectable + draggable desktop icons
+  document.querySelectorAll('.dicon').forEach(ic=>{
+    ic.addEventListener('mousedown',function(e){
+      document.querySelectorAll('.dicon').forEach(d=>d.classList.remove('sel'));
+      ic.classList.add('sel');
+      const r=ic.getBoundingClientRect();const ox=e.clientX-r.left,oy=e.clientY-r.top;ic.style.right='auto';
+      function mv(ev){ic.style.left=(ev.clientX-ox)+'px';ic.style.top=(ev.clientY-oy)+'px';}
+      function up(){document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);}
+      document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+    });
+  });
+</script>
+</body>
+</html>

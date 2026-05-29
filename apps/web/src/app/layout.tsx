@@ -1,14 +1,11 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import { CSPostHogProvider } from '@/components/providers/PostHogProvider';
 import { DialogProvider } from '@/components/providers/DialogProvider';
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
+// Runs before paint: apply the saved theme (or system preference) to <html>
+// so there is no light/dark flash on load.
+const THEME_INIT = `(function(){try{var t=localStorage.getItem('nexus-theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -54,8 +51,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased dark`}>
-      <body className="min-h-full flex flex-col font-[family-name:var(--font-inter)] text-foreground bg-background">
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
+      <body className="min-h-full flex flex-col font-sans text-foreground bg-background">
         <CSPostHogProvider>
           <DialogProvider>{children}</DialogProvider>
         </CSPostHogProvider>

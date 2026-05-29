@@ -64,7 +64,7 @@ export default function AvatarStack({ nodeId }: AvatarStackProps) {
           {user.name.substring(0, 2).toUpperCase()}
         </div>
       ))}
-      <div className="ml-2 text-[11px] font-medium text-[#37352f]/40 uppercase tracking-wider self-center pl-2">
+      <div className="ml-2 text-[11px] font-medium text-muted uppercase tracking-wider self-center pl-2">
         {users.length} editing
       </div>
     </div>

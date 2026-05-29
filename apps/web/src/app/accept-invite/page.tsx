@@ -24,10 +24,10 @@ export default async function AcceptInvitePage({ searchParams }: { searchParams:
   if (result.error) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-lg shadow-xl p-6 border border-red-100">
-          <h2 className="text-xl font-semibold text-[#37352f] mb-2">Invitation Error</h2>
-          <p className="text-[#37352f]/70 mb-4">{result.error}</p>
-          <a href="/dashboard" className="inline-block px-4 py-2 bg-[#37352f] text-white rounded-md hover:bg-[#37352f]/90 transition-colors">
+        <div className="w-full max-w-md bg-card rounded-lg shadow-popover p-6 border border-border">
+          <h2 className="text-xl font-semibold text-foreground mb-2">Invitation Error</h2>
+          <p className="text-muted mb-4">{result.error}</p>
+          <a href="/dashboard" className="inline-block px-4 py-2 bg-cta text-cta-foreground rounded-md hover:opacity-90 transition-opacity">
             Go to Dashboard
           </a>
         </div>
