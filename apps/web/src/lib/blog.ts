@@ -49,7 +49,7 @@ const POSTS: BlogPost[] = [
     author: { name: 'Ayo Reeves', initials: 'AR', role: 'Co-founder' },
     readTime: 5,
     tags: ['Product', 'Design'],
-    coverImage: 'https://images.unsplash.com/photo-1524995997946-a1c2e269a138?w=900&q=75&auto=format&fit=crop',
+    coverImage: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=900&q=75&auto=format&fit=crop',
     body: `
 <p>When you open a typical knowledge tool, you're immediately asked to make a choice: is this a page? A database? A folder? A doc?</p>
 <p>These distinctions feel meaningful at first. They become friction fast.</p>
