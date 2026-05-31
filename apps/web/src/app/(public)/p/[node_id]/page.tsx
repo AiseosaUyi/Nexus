@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import ReadOnlyEditor from '@/components/editor/ReadOnlyEditor';
 import RequestAccessForm from './RequestAccessForm';
 import GuestEditor from './GuestEditor';
+import NexusMark from '@/components/NexusMark';
 
 interface PublicPageProps {
   params: Promise<{ node_id: string }>;
@@ -110,9 +111,7 @@ export default async function PublicNodePage({ params }: PublicPageProps) {
       <div className="min-h-screen bg-background">
         <header className="border-b border-border/10 px-6 py-3 flex items-center">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-white rounded flex items-center justify-center">
-              <span className="text-black text-xs font-bold">N</span>
-            </div>
+            <NexusMark size={22} className="text-foreground" />
             <span className="text-foreground/60 text-sm font-medium">Nexus</span>
           </div>
         </header>

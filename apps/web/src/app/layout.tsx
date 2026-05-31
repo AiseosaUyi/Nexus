@@ -13,16 +13,27 @@ const siteUrl =
 
 // Bumping `?v` busts cached favicons after a redesign. Update this when the
 // icon visuals change so existing tabs reload the new mark.
-const ICON_VERSION = '3';
+const ICON_VERSION = '4';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'Nexus — Your Knowledge Base',
+    default: 'Nexus — The calm knowledge workspace for teams | Notion & Google Docs alternative',
     template: '%s · Nexus',
   },
   description:
-    'A block-based knowledge system for your team. Write, organize, and collaborate — all in one place.',
+    'Nexus is a calm, structured knowledge workspace — a Notion and Google Docs alternative that keeps your team’s notes, docs, and plans in one searchable, infinitely-nestable tree. Free to start.',
+  keywords: [
+    'knowledge workspace',
+    'Notion alternative',
+    'Google Docs alternative',
+    'team wiki',
+    'knowledge base software',
+    'document collaboration',
+    'content calendar',
+    'block editor',
+    'second brain',
+  ],
   applicationName: 'Nexus',
   icons: {
     icon: { url: `/icon.svg?v=${ICON_VERSION}`, type: 'image/svg+xml' },
@@ -32,16 +43,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: 'Nexus',
-    title: 'Nexus — Your Knowledge Base',
+    title: 'Nexus — The calm knowledge workspace for teams',
     description:
-      'A calm, block-based workspace to write, structure ideas, and collaborate — all in one place.',
+      'Stop losing your team’s knowledge across scattered Google Docs and a sprawling Notion. Nexus keeps everything in one calm, structured, searchable home.',
     url: '/',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Nexus — Your Knowledge Base',
+    title: 'Nexus — The calm knowledge workspace for teams',
     description:
-      'A calm, block-based workspace to write, structure ideas, and collaborate — all in one place.',
+      'A Notion & Google Docs alternative that keeps your team’s notes, docs, and plans in one structured, searchable tree.',
   },
 };
 

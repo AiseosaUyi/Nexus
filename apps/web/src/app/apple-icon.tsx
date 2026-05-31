@@ -3,9 +3,8 @@ import { ImageResponse } from 'next/og';
 export const size = { width: 180, height: 180 };
 export const contentType = 'image/png';
 
-// Geometric "N" mark — must read crisply at small sizes. Built from primitive
-// boxes + a parallelogram so satori/next-og renders it identically across
-// systems regardless of installed fonts.
+// "Blocks" mark — three cascading rounded blocks (gold · clay · paper) on ink.
+// Built from primitive boxes so next-og renders it identically everywhere.
 export default function AppleIcon() {
   return new ImageResponse(
     (
@@ -13,7 +12,7 @@ export default function AppleIcon() {
         style={{
           width: '100%',
           height: '100%',
-          background: '#0a0a0a',
+          background: '#241f18',
           borderRadius: 40,
           display: 'flex',
           alignItems: 'center',
@@ -21,41 +20,9 @@ export default function AppleIcon() {
           position: 'relative',
         }}
       >
-        {/* left vertical stroke */}
-        <div
-          style={{
-            position: 'absolute',
-            left: 45,
-            top: 39,
-            width: 23,
-            height: 102,
-            background: '#ffffff',
-          }}
-        />
-        {/* right vertical stroke */}
-        <div
-          style={{
-            position: 'absolute',
-            right: 45,
-            top: 39,
-            width: 23,
-            height: 102,
-            background: '#ffffff',
-          }}
-        />
-        {/* diagonal — rotated rectangle */}
-        <div
-          style={{
-            position: 'absolute',
-            left: 67,
-            top: 38,
-            width: 23,
-            height: 117,
-            background: '#ffffff',
-            transform: 'rotate(35deg)',
-            transformOrigin: 'top left',
-          }}
-        />
+        <div style={{ position: 'absolute', left: 30, top: 50, width: 96, height: 30, borderRadius: 11, background: '#d9a85a' }} />
+        <div style={{ position: 'absolute', left: 42, top: 88, width: 96, height: 30, borderRadius: 11, background: '#df7d45' }} />
+        <div style={{ position: 'absolute', left: 54, top: 126, width: 96, height: 30, borderRadius: 11, background: '#f4efe3' }} />
       </div>
     ),
     { ...size },

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AcceptInviteClient from './AcceptInviteClient';
 import InviteAuthForm from './InviteAuthForm';
+import NexusMark from '@/components/NexusMark';
 
 interface InvitePageProps {
   params: Promise<{ token: string }>;
@@ -65,7 +66,7 @@ export default async function InviteAcceptPage({ params }: InvitePageProps) {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center w-full max-w-sm mx-4">
           <div className="w-16 h-16 rounded-2xl bg-foreground/[0.06] flex items-center justify-center mx-auto mb-6">
-            <span className="text-2xl font-bold text-foreground">N</span>
+            <NexusMark size={36} className="text-foreground" />
           </div>
           <h1 className="text-xl font-bold text-foreground mb-2">
             Join {invitation.business_name || 'a workspace'}
@@ -95,7 +96,7 @@ export default async function InviteAcceptPage({ params }: InvitePageProps) {
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center max-w-md mx-4">
         <div className="w-16 h-16 rounded-2xl bg-foreground/[0.06] flex items-center justify-center mx-auto mb-6">
-          <span className="text-2xl font-bold text-foreground">N</span>
+          <NexusMark size={36} className="text-foreground" />
         </div>
         <h1 className="text-xl font-bold text-foreground mb-2">
           Join {invitation.business_name || 'a workspace'}
