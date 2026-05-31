@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight, Pencil, Layers, Users, Download, Calendar, Lock,
-  Check, Folder, FileText,
+  Check, Folder, FileText, X, Search, Sparkles, RefreshCw, Inbox,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import ThemeToggle from '@/components/ThemeToggle';
+import NexusMark from '@/components/NexusMark';
+import MarketingFooter from '@/components/marketing/MarketingFooter';
 
 // ─── Scroll Reveal ──────────────────────────────────────────────────────────────
 function RevealOnScroll({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
@@ -32,12 +34,44 @@ function RevealOnScroll({ children, className = '', delay = 0 }: { children: Rea
 function CharacterSprite() {
   return (
     <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><defs>
-      <symbol id="c-peek" viewBox="0 0 140 96" stroke="#2b251c" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
-        <ellipse cx="33" cy="74" rx="11" ry="8" fill="#b14e2c" /><ellipse cx="107" cy="74" rx="11" ry="8" fill="#b14e2c" />
-        <circle cx="70" cy="42" r="27" fill="#fcf9f2" /><path d="M44 40 Q46 14 70 15 Q94 14 96 40" fill="#2b251c" stroke="none" />
-        <circle cx="60" cy="44" r="2.8" fill="#2b251c" stroke="none" /><circle cx="80" cy="44" r="2.8" fill="#2b251c" stroke="none" />
-        <path d="M54 37 Q60 34 65 37" /><path d="M75 37 Q80 34 86 37" /><path d="M60 55 Q70 64 80 55" />
-        <circle cx="52" cy="53" r="4.5" fill="#b14e2c" opacity=".22" stroke="none" /><circle cx="88" cy="53" r="4.5" fill="#b14e2c" opacity=".22" stroke="none" />
+      {/* full-body girl — bun, clay dress, presenting */}
+      <symbol id="c-girl" viewBox="0 0 110 178" stroke="#2b251c" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M48 122 L45 154" /><path d="M64 122 L67 154" />
+        <ellipse cx="43" cy="156" rx="8" ry="4.5" fill="#2b251c" stroke="none" /><ellipse cx="69" cy="156" rx="8" ry="4.5" fill="#2b251c" stroke="none" />
+        <path d="M42 56 Q56 50 70 56 L78 124 Q56 134 34 124 Z" fill="#b14e2c" />
+        <path d="M44 64 L29 90" /><circle cx="27" cy="93" r="5" fill="#e9b784" />
+        <path d="M68 62 L86 38" /><circle cx="88" cy="35" r="5" fill="#e9b784" /><path d="M88 33 L91 25" />
+        <circle cx="56" cy="36" r="19" fill="#e9b784" />
+        <path d="M37 36 Q39 14 56 15 Q73 14 75 36" fill="#2b251c" stroke="none" /><circle cx="56" cy="13" r="6.5" fill="#2b251c" stroke="none" />
+        <circle cx="50" cy="38" r="2.6" fill="#2b251c" stroke="none" /><circle cx="62" cy="38" r="2.6" fill="#2b251c" stroke="none" />
+        <path d="M50 47 Q56 52 62 47" />
+        <circle cx="44" cy="45" r="4" fill="#b14e2c" opacity=".25" stroke="none" /><circle cx="68" cy="45" r="4" fill="#b14e2c" opacity=".25" stroke="none" />
+      </symbol>
+      {/* a diverse team of three — different skin tones, attire & roles */}
+      <symbol id="c-team" viewBox="0 0 286 176" stroke="#2b251c" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        {/* A — woman, sage dress, bun, waving (tan) */}
+        <path d="M40 122 L37 153" /><path d="M54 122 L57 153" /><ellipse cx="35" cy="155" rx="7.5" ry="4" fill="#2b251c" stroke="none" /><ellipse cx="59" cy="155" rx="7.5" ry="4" fill="#2b251c" stroke="none" />
+        <path d="M32 58 Q46 52 60 58 L66 124 Q46 132 26 124 Z" fill="#5e7152" />
+        <path d="M34 66 L24 90" /><circle cx="22" cy="93" r="4.6" fill="#d9a878" /><path d="M60 64 L74 42" /><circle cx="76" cy="39" r="4.6" fill="#d9a878" />
+        <path d="M80 33 q4 -3 7 -1" opacity=".4" />
+        <circle cx="46" cy="36" r="17" fill="#d9a878" /><path d="M30 36 Q32 16 46 17 Q60 16 62 36" fill="#2b251c" stroke="none" /><circle cx="46" cy="15" r="6" fill="#2b251c" stroke="none" />
+        <circle cx="41" cy="37" r="2.4" fill="#2b251c" stroke="none" /><circle cx="51" cy="37" r="2.4" fill="#2b251c" stroke="none" /><path d="M41 45 Q46 49 51 45" />
+        {/* B — man, clay shirt + gold tie, holding a tablet (brown) */}
+        <path d="M134 116 L131 153" /><path d="M150 116 L153 153" /><ellipse cx="129" cy="155" rx="8" ry="4.2" fill="#2b251c" stroke="none" /><ellipse cx="155" cy="155" rx="8" ry="4.2" fill="#2b251c" stroke="none" />
+        <path d="M122 50 Q142 44 162 50 L156 116 Q142 122 128 116 Z" fill="#b14e2c" />
+        <path d="M140 50 L146 50 L143 66 Z" fill="#c08a3e" stroke="none" />
+        <rect x="115" y="76" width="27" height="19" rx="3" fill="#2b251c" /><line x1="120" y1="82" x2="137" y2="82" stroke="#f3ddc0" strokeWidth="2" /><line x1="120" y1="88" x2="132" y2="88" stroke="#d9a878" strokeWidth="2" />
+        <path d="M127 60 L120 79" /><circle cx="118" cy="83" r="4.8" fill="#a9764a" /><path d="M160 58 L168 86" /><circle cx="169" cy="89" r="4.8" fill="#a9764a" />
+        <circle cx="142" cy="30" r="18.5" fill="#a9764a" /><path d="M122 30 Q124 10 142 11 Q160 10 162 30 Q142 23 122 30 Z" fill="#2b251c" stroke="none" />
+        <circle cx="136" cy="31" r="2.5" fill="#2b251c" stroke="none" /><circle cx="148" cy="31" r="2.5" fill="#2b251c" stroke="none" /><path d="M136 40 Q142 45 148 40" />
+        {/* C — glasses, gold top, curly hair, waving (light) */}
+        <path d="M224 122 L221 153" /><path d="M238 122 L241 153" /><ellipse cx="219" cy="155" rx="7.5" ry="4" fill="#2b251c" stroke="none" /><ellipse cx="243" cy="155" rx="7.5" ry="4" fill="#2b251c" stroke="none" />
+        <path d="M212 56 Q230 50 248 56 L254 124 Q230 132 206 124 Z" fill="#c08a3e" />
+        <path d="M214 64 L206 90" /><circle cx="204" cy="93" r="4.6" fill="#f3ddc0" /><path d="M248 62 L262 42" /><circle cx="264" cy="39" r="4.6" fill="#f3ddc0" />
+        <path d="M210 40 Q208 14 230 13 Q252 14 250 40 Q244 31 238 35 Q232 27 226 33 Q220 27 214 35 Q210 33 210 40 Z" fill="#6b4a2e" stroke="none" />
+        <circle cx="230" cy="39" r="16.5" fill="#f3ddc0" />
+        <circle cx="224" cy="40" r="5" stroke="#2b251c" strokeWidth="2" /><circle cx="236" cy="40" r="5" stroke="#2b251c" strokeWidth="2" /><line x1="229" y1="40" x2="231" y2="40" stroke="#2b251c" strokeWidth="2" />
+        <path d="M225 49 Q230 53 235 49" />
       </symbol>
       <symbol id="c-wave" viewBox="0 0 120 168" stroke="#2b251c" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
         <path d="M52 108 L50 150" /><path d="M68 108 L70 150" /><ellipse cx="48" cy="152" rx="9" ry="5" fill="#2b251c" stroke="none" /><ellipse cx="72" cy="152" rx="9" ry="5" fill="#2b251c" stroke="none" />
@@ -91,12 +125,16 @@ function Nav() {
     <nav className={`fixed top-0 inset-x-0 z-50 transition-colors duration-300 ${stuck ? 'bg-background/80 backdrop-blur-xl border-b border-border' : 'border-b border-transparent'}`}>
       <div className="max-w-6xl mx-auto px-6 h-[72px] flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 font-semibold text-[19px] tracking-tight">
-          <span className="w-7 h-7 rounded-lg bg-accent text-white flex items-center justify-center text-xs font-bold">N</span>
+          <NexusMark size={26} className="text-foreground" />
           Nexus
         </Link>
         <div className="hidden md:flex items-center gap-1 text-[14px]">
-          {[['Features', '#features'], ['How it works', '#tree'], ['Pricing', '#pricing']].map(([l, h]) => (
-            <a key={h} href={h} className="px-3.5 py-2 rounded-lg text-muted hover:text-foreground hover:bg-hover transition-colors">{l}</a>
+          {([['Features', '#features'], ['Pricing', '#pricing'], ['Blog', '/blog'], ['About', '/about']] as [string, string][]).map(([l, h]) => (
+            h.startsWith('/') ? (
+              <Link key={h} href={h} className="px-3.5 py-2 rounded-lg text-muted hover:text-foreground hover:bg-hover transition-colors">{l}</Link>
+            ) : (
+              <a key={h} href={h} className="px-3.5 py-2 rounded-lg text-muted hover:text-foreground hover:bg-hover transition-colors">{l}</a>
+            )
           ))}
         </div>
         <div className="flex items-center gap-2">
@@ -146,17 +184,70 @@ function Tick({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ─── A "scattered tool" card for the problem collage ────────────────────────────
+function MessCard({ tool, name, color, style }: { tool: string; name: string; color: string; style?: React.CSSProperties }) {
+  return (
+    <div className="absolute w-[206px] rounded-2xl border border-border bg-card shadow-lg p-3.5" style={style}>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="w-[18px] h-[18px] rounded-[6px] shrink-0" style={{ background: color }} />
+        <span className="text-[11px] text-muted font-medium">{tool}</span>
+      </div>
+      <div className="text-[13.5px] font-medium text-foreground/85 truncate">{name}</div>
+    </div>
+  );
+}
+
+// ─── Comparison + FAQ data ──────────────────────────────────────────────────────
+// Honest positioning: we don't out-feature Notion today — this is where we're going.
+const ROADMAP: [LucideIcon, string, string][] = [
+  [Sparkles, 'A workspace that organizes itself', 'Capture a thought and Nexus files it, links it to related work, and grows the tree for you — no manual sorting, ever.'],
+  [Search, 'Ask your whole workspace', 'Pose a question and get an answer drawn from everything your team has written — with sources you can click straight through to.'],
+  [RefreshCw, 'Knowledge that stays true', 'Documents flag themselves when they go stale and pull fresh details from the source. No more wikis no one trusts.'],
+  [Inbox, 'Capture from everywhere', 'Turn Slack messages, meeting notes, and email into clean, structured nodes — automatically, where they belong.'],
+];
+
+const FAQ: [string, string][] = [
+  ['Is Nexus a Notion alternative?', 'Yes. If Notion has grown into a maze, Nexus keeps the block editor you like but adds real structure and a calmer, faster experience — so your workspace stays organized as it grows.'],
+  ['Can I import from Notion or Google Docs?', 'Yes. Paste a URL and Nexus pulls the page in as clean, native blocks. Moving your knowledge over takes minutes, not a lost weekend.'],
+  ['Is Nexus good for a team wiki or knowledge base?', 'That’s exactly what it’s built for. One infinitely-nestable tree keeps every document, folder, and plan in a single place your whole team can actually find.'],
+  ['Does Nexus help with content planning?', 'Yes. A built-in content calendar lets you attach any page to a date for editorial planning, release notes, or sprints — no database hacks required.'],
+  ['Can my team collaborate in real time?', 'Yes — live cursors and instant updates, with clear admin, editor, and viewer roles scoped to each workspace.'],
+  ['Is there a free plan?', 'Yes. Your first workspace is free forever, and you don’t need a credit card to start.'],
+];
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'SoftwareApplication',
+        name: 'Nexus',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        description:
+          'Nexus is a calm, structured knowledge workspace — a Notion and Google Docs alternative that keeps your team’s notes, documents, and plans in one searchable, infinitely-nestable tree.',
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: FAQ.map(([q, a]) => ({
+          '@type': 'Question',
+          name: q,
+          acceptedAnswer: { '@type': 'Answer', text: a },
+        })),
+      },
+    ],
+  };
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <CharacterSprite />
       <Nav />
 
       {/* HERO */}
       <section className="px-6 pt-28 sm:pt-36 pb-14 text-center">
         <div className="max-w-5xl mx-auto">
-          <div className="hero-stagger-1 text-[12.5px] font-semibold tracking-[0.16em] uppercase text-accent mb-7">Block-based knowledge workspace</div>
           <h1 className="hero-stagger-2 font-display text-[clamp(44px,7vw,84px)] leading-[1.0] font-semibold tracking-[-0.04em] max-w-[15ch] mx-auto mb-7">
             A calm home for{' '}
             <span className="relative whitespace-nowrap">everything
@@ -174,24 +265,50 @@ export default function LandingPage() {
 
           <div className="hero-stagger-5 relative mt-16">
             <Shot src="/shots/app-doc.png" alt="Nexus — a document open in the workspace, with the page tree, live collaborators and comments" eager />
-            <svg aria-hidden="true" className="hidden lg:block absolute pointer-events-none z-[6] drop-shadow-lg" style={{ width: 120, top: -46, right: '6%', ...charBob }}><use href="#c-peek" /></svg>
+            <svg aria-hidden="true" className="hidden lg:block absolute pointer-events-none z-[6] drop-shadow-lg" style={{ width: 248, bottom: -26, left: 12, ...charBob2 }}><use href="#c-team" /></svg>
           </div>
         </div>
       </section>
 
-      {/* TRUST */}
-      <div className="px-6 pt-16 pb-2 text-center">
-        <p className="text-[12px] tracking-[0.14em] uppercase text-muted/80 font-semibold mb-7">Trusted by thoughtful teams</p>
-        <div className="flex flex-wrap justify-center gap-x-12 gap-y-4 opacity-70 text-[18px] font-semibold tracking-tight text-muted">
-          {['Northwind', 'Vector', 'Foundry', 'Lumen', 'Halcyon', 'Cobalt'].map((n) => <span key={n}>{n}</span>)}
+      {/* PROBLEM — designed scatter collage */}
+      <section className="px-6 pt-24 pb-14">
+        <div className="max-w-[1120px] mx-auto grid lg:grid-cols-[1fr_1.05fr] gap-12 lg:gap-16 items-center">
+          <RevealOnScroll>
+            <h2 className="font-display text-[clamp(30px,4.8vw,56px)] font-semibold tracking-[-0.035em] leading-[1.0]">
+              Your team’s knowledge is <span className="text-accent">everywhere.</span><br /> And nowhere.
+            </h2>
+            <p className="text-[18px] text-muted mt-6 leading-relaxed max-w-[46ch]">
+              It’s scattered across a dozen Google Docs, a Notion that’s grown into a maze, Slack threads no one can search, and someone’s laptop. New hires take weeks to find their footing. The same questions get answered twice. Good thinking disappears the moment it’s written down.
+            </p>
+            <p className="text-[18px] text-foreground mt-5 leading-relaxed font-medium max-w-[46ch]">
+              Nexus fixes the part every other tool ignores — <span className="text-accent">where your knowledge actually lives.</span>
+            </p>
+          </RevealOnScroll>
+          <RevealOnScroll delay={120}>
+            <div className="relative h-[360px] sm:h-[420px] select-none" aria-hidden="true">
+              <MessCard tool="Google Docs" name="Roadmap-FINAL-v3.docx" color="#7c8aa0" style={{ top: 4, left: 14, transform: 'rotate(-6deg)', zIndex: 3 }} />
+              <MessCard tool="Notion" name="Untitled" color="#9a948a" style={{ top: 0, right: 6, transform: 'rotate(5deg)', zIndex: 2 }} />
+              <MessCard tool="Slack" name="“did anyone save the Q3 notes?”" color="#9b7fa0" style={{ top: 116, left: 0, transform: 'rotate(-3deg)', zIndex: 4 }} />
+              <MessCard tool="Drive" name="brand_assets_old/" color="#86a07c" style={{ top: 150, right: 2, transform: 'rotate(7deg)', zIndex: 2 }} />
+              <MessCard tool="Desktop" name="launch-plan (1).docx" color="#b08a6a" style={{ bottom: 12, left: 40, transform: 'rotate(-9deg)', zIndex: 3, opacity: 0.92 }} />
+              <div className="absolute z-[6] w-[244px] rounded-2xl border border-border bg-card shadow-xl p-3.5" style={{ top: 186, left: 78, transform: 'rotate(2deg)' }}>
+                <div className="flex items-center gap-2 rounded-xl bg-background border border-border px-3 py-2">
+                  <Search className="w-4 h-4 text-muted shrink-0" strokeWidth={2} />
+                  <span className="text-[13px] text-foreground/80 truncate">where’s the launch plan?</span>
+                </div>
+                <div className="mt-2.5 flex items-center gap-1.5 px-0.5 text-[12px] text-muted">
+                  <X className="w-3.5 h-3.5 text-muted/50" strokeWidth={2.4} /> No results across 4 tools
+                </div>
+              </div>
+            </div>
+          </RevealOnScroll>
         </div>
-      </div>
+      </section>
 
       {/* FEATURES */}
       <section id="features" className="px-6 py-28">
         <div className="max-w-[1120px] mx-auto">
           <RevealOnScroll className="text-center max-w-[62ch] mx-auto">
-            <div className="text-[12.5px] font-semibold tracking-[0.14em] uppercase text-accent mb-4">The product</div>
             <h2 className="font-display text-[clamp(30px,4.3vw,50px)] font-semibold tracking-[-0.034em] leading-[1.06]">Less software. More like a well-kept study.</h2>
             <p className="text-[18.5px] text-muted mt-4 leading-relaxed">Everything you need to think clearly — and nothing that gets in the way.</p>
           </RevealOnScroll>
@@ -201,7 +318,7 @@ export default function LandingPage() {
             <RevealOnScroll delay={160}>
               <div className="relative">
                 <FeatureCard icon={Users} title="Edit together">Live cursors and instant updates. Collaborate in real time, calmly, without a single collision.</FeatureCard>
-                <svg aria-hidden="true" className="hidden lg:block absolute pointer-events-none z-[6] drop-shadow-lg" style={{ width: 70, top: -37, right: 16, ...charBob2 }}><use href="#c-peek" /></svg>
+                <svg aria-hidden="true" className="hidden lg:block absolute pointer-events-none z-[6] drop-shadow-lg" style={{ width: 88, bottom: -8, right: -30, ...charBob2 }}><use href="#c-girl" /></svg>
               </div>
             </RevealOnScroll>
             <RevealOnScroll><FeatureCard icon={Download} title="Bring it over">Import from Notion with a single URL. Your pages arrive as clean, native Nexus blocks.</FeatureCard></RevealOnScroll>
@@ -215,7 +332,6 @@ export default function LandingPage() {
       <section className="px-6 pb-28">
         <div className="max-w-[1120px] mx-auto">
           <RevealOnScroll className="text-center max-w-[62ch] mx-auto">
-            <div className="text-[12.5px] font-semibold tracking-[0.14em] uppercase text-accent mb-4">Plan visually</div>
             <h2 className="font-display text-[clamp(30px,4.3vw,50px)] font-semibold tracking-[-0.034em] leading-[1.06]">Your calendar, in the same calm space.</h2>
             <p className="text-[18.5px] text-muted mt-4 leading-relaxed">Attach any page to a date and see the whole month at a glance — content, releases, and prep on one timeline.</p>
           </RevealOnScroll>
@@ -227,7 +343,6 @@ export default function LandingPage() {
       <section id="tree" className="px-6 pb-28">
         <div className="max-w-[1120px] mx-auto grid lg:grid-cols-[1fr_1.05fr] gap-16 items-center">
           <RevealOnScroll>
-            <div className="text-[12.5px] font-semibold tracking-[0.14em] uppercase text-accent mb-4">One tree</div>
             <h3 className="font-display text-[clamp(26px,3.2vw,38px)] font-semibold tracking-[-0.028em] leading-[1.1] mb-4">Everything has a place.</h3>
             <p className="text-[16.5px] text-muted leading-relaxed mb-6 max-w-[46ch]">No more guessing whether something is a “page” or a “file.” In Nexus it&apos;s all one tree — so you can nest, move, and find anything without friction.</p>
             <ul className="flex flex-col gap-3">
@@ -264,10 +379,28 @@ export default function LandingPage() {
           <RevealOnScroll className="text-center max-w-[900px] mx-auto">
             <p className="font-display text-[clamp(24px,3.3vw,40px)] leading-[1.32] font-medium tracking-[-0.022em]">A workspace should feel less like software and <span className="text-accent">more like a well-kept library</span> — calm, ordered, and impossible to lose your place in.</p>
           </RevealOnScroll>
-          <RevealOnScroll className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-border border border-border rounded-2xl overflow-hidden mt-16">
-            {[['10k+', 'blocks per document'], ['<30ms', 'real-time sync'], ['99.99%', 'uptime']].map(([n, l]) => (
-              <div key={l} className="bg-background py-9 px-8 text-center"><div className="font-display text-[clamp(34px,4.2vw,50px)] font-semibold tracking-[-0.03em]">{n}</div><div className="text-[14px] text-muted mt-2">{l}</div></div>
-            ))}
+          <RevealOnScroll className="mt-24">
+            <div className="text-center max-w-[60ch] mx-auto mb-12">
+              <h2 className="font-display text-[clamp(26px,3.8vw,44px)] font-semibold tracking-[-0.03em] leading-[1.05]">We’re not out-featuring Notion.</h2>
+              <p className="text-[18px] text-muted mt-5 leading-relaxed">
+                Notion and Google Docs are excellent tools. Nexus is building what they were never designed
+                to be — a workspace that does the organizing <em className="not-italic text-foreground font-medium">for</em> you, so your team’s knowledge never scatters again. Here’s where we’re headed.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-[18px] max-w-[940px] mx-auto">
+              {ROADMAP.map(([Icon, t, d], i) => (
+                <div key={i} className="p-7 rounded-2xl border border-border bg-card">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="w-12 h-12 rounded-xl border border-border bg-background flex items-center justify-center text-accent">
+                      <Icon className="w-[21px] h-[21px]" strokeWidth={1.9} />
+                    </div>
+                    <span className="text-[10.5px] font-semibold tracking-wide uppercase text-accent rounded-full px-2.5 py-1 border border-accent/30" style={{ background: 'color-mix(in oklab, var(--accent) 8%, transparent)' }}>On the roadmap</span>
+                  </div>
+                  <h3 className="text-[19px] font-semibold tracking-tight mb-2">{t}</h3>
+                  <p className="text-[14.5px] text-muted leading-relaxed">{d}</p>
+                </div>
+              ))}
+            </div>
           </RevealOnScroll>
         </div>
       </section>
@@ -276,7 +409,6 @@ export default function LandingPage() {
       <section className="px-6 pb-28">
         <div className="max-w-[1120px] mx-auto">
           <RevealOnScroll className="text-center max-w-[62ch] mx-auto">
-            <div className="text-[12.5px] font-semibold tracking-[0.14em] uppercase text-accent mb-4">How it works</div>
             <h2 className="font-display text-[clamp(30px,4.3vw,50px)] font-semibold tracking-[-0.034em] leading-[1.06]">From blank page to second brain.</h2>
           </RevealOnScroll>
           <RevealOnScroll className="grid md:grid-cols-3 mt-14 border-t border-border">
@@ -285,7 +417,7 @@ export default function LandingPage() {
               ['STEP 02', 'Capture everything', 'Write docs, nest folders, import from Notion. Every idea becomes a node you can find again.'],
               ['STEP 03', 'Plan & ship', 'Attach pages to a calendar and collaborate in real time as your knowledge compounds.'],
             ].map(([n, t, d], i) => (
-              <div key={i} className={`py-8 pr-8 ${i < 2 ? 'border-r border-border' : ''}`}>
+              <div key={i} className={`py-8 pr-8 ${i > 0 ? 'md:pl-9' : ''} ${i < 2 ? 'border-r border-border' : ''}`}>
                 <div className="text-[13px] font-semibold text-accent tabular-nums">{n}</div>
                 <h3 className="text-[20px] font-semibold tracking-tight mt-4 mb-2">{t}</h3>
                 <p className="text-[15px] text-muted leading-relaxed max-w-[34ch]">{d}</p>
@@ -309,11 +441,28 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* FAQ — SEO + objection handling */}
+      <section id="faq" className="px-6 pb-28">
+        <div className="max-w-[1120px] mx-auto relative">
+          <svg aria-hidden="true" className="hidden lg:block absolute pointer-events-none z-[6] drop-shadow-lg" style={{ width: 84, top: -10, right: 6, ...charBob }}><use href="#c-write" /></svg>
+          <RevealOnScroll className="text-center max-w-[62ch] mx-auto">
+            <h2 className="font-display text-[clamp(30px,4.3vw,50px)] font-semibold tracking-[-0.034em] leading-[1.06]">Everything you’re probably wondering.</h2>
+          </RevealOnScroll>
+          <div className="grid md:grid-cols-2 gap-x-14 gap-y-9 mt-14 max-w-[940px] mx-auto">
+            {FAQ.map(([q, a]) => (
+              <RevealOnScroll key={q}>
+                <h3 className="text-[17.5px] font-semibold tracking-tight mb-2.5">{q}</h3>
+                <p className="text-[15px] text-muted leading-relaxed">{a}</p>
+              </RevealOnScroll>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* PRICING */}
       <section id="pricing" className="px-6 pb-28">
         <div className="max-w-[1120px] mx-auto">
           <RevealOnScroll className="text-center max-w-[62ch] mx-auto">
-            <div className="text-[12.5px] font-semibold tracking-[0.14em] uppercase text-accent mb-4">Pricing</div>
             <h2 className="font-display text-[clamp(30px,4.3vw,50px)] font-semibold tracking-[-0.034em] leading-[1.06]">Simple plans that grow with you.</h2>
           </RevealOnScroll>
           <div className="grid lg:grid-cols-3 gap-[18px] mt-14 max-w-[400px] lg:max-w-none mx-auto">
@@ -351,27 +500,7 @@ export default function LandingPage() {
         </RevealOnScroll>
       </section>
 
-      {/* FOOTER */}
-      <footer className="px-6 pt-16 pb-12 border-t border-border bg-sidebar">
-        <div className="max-w-[1120px] mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-[1.7fr_1fr_1fr_1fr] gap-10">
-            <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2.5 font-semibold text-[16px] tracking-tight"><span className="w-7 h-7 rounded-lg bg-accent text-white flex items-center justify-center text-[11px] font-bold">N</span>Nexus</div>
-              <p className="text-[14.5px] text-muted max-w-[30ch] mt-3.5 leading-relaxed">A calm home for everything you know. Write, organize, and plan — all in one place.</p>
-            </div>
-            {[['Product', ['Features', 'Pricing', 'How it works', 'Changelog']], ['Company', ['About', 'Blog', 'Careers', 'Contact']], ['Resources', ['Docs', 'API', 'Community', 'Status']]].map(([h, items]) => (
-              <div key={h as string}>
-                <h4 className="text-[12px] tracking-[0.1em] uppercase text-muted/80 font-semibold mb-4">{h as string}</h4>
-                {(items as string[]).map((x) => <a key={x} href="#" className="block text-[14.5px] text-muted hover:text-accent transition-colors mb-2.5">{x}</a>)}
-              </div>
-            ))}
-          </div>
-          <div className="mt-14 pt-7 border-t border-border flex justify-between flex-wrap gap-3 text-[13px] text-muted">
-            <span>© {new Date().getFullYear()} Nexus, Inc. All rights reserved.</span>
-            <span>Privacy · Terms</span>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </>
   );
 }
