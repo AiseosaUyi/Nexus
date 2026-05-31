@@ -48,7 +48,6 @@ export default function SecurityPage() {
       {/* Hero */}
       <section className="pt-20 pb-14 max-w-[1120px] mx-auto">
         <RevealOnScroll>
-          <div className="text-[13px] font-semibold tracking-[0.1em] uppercase text-accent mb-5">Security</div>
           <h1 className="font-display text-[clamp(34px,5vw,60px)] font-semibold tracking-[-0.04em] leading-[1.0] mb-6">
             Your data is your data.
           </h1>

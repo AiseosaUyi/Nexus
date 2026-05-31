@@ -46,9 +46,6 @@ export default function DocsPage() {
   return (
     <div>
       <div className="mb-10">
-        <div className="text-[13px] font-semibold tracking-[0.08em] uppercase text-accent mb-3">
-          Documentation
-        </div>
         <h1 className="font-display text-[clamp(28px,3.8vw,44px)] font-semibold tracking-[-0.035em] leading-[1.05] mb-4">
           Welcome to Nexus Docs
         </h1>

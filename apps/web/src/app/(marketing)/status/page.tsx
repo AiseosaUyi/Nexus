@@ -56,7 +56,6 @@ export default function StatusPage() {
     <div className="px-6">
       <section className="pt-20 pb-14 max-w-[1120px] mx-auto">
         <RevealOnScroll>
-          <div className="text-[13px] font-semibold tracking-[0.1em] uppercase text-accent mb-5">Status</div>
           <div className="flex items-start gap-5 mb-6">
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 mt-1"

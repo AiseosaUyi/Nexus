@@ -57,7 +57,6 @@ export default function AboutPage() {
       <section className="pt-20 pb-16 max-w-[1120px] mx-auto">
         <RevealOnScroll>
           <div className="max-w-[700px]">
-            <div className="text-[13px] font-semibold tracking-[0.1em] uppercase text-accent mb-5">About Nexus</div>
             <h1 className="font-display text-[clamp(38px,5.5vw,66px)] font-semibold tracking-[-0.04em] leading-[1.0] mb-7">
               We're building the workspace<br className="hidden sm:block" /> we always wanted.
             </h1>
