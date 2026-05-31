@@ -34,17 +34,12 @@ export default function BlogPage() {
         <RevealOnScroll>
           <Link
             href={`/blog/${featured.slug}`}
-            className="group grid lg:grid-cols-[1.3fr_1fr] gap-0 rounded-2xl border border-border bg-card hover:border-accent/40 transition-colors overflow-hidden"
+            className="group grid lg:grid-cols-[1.3fr_1fr] rounded-2xl border border-border bg-card hover:border-accent/40 transition-colors overflow-hidden"
           >
-            {/* Text side */}
             <div className="p-8 lg:p-10">
               <div className="flex items-center gap-3 mb-4">
                 {featured.tags.map((t) => (
-                  <span
-                    key={t}
-                    className="text-[11.5px] font-semibold px-2.5 py-0.5 rounded-full border border-border"
-                    style={{ background: 'color-mix(in oklab, var(--accent) 8%, transparent)', color: 'var(--accent)' }}
-                  >
+                  <span key={t} className="text-[11.5px] font-semibold px-2.5 py-0.5 rounded-full border border-border" style={{ background: 'color-mix(in oklab, var(--accent) 8%, transparent)', color: 'var(--accent)' }}>
                     {t}
                   </span>
                 ))}
@@ -54,10 +49,7 @@ export default function BlogPage() {
               </h2>
               <p className="text-[15.5px] text-muted leading-relaxed mb-6">{featured.excerpt}</p>
               <div className="flex items-center gap-3">
-                <span
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[13px] font-bold"
-                  style={{ background: 'var(--accent)' }}
-                >
+                <span className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[13px] font-bold" style={{ background: 'var(--accent)' }}>
                   {featured.author.initials}
                 </span>
                 <div className="text-[13.5px]">
@@ -67,18 +59,14 @@ export default function BlogPage() {
               </div>
             </div>
 
-            {/* Illustration side */}
-            <div
-              className="hidden lg:flex items-end justify-center relative min-h-[240px] border-l border-border overflow-hidden"
-              style={{ background: featured.cardColor }}
-            >
-              <svg
-                aria-hidden="true"
-                className="relative z-10"
-                style={{ width: 190, display: 'block' }}
-              >
-                <use href={`#${featured.character}`} />
-              </svg>
+            {/* Cover photo */}
+            <div className="hidden lg:block relative min-h-[260px] border-l border-border overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={featured.coverImage}
+                alt={featured.title}
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
             </div>
           </Link>
         </RevealOnScroll>
@@ -93,25 +81,20 @@ export default function BlogPage() {
                 href={`/blog/${post.slug}`}
                 className="group flex flex-col h-full rounded-2xl border border-border bg-card hover:border-accent/40 transition-colors overflow-hidden"
               >
-                {/* Illustration */}
-                <div
-                  className="relative h-[148px] flex items-end justify-center overflow-hidden border-b border-border"
-                  style={{ background: post.cardColor }}
-                >
-                  <svg aria-hidden="true" style={{ width: 100, display: 'block', flexShrink: 0 }}>
-                    <use href={`#${post.character}`} />
-                  </svg>
+                {/* Cover photo */}
+                <div className="relative h-[160px] overflow-hidden border-b border-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={post.coverImage}
+                    alt={post.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
                 </div>
 
-                {/* Content */}
                 <div className="p-5 flex flex-col flex-1">
                   <div className="flex flex-wrap gap-2 mb-3">
                     {post.tags.map((t) => (
-                      <span
-                        key={t}
-                        className="text-[11px] font-semibold px-2 py-0.5 rounded-full border border-border"
-                        style={{ background: 'color-mix(in oklab, var(--accent) 8%, transparent)', color: 'var(--accent)' }}
-                      >
+                      <span key={t} className="text-[11px] font-semibold px-2 py-0.5 rounded-full border border-border" style={{ background: 'color-mix(in oklab, var(--accent) 8%, transparent)', color: 'var(--accent)' }}>
                         {t}
                       </span>
                     ))}
@@ -119,19 +102,12 @@ export default function BlogPage() {
                   <h3 className="font-semibold text-[16px] leading-[1.35] tracking-tight mb-2.5 group-hover:text-accent transition-colors flex-1">
                     {post.title}
                   </h3>
-                  <p className="text-[13px] text-muted leading-relaxed mb-4 line-clamp-2">
-                    {post.excerpt}
-                  </p>
+                  <p className="text-[13px] text-muted leading-relaxed mb-4 line-clamp-2">{post.excerpt}</p>
                   <div className="flex items-center gap-2 pt-3.5 border-t border-border">
-                    <span
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
-                      style={{ background: 'var(--accent)' }}
-                    >
+                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold" style={{ background: 'var(--accent)' }}>
                       {post.author.initials}
                     </span>
-                    <span className="text-[12px] text-muted">
-                      {post.author.name} · {formatDate(post.date)}
-                    </span>
+                    <span className="text-[12px] text-muted">{post.author.name} · {formatDate(post.date)}</span>
                   </div>
                 </div>
               </Link>

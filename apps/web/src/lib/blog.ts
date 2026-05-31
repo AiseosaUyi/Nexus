@@ -7,8 +7,7 @@ export interface BlogPost {
   readTime: number;
   tags: string[];
   body: string;
-  character: 'c-write' | 'c-girl' | 'c-jump' | 'c-wave' | 'c-team';
-  cardColor: string;
+  coverImage: string;
 }
 
 const POSTS: BlogPost[] = [
@@ -20,8 +19,7 @@ const POSTS: BlogPost[] = [
     author: { name: 'Ayo Reeves', initials: 'AR', role: 'Co-founder' },
     readTime: 6,
     tags: ['Knowledge management', 'Teams'],
-    character: 'c-write' as const,
-    cardColor: 'radial-gradient(ellipse at 70% 80%, #c08a3e33, #b14e2c22 60%, transparent)',
+    coverImage: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=900&q=75&auto=format&fit=crop',
     body: `
 <p>The problem isn't that your team is lazy about documentation. The problem is that most wikis are designed as filing cabinets — you put something in, it sits there, and nothing reminds you it exists until someone complains it's wrong.</p>
 
@@ -51,8 +49,7 @@ const POSTS: BlogPost[] = [
     author: { name: 'Ayo Reeves', initials: 'AR', role: 'Co-founder' },
     readTime: 5,
     tags: ['Product', 'Design'],
-    character: 'c-girl' as const,
-    cardColor: 'radial-gradient(ellipse at 70% 80%, #b14e2c2e, #c08a3e1a 60%, transparent)',
+    coverImage: 'https://images.unsplash.com/photo-1524995997946-a1c2e269a138?w=900&q=75&auto=format&fit=crop',
     body: `
 <p>When you open a typical knowledge tool, you're immediately asked to make a choice: is this a page? A database? A folder? A doc?</p>
 <p>These distinctions feel meaningful at first. They become friction fast.</p>
@@ -79,8 +76,7 @@ const POSTS: BlogPost[] = [
     author: { name: 'Priya Iyer', initials: 'PI', role: 'Head of Product' },
     readTime: 4,
     tags: ['Content', 'Workflow'],
-    character: 'c-jump' as const,
-    cardColor: 'radial-gradient(ellipse at 70% 80%, #5e715226, #c08a3e1a 60%, transparent)',
+    coverImage: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=900&q=75&auto=format&fit=crop',
     body: `
 <p>Content teams have a calendar problem. The calendar is in Airtable. The briefs are in Google Docs. The published posts are on the website. The performance data is in Notion. The conversations about what to write next are in Slack.</p>
 <p>These are four or five different systems, and at least as many mental context-switches per day. Something always falls through.</p>
@@ -103,8 +99,7 @@ const POSTS: BlogPost[] = [
     author: { name: 'Marcus Olin', initials: 'MO', role: 'Engineering' },
     readTime: 7,
     tags: ['Engineering', 'Collaboration'],
-    character: 'c-wave' as const,
-    cardColor: 'radial-gradient(ellipse at 70% 80%, #5e715230, #b14e2c18 60%, transparent)',
+    coverImage: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900&q=75&auto=format&fit=crop',
     body: `
 <p>Live collaboration in text editors is one of those features that's impressive for thirty seconds and then quietly stressful for the next six months.</p>
 <p>You've experienced this. You open a doc to finish an important paragraph. Your cursor is there. Another cursor materializes from somewhere. You both start typing. The text merges in ways that require immediate repair. You close the tab and go back to emailing drafts.</p>
@@ -130,8 +125,7 @@ const POSTS: BlogPost[] = [
     author: { name: 'Priya Iyer', initials: 'PI', role: 'Head of Product' },
     readTime: 5,
     tags: ['How-to', 'Import'],
-    character: 'c-team' as const,
-    cardColor: 'radial-gradient(ellipse at 70% 80%, #c08a3e28, #5e715220 60%, transparent)',
+    coverImage: 'https://images.unsplash.com/photo-1553484771-371a605b060b?w=900&q=75&auto=format&fit=crop',
     body: `
 <p>The biggest reason teams don't switch knowledge tools isn't price or features — it's the cost of moving years of documentation. We've tried to make that cost as low as possible.</p>
 

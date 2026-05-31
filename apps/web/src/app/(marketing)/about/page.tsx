@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import RevealOnScroll from '@/components/marketing/RevealOnScroll';
 
-type CharId = 'c-wave' | 'c-write' | 'c-jump';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -11,27 +10,24 @@ export const metadata: Metadata = {
     "Nexus is built by a small team that kept losing important work to scattered tools. We're building the calm, structured workspace we always wanted.",
 };
 
-const TEAM: { name: string; role: string; bio: string; character: CharId; cardColor: string }[] = [
+const TEAM: { name: string; role: string; bio: string; photo: string }[] = [
   {
     name: 'Ayo Reeves',
     role: 'Co-founder & CEO',
     bio: 'Previously led product at an enterprise SaaS company. Spent three years watching teams fail to maintain their knowledge bases.',
-    character: 'c-wave',
-    cardColor: 'radial-gradient(ellipse at 60% 100%, #5e715230, #c08a3e18 70%, transparent)',
+    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80&auto=format&fit=crop&crop=face',
   },
   {
     name: 'Priya Iyer',
     role: 'Co-founder & CPO',
     bio: 'Designed and shipped knowledge tools at two companies. Believes the right interface can change the way people think.',
-    character: 'c-write',
-    cardColor: 'radial-gradient(ellipse at 60% 100%, #b14e2c28, #c08a3e18 70%, transparent)',
+    photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80&auto=format&fit=crop&crop=face',
   },
   {
     name: 'Marcus Olin',
     role: 'Co-founder & CTO',
     bio: 'Built distributed systems and real-time collaboration infrastructure. Obsessed with making complex things feel simple.',
-    character: 'c-jump',
-    cardColor: 'radial-gradient(ellipse at 60% 100%, #c08a3e28, #b14e2c18 70%, transparent)',
+    photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80&auto=format&fit=crop&crop=face',
   },
 ];
 
@@ -138,17 +134,13 @@ export default function AboutPage() {
           </p>
         </RevealOnScroll>
         <div className="grid md:grid-cols-3 gap-[18px]">
-          {TEAM.map(({ name, role, bio, character, cardColor }, i) => (
+          {TEAM.map(({ name, role, bio, photo }, i) => (
             <RevealOnScroll key={name} delay={i * 70}>
               <div className="rounded-2xl border border-border bg-card overflow-hidden">
-                {/* Illustration panel */}
-                <div
-                  className="h-[160px] flex items-end justify-center"
-                  style={{ background: cardColor }}
-                >
-                  <svg aria-hidden="true" style={{ width: 110, display: 'block' }}>
-                    <use href={`#${character}`} />
-                  </svg>
+                {/* Headshot */}
+                <div className="relative h-[200px] overflow-hidden bg-sidebar">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photo} alt={name} className="w-full h-full object-cover object-top" />
                 </div>
                 {/* Info */}
                 <div className="p-6">

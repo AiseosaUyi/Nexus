@@ -45,13 +45,13 @@ export default async function BlogPostPage({ params }: Props) {
         {/* Article */}
         <article>
           {/* Banner */}
-          <div
-            className="relative h-[200px] rounded-2xl overflow-hidden flex items-end justify-center mb-8"
-            style={{ background: post.cardColor }}
-          >
-            <svg aria-hidden="true" style={{ width: 160, display: 'block' }}>
-              <use href={`#${post.character}`} />
-            </svg>
+          <div className="relative h-[260px] rounded-2xl overflow-hidden mb-8">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={post.coverImage}
+              alt={post.title}
+              className="w-full h-full object-cover"
+            />
           </div>
 
           <header className="mb-10">
