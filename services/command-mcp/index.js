@@ -34,7 +34,7 @@ async function call(method, body) {
 const ok = (d) => ({ content: [{ type: 'text', text: JSON.stringify(d, null, 2) }] });
 
 const TOOLS = [
-  { name: 'cc_pending', description: 'Get everything waiting on Aise: drafted replies/proposals, pending posts, quarantined items, and platform health. Call first each run.',
+  { name: 'cc_pending', description: 'Get everything waiting on the configured workspace (COMMAND_WORKSPACE): drafted replies/proposals, pending posts, quarantined items, and platform health. Call first each run.',
     inputSchema: { type: 'object', properties: {} }, run: () => call('GET').then(ok) },
   { name: 'cc_capture_opportunity', description: 'Record a new inbound item (message/comment/job/invite). Auto-scores scam risk and quarantines obvious scams. Include draft_reply to place it in the approval queue.',
     inputSchema: { type: 'object', required: ['platform', 'message'], properties: {
@@ -46,7 +46,7 @@ const TOOLS = [
     inputSchema: { type: 'object', required: ['id','draft_reply'], properties: {
       id: { type: 'string' }, draft_reply: { type: 'string' }, fit_score: { type: 'number' } } },
     run: (a) => call('POST', { op: 'draft_reply', ...a }).then(ok) },
-  { name: 'cc_mark_sent', description: 'After Aise approved and Cowork actually sent the reply, mark the opportunity sent.',
+  { name: 'cc_mark_sent', description: 'After the workspace owner approved and Cowork actually sent the reply, mark the opportunity sent.',
     inputSchema: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
     run: (a) => call('POST', { op: 'decide_opportunity', id: a.id, decision: 'sent' }).then(ok) },
   { name: 'cc_add_post', description: 'Add a content post (caption/body + optional media note) to the calendar for a platform, awaiting approval.',
@@ -54,7 +54,7 @@ const TOOLS = [
       platform: { type: 'string' }, title: { type: 'string' }, body: { type: 'string' },
       media_ref: { type: 'string' }, scheduled_for: { type: 'string' }, quality_score: { type: 'number' } } },
     run: (a) => call('POST', { op: 'add_post', ...a }).then(ok) },
-  { name: 'cc_mark_posted', description: 'After Aise approved and Cowork published the post, mark it posted with the URL.',
+  { name: 'cc_mark_posted', description: 'After the workspace owner approved and Cowork published the post, mark it posted with the URL.',
     inputSchema: { type: 'object', required: ['id'], properties: { id: { type: 'string' }, post_url: { type: 'string' } } },
     run: (a) => call('POST', { op: 'decide_post', id: a.id, decision: 'posted', post_url: a.post_url }).then(ok) },
   { name: 'cc_record_health', description: 'Store a 0-100 health score for a platform plus the single top fix.',

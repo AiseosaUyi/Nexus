@@ -64,7 +64,7 @@ create table if not exists public.command_action_log (
   id           uuid primary key default gen_random_uuid(),
   business_id  uuid not null references public.businesses (id) on delete cascade,
   platform     text,
-  kind         text not null,                              -- checked|drafted|sent|posted|scored|error
+  kind         text not null,                              -- checked|drafted|sent|posted|scored|quarantined|error
   ref_id       uuid,
   detail       text,
   created_at   timestamptz not null default now()

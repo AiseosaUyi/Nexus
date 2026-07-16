@@ -79,7 +79,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   if (!authed(req)) return new NextResponse('Unauthorized', { status: 401 });
   const supabase = createServiceClient();
-  const body = await req.json();
+
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'invalid JSON body' }, { status: 400 });
+  }
+
   const biz = await businessId(supabase, body.workspace);
   if (!biz) return NextResponse.json({ error: 'workspace not found or not enabled' }, { status: 404 });
 
@@ -88,6 +95,9 @@ export async function POST(req: NextRequest) {
   try {
     switch (op) {
       case 'capture_opportunity': {
+        if (!body.platform || !body.message) {
+          return NextResponse.json({ error: 'platform and message are required' }, { status: 400 });
+        }
         const { scam_score } = scoreScam(body.message ?? '');
         const status = scam_score >= 60 ? 'quarantined' : body.draft_reply ? 'drafted' : 'new';
         const { data, error } = await supabase.from('opportunities').insert({
@@ -97,11 +107,14 @@ export async function POST(req: NextRequest) {
           fit_score: body.fit_score ?? 0, scam_score, status,
         }).select('*').single();
         if (error) throw error;
-        await log(supabase, biz, body.platform, status === 'quarantined' ? 'error' : 'drafted',
+        await log(supabase, biz, body.platform, status === 'quarantined' ? 'quarantined' : 'drafted',
           data.id, status === 'quarantined' ? `quarantined scam=${scam_score}` : 'inbound captured');
         return NextResponse.json({ ok: true, id: data.id, scam_score, status });
       }
       case 'draft_reply': {
+        if (!body.id || !body.draft_reply) {
+          return NextResponse.json({ error: 'id and draft_reply are required' }, { status: 400 });
+        }
         const { error } = await supabase.from('opportunities')
           .update({ draft_reply: body.draft_reply, status: 'drafted',
             ...(body.fit_score != null ? { fit_score: body.fit_score } : {}) })
@@ -110,6 +123,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true });
       }
       case 'decide_opportunity': {
+        if (!body.id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
         const map: Record<string, string> = { approve: 'approved', reject: 'rejected', sent: 'sent' };
         const status = map[body.decision];
         if (!status) return NextResponse.json({ error: 'bad decision' }, { status: 400 });
@@ -121,6 +135,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, status });
       }
       case 'add_post': {
+        if (!body.platform || !body.body) {
+          return NextResponse.json({ error: 'platform and body are required' }, { status: 400 });
+        }
         // Reuse the calendar model: a backing document node + a calendar_entry.
         const { data: node, error: nodeErr } = await supabase.from('nodes').insert({
           business_id: biz, type: 'document', title: body.title || 'Untitled post',
@@ -138,6 +155,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, id: data.id });
       }
       case 'decide_post': {
+        if (!body.id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
         const map: Record<string, string> = { approve: 'scheduled', posted: 'published', reject: 'cancelled' };
         const status = map[body.decision];
         if (!status) return NextResponse.json({ error: 'bad decision' }, { status: 400 });
@@ -149,6 +167,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, status });
       }
       case 'record_health': {
+        if (!body.platform || body.health_score == null) {
+          return NextResponse.json({ error: 'platform and health_score are required' }, { status: 400 });
+        }
         const { error } = await supabase.from('platform_health').upsert({
           business_id: biz, platform: body.platform, health_score: body.health_score,
           top_fix: body.top_fix ?? null, last_checked: new Date().toISOString(),
