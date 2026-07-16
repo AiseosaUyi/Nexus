@@ -10,11 +10,6 @@ import TeamSettingsModal from '@/components/business/TeamSettingsModal';
 import { Node, Teamspace } from '@nexus/api/schema';
 import { buildTree } from '@/lib/tree';
 import { Plus, Search, Clock, Home, Upload, ChevronRight, Sparkles } from 'lucide-react';
-
-// Workspace slug where the private Freelance Command Center is available.
-// Gating the nav link here keeps it out of Gruve/Sippy sidebars, so employees
-// in those workspaces never see the personal hustle.
-const COMMAND_CENTER_SLUG = 'aise';
 import { cn } from '@/lib/utils';
 import { createNode, updateNode, createTeamspace } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { useRouter } from 'next/navigation';
@@ -28,15 +23,18 @@ interface SidebarTreeProps {
   businessName: string;
   workspaceSlug: string;
   currentUserRole: 'ADMIN' | 'EDITOR' | 'VIEWER';
+  /** When true, this workspace has the Command Center enabled → show its nav link. */
+  commandCenterEnabled?: boolean;
 }
 
-export default function SidebarTree({ 
-  initialNodes, 
+export default function SidebarTree({
+  initialNodes,
   initialTeamspaces,
-  businessId, 
+  businessId,
   businessName,
   workspaceSlug,
-  currentUserRole
+  currentUserRole,
+  commandCenterEnabled
 }: SidebarTreeProps) {
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [teamspaces, setTeamspaces] = useState<Teamspace[]>(initialTeamspaces);
@@ -176,7 +174,7 @@ export default function SidebarTree({
             </button>
           </Link>
 
-          {workspaceSlug === COMMAND_CENTER_SLUG && (
+          {commandCenterEnabled && (
             <Link href={`/w/${workspaceSlug}/command-center`} className="block">
               <button className="flex items-center gap-2 w-full p-1.5 hover:bg-hover rounded-md transition-colors cursor-pointer outline-none text-[14px] group">
                 <Sparkles className="w-4 h-4 text-foreground/40 group-hover:text-foreground shrink-0" strokeWidth={2} />

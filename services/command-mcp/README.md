@@ -1,42 +1,47 @@
 # Command Center — the Freelance hub inside Nexus
 
-A private module inside your **Aise** workspace that tracks every freelance + marketing
-platform, drafts replies and posts, scores your presence, and only acts after you approve.
-**Nexus is the brain; Cowork is the hands.** Isolated by RLS to the `aise` workspace, so your
-Gruve and Sippy employees never see it.
+A per-workspace module that tracks every freelance + marketing platform, drafts replies and
+posts, scores your presence, and only acts after you approve. **Nexus is the brain; Cowork is
+the hands.** It's opt-in per workspace: any workspace ADMIN enables it, and it's RLS-isolated to
+that workspace, so members of your *other* workspaces (e.g. Gruve, Sippy employees) never see it.
+Nothing is hardcoded to one workspace — create a private workspace, enable it there, done.
 
 Platforms: Behance · Dribbble · Upwork · Contra · Fiverr · Twitter · LinkedIn.
 
 ## Pieces (all on the `feature/command-center` branch)
 
 ```
-database/migrations/26_command_center.sql   opportunities, platform_health, command_action_log (+RLS)
-database/seeds/aise_space.sql               creates the private "Aise" workspace + seeds platforms
-apps/web/src/app/.../command-actions.ts     server actions for the dashboard
-apps/web/src/app/api/command/route.ts       token-guarded endpoint for the MCP / heartbeat
-apps/web/src/app/.../command-center/        the dashboard route
-apps/web/src/components/dashboard/CommandCenter.tsx   the UI (approval queue, health, quarantine)
-services/command-mcp/                        this MCP + the operator playbooks
+database/migrations/26_command_center.sql     opportunities, platform_health, command_action_log (+RLS)
+database/migrations/27_command_center_enable.sql  per-workspace enable flag + enable/disable RPCs
+apps/web/src/app/.../command-actions.ts        server actions (incl. enable/disable)
+apps/web/src/app/api/command/route.ts          token-guarded endpoint (workspace resolved per request)
+apps/web/src/app/.../command-center/           the dashboard route (+ enable screen)
+apps/web/src/components/dashboard/CommandCenter.tsx    the UI (approval queue, health, quarantine)
+apps/web/src/components/dashboard/EnableCommandCenter.tsx  one-click enable screen
+services/command-mcp/                          this MCP + the operator playbooks
 ```
 
 Content posts reuse the existing `calendar_entries` table — no duplicate calendar.
+Nothing is scoped to a fixed workspace: a `command_center_enabled` flag on `businesses` +
+`enable_command_center(business_id)` / `disable_command_center(business_id)` RPCs make it opt-in
+per workspace for any admin.
 
 ## Setup
 
-1. **Apply the migration + seed** (after logging into Nexus once so your user row exists):
-   ```bash
-   pnpm supabase db reset          # replays all migrations incl. 26
-   # then run the seed against your DB:
-   psql "$DATABASE_URL" -f database/seeds/aise_space.sql
-   ```
-2. **Env** (in `apps/web/.env.local`):
+1. **Apply the migrations** — run `pnpm supabase db reset` (replays 26 + 27), or paste
+   `26_command_center.sql` then `27_command_center_enable.sql` into the Supabase SQL editor.
+2. **Create a private workspace** for your freelancing via the normal “Create workspace” button
+   (e.g. name it *Aise*). This is just a regular Nexus workspace — no special setup.
+3. **Enable it:** open that workspace → visit `/w/<slug>/command-center` → click **Enable**.
+   That flips the flag and seeds the 7 platforms. The sidebar link then appears (only in this
+   workspace). Enabling requires ADMIN of the workspace.
+4. **Env** (in `apps/web/.env.local`, for the automation endpoint):
    ```
    SUPABASE_SERVICE_ROLE_KEY=...           # from Supabase project settings
    COMMAND_CENTER_TOKEN=<a long random secret>
-   COMMAND_CENTER_BUSINESS_SLUG=aise
+   COMMAND_CENTER_BUSINESS_SLUG=<your slug>   # optional default; the MCP can also pass it
    ```
-3. **Run the app** (`pnpm dev`), open the `Aise` workspace → **Command Center** in the sidebar.
-4. **Connect the MCP to Cowork:**
+5. **Connect the MCP to Cowork:**
    ```json
    {
      "mcpServers": {
@@ -45,7 +50,8 @@ Content posts reuse the existing `calendar_entries` table — no duplicate calen
          "args": ["ABSOLUTE/PATH/Nexus/services/command-mcp/index.js"],
          "env": {
            "COMMAND_API": "http://localhost:3000/api/command",
-           "COMMAND_TOKEN": "<same COMMAND_CENTER_TOKEN>"
+           "COMMAND_TOKEN": "<same COMMAND_CENTER_TOKEN>",
+           "COMMAND_WORKSPACE": "<your workspace slug>"
          }
        }
      }

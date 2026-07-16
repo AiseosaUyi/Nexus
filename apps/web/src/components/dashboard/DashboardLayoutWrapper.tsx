@@ -53,6 +53,7 @@ export default function DashboardLayoutWrapper({
             businessName={activeBusiness?.name || "Workspace"}
             workspaceSlug={workspaceSlug}
             currentUserRole={currentUserRole}
+            commandCenterEnabled={!!activeBusiness?.command_center_enabled}
           />
         </div>
       </aside>
@@ -67,6 +68,7 @@ export default function DashboardLayoutWrapper({
         businessName={activeBusiness?.name || "Workspace"}
         workspaceSlug={workspaceSlug}
         currentUserRole={currentUserRole}
+        commandCenterEnabled={!!activeBusiness?.command_center_enabled}
       />
 
       {/* Main Content Area */}

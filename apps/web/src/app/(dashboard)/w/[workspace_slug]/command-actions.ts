@@ -9,6 +9,24 @@ import type {
   PlatformHealth,
 } from '@nexus/api/schema';
 
+/** Turn the Command Center on for a workspace (ADMIN only). Seeds default platforms. */
+export async function enableCommandCenter(businessId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('enable_command_center', { p_business_id: businessId });
+  if (error) return { error: error.message };
+  revalidatePath('/', 'layout');
+  return { ok: true };
+}
+
+/** Turn the Command Center off for a workspace (ADMIN only). Data is preserved. */
+export async function disableCommandCenter(businessId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('disable_command_center', { p_business_id: businessId });
+  if (error) return { error: error.message };
+  revalidatePath('/', 'layout');
+  return { ok: true };
+}
+
 /** Load everything for the Command Center dashboard in one shot. */
 export async function getCommandCenter(businessId: string) {
   const supabase = await createClient();

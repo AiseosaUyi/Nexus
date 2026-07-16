@@ -4,21 +4,27 @@
 // the Next.js app (with RLS + the token guard) is the source of truth.
 //
 // Config via env:
-//   COMMAND_API    full URL of the endpoint  (e.g. https://your-nexus.app/api/command
-//                  or http://localhost:3000/api/command)
-//   COMMAND_TOKEN  must match COMMAND_CENTER_TOKEN set on the Nexus server
+//   COMMAND_API        full URL of the endpoint  (e.g. https://your-nexus.app/api/command
+//                      or http://localhost:3000/api/command)
+//   COMMAND_TOKEN      must match COMMAND_CENTER_TOKEN set on the Nexus server
+//   COMMAND_WORKSPACE  the workspace slug this operator drives (e.g. "aise").
+//                      Any workspace that has the Command Center enabled works.
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 const API = process.env.COMMAND_API || 'http://localhost:3000/api/command';
 const TOKEN = process.env.COMMAND_TOKEN || '';
+const WORKSPACE = process.env.COMMAND_WORKSPACE || '';
 
 async function call(method, body) {
-  const r = await fetch(API, {
+  const url = method === 'GET' && WORKSPACE
+    ? `${API}?workspace=${encodeURIComponent(WORKSPACE)}`
+    : API;
+  const r = await fetch(url, {
     method,
     headers: { 'content-type': 'application/json', authorization: `Bearer ${TOKEN}` },
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? JSON.stringify({ ...body, ...(WORKSPACE ? { workspace: WORKSPACE } : {}) }) : undefined,
   });
   const text = await r.text();
   let data; try { data = JSON.parse(text); } catch { data = text; }

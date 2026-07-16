@@ -15,6 +15,7 @@ interface MobileSidebarProps {
   businessName: string;
   workspaceSlug: string;
   currentUserRole: 'ADMIN' | 'EDITOR' | 'VIEWER';
+  commandCenterEnabled?: boolean;
 }
 
 export default function MobileSidebar({
@@ -25,7 +26,8 @@ export default function MobileSidebar({
   businessId,
   businessName,
   workspaceSlug,
-  currentUserRole
+  currentUserRole,
+  commandCenterEnabled
 }: MobileSidebarProps) {
   return (
     <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
@@ -51,6 +53,7 @@ export default function MobileSidebar({
                 businessName={businessName}
                 workspaceSlug={workspaceSlug}
                 currentUserRole={currentUserRole}
+                commandCenterEnabled={commandCenterEnabled}
               />
             </div>
           </div>

@@ -3,24 +3,39 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { scoreScam } from '@/lib/command/scam';
 
 // Token-guarded automation endpoint for the Command Center MCP / heartbeat.
-// Scoped to a single private workspace (default slug "aise"). Because it uses the
-// service-role client it bypasses RLS, so it is protected by COMMAND_CENTER_TOKEN
-// and only ever touches the one configured business.
+// The target workspace is resolved dynamically from the request (?workspace=slug on
+// GET, or { workspace } in the POST body), so this is NOT tied to any single
+// workspace. COMMAND_CENTER_BUSINESS_SLUG is only an optional default for a
+// single-operator setup. It uses the service-role client (bypasses RLS) and is
+// therefore protected by COMMAND_CENTER_TOKEN; it only ever touches a workspace
+// that has command_center_enabled = true.
 //
 // Env required:
 //   COMMAND_CENTER_TOKEN            shared secret (also set in the MCP)
 //   SUPABASE_SERVICE_ROLE_KEY       service role key
-//   COMMAND_CENTER_BUSINESS_SLUG    default "aise"
+//   COMMAND_CENTER_BUSINESS_SLUG    optional default workspace slug
 
 function authed(req: NextRequest): boolean {
   const token = process.env.COMMAND_CENTER_TOKEN;
   return !!token && req.headers.get('authorization') === `Bearer ${token}`;
 }
 
-async function businessId(supabase: ReturnType<typeof createServiceClient>) {
-  const slug = process.env.COMMAND_CENTER_BUSINESS_SLUG || 'aise';
-  const { data } = await supabase.from('businesses').select('id').eq('slug', slug).single();
-  return data?.id as string | undefined;
+/** Resolve the target business id from an explicit slug, falling back to the env default.
+ *  Only returns enabled workspaces, so a stray token can't touch a workspace that
+ *  hasn't opted in. */
+async function businessId(
+  supabase: ReturnType<typeof createServiceClient>,
+  slug?: string | null,
+) {
+  const wanted = slug || process.env.COMMAND_CENTER_BUSINESS_SLUG;
+  if (!wanted) return undefined;
+  const { data } = await supabase
+    .from('businesses')
+    .select('id, command_center_enabled')
+    .eq('slug', wanted)
+    .single();
+  if (!data?.command_center_enabled) return undefined;
+  return data.id as string;
 }
 
 async function log(
@@ -34,8 +49,9 @@ async function log(
 export async function GET(req: NextRequest) {
   if (!authed(req)) return new NextResponse('Unauthorized', { status: 401 });
   const supabase = createServiceClient();
-  const biz = await businessId(supabase);
-  if (!biz) return NextResponse.json({ error: 'workspace not found' }, { status: 404 });
+  const slug = req.nextUrl.searchParams.get('workspace');
+  const biz = await businessId(supabase, slug);
+  if (!biz) return NextResponse.json({ error: 'workspace not found or not enabled' }, { status: 404 });
 
   const [drafts, quarantined, posts, health] = await Promise.all([
     supabase.from('opportunities').select('*').eq('business_id', biz).eq('status', 'drafted')
@@ -63,10 +79,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   if (!authed(req)) return new NextResponse('Unauthorized', { status: 401 });
   const supabase = createServiceClient();
-  const biz = await businessId(supabase);
-  if (!biz) return NextResponse.json({ error: 'workspace not found' }, { status: 404 });
-
   const body = await req.json();
+  const biz = await businessId(supabase, body.workspace);
+  if (!biz) return NextResponse.json({ error: 'workspace not found or not enabled' }, { status: 404 });
+
   const op = body.op as string;
 
   try {
