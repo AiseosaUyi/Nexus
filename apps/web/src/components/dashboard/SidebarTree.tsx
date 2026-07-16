@@ -174,15 +174,16 @@ export default function SidebarTree({
             </button>
           </Link>
 
-          <Link href={`/w/${workspaceSlug}/command-center`} className="block">
-            <button className="flex items-center gap-2 w-full p-1.5 hover:bg-hover rounded-md transition-colors cursor-pointer outline-none text-[14px] group">
-              <Sparkles className="w-4 h-4 text-foreground/40 group-hover:text-foreground shrink-0" strokeWidth={2} />
-              <span className="text-foreground/70 group-hover:text-foreground font-medium">Command Center</span>
-              {!commandCenterEnabled && (
-                <span className="ml-auto text-[10px] text-foreground/30 group-hover:text-foreground/60 font-medium uppercase tracking-wide">New</span>
-              )}
-            </button>
-          </Link>
+          {/* Only render in workspaces that have enabled the Command Center, so it
+              never appears in other workspaces (e.g. Gruve, Sippy) or for their members. */}
+          {commandCenterEnabled && (
+            <Link href={`/w/${workspaceSlug}/command-center`} className="block">
+              <button className="flex items-center gap-2 w-full p-1.5 hover:bg-hover rounded-md transition-colors cursor-pointer outline-none text-[14px] group">
+                <Sparkles className="w-4 h-4 text-foreground/40 group-hover:text-foreground shrink-0" strokeWidth={2} />
+                <span className="text-foreground/70 group-hover:text-foreground font-medium">Command Center</span>
+              </button>
+            </Link>
+          )}
 
           <button
             onClick={() => setIsImportOpen(true)}
