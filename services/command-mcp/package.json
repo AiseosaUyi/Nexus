@@ -1,0 +1,13 @@
+{
+  "name": "@nexus/command-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Command Center MCP — the tools Cowork calls to read the queue and write drafts/results back to Nexus.",
+  "type": "module",
+  "main": "index.js",
+  "bin": { "nexus-command-mcp": "index.js" },
+  "scripts": { "start": "node index.js" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  }
+}

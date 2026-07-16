@@ -214,6 +214,54 @@ export interface CreateCalendarEntryPayload {
   notes?: string;
 }
 
+// ─── Command Center ───────────────────────────────────────────────────────────
+
+export type OpportunityStatus =
+  | 'new' | 'drafted' | 'approved' | 'sent' | 'rejected' | 'quarantined';
+export type OpportunityType = 'message' | 'comment' | 'job' | 'invite';
+export type PlatformKind = 'inbound' | 'content' | 'both';
+
+export interface Opportunity {
+  id: string;
+  business_id: string;
+  platform: string;
+  type: OpportunityType;
+  status: OpportunityStatus;
+  contact: string | null;
+  source_url: string | null;
+  message: string | null;
+  draft_reply: string | null;
+  fit_score: number;
+  scam_score: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  decided_at: string | null;
+}
+
+export interface PlatformHealth {
+  id: string;
+  business_id: string;
+  platform: string;
+  kind: PlatformKind;
+  handle: string | null;
+  health_score: number;
+  top_fix: string | null;
+  last_checked: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommandActionLog {
+  id: string;
+  business_id: string;
+  platform: string | null;
+  kind: string;
+  ref_id: string | null;
+  detail: string | null;
+  created_at: string;
+}
+
 // ─── API Responses ────────────────────────────────────────────────────────────
 
 export interface ApiError {

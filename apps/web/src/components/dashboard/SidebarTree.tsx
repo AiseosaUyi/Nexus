@@ -9,7 +9,12 @@ import ImportModal from './ImportModal';
 import TeamSettingsModal from '@/components/business/TeamSettingsModal';
 import { Node, Teamspace } from '@nexus/api/schema';
 import { buildTree } from '@/lib/tree';
-import { Plus, Search, Clock, Home, Upload, ChevronRight } from 'lucide-react';
+import { Plus, Search, Clock, Home, Upload, ChevronRight, Sparkles } from 'lucide-react';
+
+// Workspace slug where the private Freelance Command Center is available.
+// Gating the nav link here keeps it out of Gruve/Sippy sidebars, so employees
+// in those workspaces never see the personal hustle.
+const COMMAND_CENTER_SLUG = 'aise';
 import { cn } from '@/lib/utils';
 import { createNode, updateNode, createTeamspace } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { useRouter } from 'next/navigation';
@@ -170,6 +175,15 @@ export default function SidebarTree({
               <span className="text-foreground/70 group-hover:text-foreground font-medium">Updates</span>
             </button>
           </Link>
+
+          {workspaceSlug === COMMAND_CENTER_SLUG && (
+            <Link href={`/w/${workspaceSlug}/command-center`} className="block">
+              <button className="flex items-center gap-2 w-full p-1.5 hover:bg-hover rounded-md transition-colors cursor-pointer outline-none text-[14px] group">
+                <Sparkles className="w-4 h-4 text-foreground/40 group-hover:text-foreground shrink-0" strokeWidth={2} />
+                <span className="text-foreground/70 group-hover:text-foreground font-medium">Command Center</span>
+              </button>
+            </Link>
+          )}
 
           <button
             onClick={() => setIsImportOpen(true)}
