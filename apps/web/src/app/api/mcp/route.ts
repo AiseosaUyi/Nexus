@@ -13,9 +13,17 @@ import * as ops from '@/lib/command/ops';
 // calls — so behaviour never drifts between the token-guarded REST endpoint
 // and this MCP endpoint.
 
+// Accept the shared secret either as an Authorization: Bearer header (used by the
+// stdio MCP and curl) OR as a `?key=` query param. The query-param path exists
+// because Claude's "Add custom connector" dialog only offers a URL + OAuth — it has
+// no request-headers field — so the secret has to travel in the URL itself, e.g.
+//   https://<domain>/api/mcp?key=<COMMAND_CENTER_TOKEN>
 function authed(req: NextRequest): boolean {
   const token = process.env.COMMAND_CENTER_TOKEN;
-  return !!token && req.headers.get('authorization') === `Bearer ${token}`;
+  if (!token) return false;
+  const byHeader = req.headers.get('authorization') === `Bearer ${token}`;
+  const byQuery = req.nextUrl.searchParams.get('key') === token;
+  return byHeader || byQuery;
 }
 
 type ToolResult = { content: Array<{ type: 'text'; text: string }>; isError?: boolean };
