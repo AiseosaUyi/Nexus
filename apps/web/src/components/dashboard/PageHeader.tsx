@@ -829,9 +829,8 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
           onInput={handleTitleChange}
           data-placeholder="Untitled"
           className="text-3xl md:text-5xl font-black font-display tracking-tight leading-tight text-foreground outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-foreground/25 empty:before:font-normal break-words mb-4"
-        >
-          {initialTitle === "Untitled" ? "" : initialTitle}
-        </h1>
+          dangerouslySetInnerHTML={{ __html: initialTitle === "Untitled" ? "" : initialTitle }}
+        />
 
         {/* Page metadata can go here if needed later */}
       </div>

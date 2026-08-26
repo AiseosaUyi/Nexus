@@ -10,6 +10,29 @@ interface PublicPageProps {
   params: Promise<{ node_id: string }>;
 }
 
+function extractTextFromBlocks(blocks: any[]): string {
+  if (!blocks) return '';
+  let textContent = '';
+  
+  const extract = (arr: any[]): string => {
+    let s = '';
+    for (const n of arr) {
+      if (n.type === 'text' && n.text) s += n.text;
+      else if (n.content && Array.isArray(n.content)) s += extract(n.content);
+      s += ' ';
+    }
+    return s;
+  };
+  
+  for (const b of blocks) {
+    if (b.content?.content && Array.isArray(b.content.content)) {
+      const text = extract(b.content.content).trim();
+      if (text) textContent += text + '\n\n';
+    }
+  }
+  return textContent.trim();
+}
+
 export async function generateMetadata({ params }: PublicPageProps): Promise<Metadata> {
   const { node_id } = await params;
   const supabase = await createClient();
@@ -23,15 +46,24 @@ export async function generateMetadata({ params }: PublicPageProps): Promise<Met
 
   if (!node) return { title: 'Request Access — Nexus' };
 
+  const { data: blocks } = await supabase
+    .from('blocks')
+    .select('content')
+    .eq('node_id', node_id)
+    .order('position', { ascending: true })
+    .limit(10);
+
+  const plainText = extractTextFromBlocks(blocks || []);
   const title = node.title || 'Untitled';
   const displayTitle = node.icon ? `${node.icon} ${title}` : title;
+  const description = plainText ? (plainText.substring(0, 160) + (plainText.length > 160 ? '...' : '')) : `Read ${title} on Nexus`;
 
   return {
     title: displayTitle,
-    description: `Read ${title} on Nexus`,
+    description,
     openGraph: {
       title: displayTitle,
-      description: `Read ${title} on Nexus`,
+      description,
       type: 'article',
     },
   };
@@ -140,7 +172,14 @@ export default async function PublicNodePage({ params }: PublicPageProps) {
     .eq('id', node_id)
     .single();
 
+  const { data: blocks } = await supabase
+    .from('blocks')
+    .select('content')
+    .eq('node_id', node_id)
+    .order('position', { ascending: true });
+
   const snapshot = nodeWithSnapshot?.yjs_snapshot as string | null;
+  const plainTextContent = extractTextFromBlocks(blocks || []);
 
   // Editable mode only when the viewer is an invited Guest with edit/full
   // permission. Public viewers and view-only invitees still hit the
@@ -182,7 +221,17 @@ export default async function PublicNodePage({ params }: PublicPageProps) {
         ) : (
           <ReadOnlyEditor snapshot={snapshot} />
         )}
+
+        {/* Hidden text content for AI scrapers and search engines that don't execute JS */}
+        {plainTextContent && (
+          <div className="absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0 [clip:rect(0,0,0,0)]" aria-hidden="true">
+            {plainTextContent.split('\n\n').map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );
 }
+
