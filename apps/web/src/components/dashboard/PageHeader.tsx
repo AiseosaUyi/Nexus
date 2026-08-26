@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Smile,
   Image as ImageIcon,
@@ -135,6 +135,20 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
   const [currentUser, setCurrentUser] = useState<{ email: string; name: string | null; avatar: string | null } | null>(null);
   const shareMenuRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
+
+  // The title <h1> is contentEditable, so React must not re-diff its children
+  // on every render — the debounced save (see debouncedUpdate below) calls
+  // revalidatePath, which refetches this node and hands PageHeader a fresh
+  // `initialTitle` prop mid-edit. If children tracked that prop directly,
+  // each save-triggered refresh would reset the DOM to the saved value and
+  // collapse the cursor to the start, wiping anything typed since. Freezing
+  // the initial content per nodeId (not per prop update) keeps real
+  // navigation correct while making the element uncontrolled in between.
+  const displayTitle = useMemo(
+    () => (initialTitle === "Untitled" ? "" : initialTitle),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nodeId],
+  );
 
   const [coverUrl, setCoverUrl] = useState<string | null>(initialCoverUrl ?? null);
   const [isCoverPickerOpen, setIsCoverPickerOpen] = useState(false);
@@ -830,7 +844,7 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
           data-placeholder="Untitled"
           className="text-3xl md:text-5xl font-black font-display tracking-tight leading-tight text-foreground outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-foreground/25 empty:before:font-normal break-words mb-4"
         >
-          {initialTitle === "Untitled" ? "" : initialTitle}
+          {displayTitle}
         </h1>
 
         {/* Page metadata can go here if needed later */}
