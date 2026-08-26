@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { resolve } from 'path';
+import { writeFileSync, mkdirSync } from 'fs';
 
 /**
  * Block Picker E2E tests.
@@ -8,6 +10,25 @@ import { test, expect } from '@playwright/test';
  *
  * storageState is configured via playwright.config.ts (chromium-auth project).
  */
+
+// Generate a tiny test image (1x1 red pixel PNG)
+function createTestImage(dir: string): string {
+  mkdirSync(dir, { recursive: true });
+  const filePath = resolve(dir, 'test-block-image.png');
+  const png = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // PNG signature
+    0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1
+    0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xde,
+    0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, 0x54, // IDAT chunk
+    0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00, 0x00,
+    0x00, 0x02, 0x00, 0x01, 0xe2, 0x21, 0xbc, 0x33,
+    0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, // IEND chunk
+    0xae, 0x42, 0x60, 0x82,
+  ]);
+  writeFileSync(filePath, png);
+  return filePath;
+}
 
 // Helper: navigate to a fresh page and open the editor
 async function openFreshEditorPage(page: any) {
@@ -188,5 +209,32 @@ test.describe('Block Picker — Basic blocks', () => {
     // Only heading items should be visible; "Text" should be gone
     await expect(picker.getByText('Heading 1')).toBeVisible({ timeout: 3000 });
     await expect(picker.getByText('Text')).not.toBeVisible();
+  });
+});
+
+test.describe('Block Picker — Image persistence', () => {
+  // Regression test: uploading an image and immediately reloading the page
+  // (well inside the 10s Yjs snapshot debounce window) used to lose the
+  // image entirely, because NexusEditor never flushed the pending debounced
+  // snapshot save on unload/unmount.
+  test('Image inserted via "+" survives an immediate page reload', async ({ page }, testInfo) => {
+    await openFreshEditorPage(page);
+    const picker = await openBlockPicker(page, 'Image persistence test');
+
+    const fileChooserPromise = page.waitForEvent('filechooser');
+    await picker.getByText('Image').click();
+    const fileChooser = await fileChooserPromise;
+    const imagePath = createTestImage(testInfo.outputDir);
+    await fileChooser.setFiles(imagePath);
+
+    const editor = page.locator('.tiptap.ProseMirror');
+    await expect(editor.locator('img')).toBeVisible({ timeout: 5000 });
+
+    // Reload right away — before the 10s snapshot debounce would normally
+    // fire on its own. The unload flush must persist it instead.
+    await page.reload();
+
+    const editorAfterReload = page.locator('.tiptap.ProseMirror');
+    await expect(editorAfterReload.locator('img')).toBeVisible({ timeout: 10000 });
   });
 });

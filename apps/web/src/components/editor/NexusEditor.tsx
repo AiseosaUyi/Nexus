@@ -292,6 +292,22 @@ export default function NexusEditor({
     }
   }, [provider, userName, userColor]);
 
+  // Flush pending saves before the page unloads (hard refresh/close) and on
+  // unmount (SPA navigation away from this node) — otherwise edits made
+  // inside the 10s snapshot debounce window (e.g. an image just inserted)
+  // never reach the server and vanish on reload.
+  useEffect(() => {
+    const flushPending = () => {
+      debouncedSnapshotSave.flush();
+      debouncedBlockSync.flush();
+    };
+    window.addEventListener('beforeunload', flushPending);
+    return () => {
+      window.removeEventListener('beforeunload', flushPending);
+      flushPending();
+    };
+  }, [debouncedSnapshotSave, debouncedBlockSync]);
+
   // 6. Track selection for floating toolbar position. Anchored BELOW the
   // selection so the menu doesn't cover the text the user is reading.
   useEffect(() => {
