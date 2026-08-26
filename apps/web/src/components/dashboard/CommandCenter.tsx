@@ -7,7 +7,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { decideOpportunity } from '@/app/(dashboard)/w/[workspace_slug]/command-actions';
-import type { Opportunity, PlatformHealth, CommandActionLog } from '@nexus/api/schema';
+import type {
+  Opportunity, PlatformHealth, CommandActionLog,
+  PlatformDifficulty, PlatformPotential, PlatformOnboarding,
+} from '@nexus/api/schema';
 
 interface Props {
   businessId: string;
@@ -19,6 +22,44 @@ interface Props {
 
 const healthColor = (v: number) =>
   v >= 70 ? 'bg-emerald-500' : v >= 40 ? 'bg-amber-500' : 'bg-accent';
+
+const POTENTIAL_WEIGHT: Record<PlatformPotential, number> = {
+  high: 1,
+  very_high: 2,
+  extremely_high: 3,
+};
+
+// Harder platforms are worth less per hour spent, not worthless — a hard
+// platform with extreme potential should still outrank an easy dead end.
+const DIFFICULTY_FACTOR: Record<PlatformDifficulty, number> = {
+  easy: 1,
+  medium: 0.7,
+  hard: 0.4,
+};
+
+const POTENTIAL_LABEL: Record<PlatformPotential, string> = {
+  high: 'high',
+  very_high: 'very high',
+  extremely_high: 'extremely high',
+};
+
+const ONBOARDING_LABEL: Record<PlatformOnboarding, string> = {
+  not_started: 'Not started',
+  profile_building: 'Building',
+  applied: 'Applied',
+  screening: 'Screening',
+  active: 'Active',
+  rejected: 'Rejected',
+  paused: 'Paused',
+};
+
+/** Where the next hour is best spent. Unresearched platforms score 0 and sink. */
+function opportunityScore(p: PlatformHealth) {
+  if (!p.region_friendly || !p.difficulty || !p.potential) return 0;
+  return p.region_friendly
+    * POTENTIAL_WEIGHT[p.potential]
+    * DIFFICULTY_FACTOR[p.difficulty];
+}
 
 export default function CommandCenter({
   workspaceSlug, initialOpportunities, initialHealth, initialLog,
@@ -35,6 +76,15 @@ export default function CommandCenter({
     () => initialOpportunities.filter((o) => o.status === 'quarantined'),
     [initialOpportunities],
   );
+
+  // Platforms you are already live on drop below the ones still worth chasing,
+  // so the top of the list is always "what to do next", not "what you've done".
+  const ranked = useMemo(() => {
+    const rank = (p: PlatformHealth) => (p.onboarding_status === 'active' ? 1 : 0);
+    return [...initialHealth].sort((a, b) =>
+      rank(a) - rank(b) || opportunityScore(b) - opportunityScore(a),
+    );
+  }, [initialHealth]);
 
   const decide = (id: string, decision: 'approve' | 'reject') => {
     setBusyId(id);
@@ -66,20 +116,37 @@ export default function CommandCenter({
           <Kpi icon={Gauge} label="Platforms tracked" value={initialHealth.length} />
         </div>
 
-        {/* Platform health */}
-        <Section title="Platform health" icon={Gauge}>
+        {/* Platforms, ranked by where the next hour pays off most */}
+        <Section title="Platforms — ranked by opportunity" icon={Gauge}>
           <div className="space-y-2">
-            {initialHealth.length === 0 && <Empty>No platforms yet. Run a check to populate.</Empty>}
-            {initialHealth.map((p) => (
+            {ranked.length === 0 && <Empty>No platforms yet. Run a check to populate.</Empty>}
+            {ranked.map((p) => (
               <div key={p.id} className="rounded-2xl border border-border bg-sidebar/50 p-4">
-                <div className="flex items-center gap-3">
-                  <span className="w-24 font-semibold text-foreground">{p.platform}</span>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="font-semibold text-foreground">{p.platform}</span>
+                  {p.region_friendly > 0 && (
+                    <span className="text-xs text-muted" title={`${p.region_friendly}/5 region friendly`}>
+                      {'★'.repeat(p.region_friendly)}
+                      <span className="opacity-30">{'★'.repeat(5 - p.region_friendly)}</span>
+                    </span>
+                  )}
+                  {p.difficulty && <Tag>{p.difficulty}</Tag>}
+                  {p.potential && <Tag>{POTENTIAL_LABEL[p.potential]}</Tag>}
+                  <span className="ml-auto">
+                    <Tag tone={p.onboarding_status === 'active' ? 'accent' : undefined}>
+                      {ONBOARDING_LABEL[p.onboarding_status]}
+                    </Tag>
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 mt-3">
                   <div className="flex-1 h-2 rounded-full bg-background overflow-hidden">
                     <div className={cn('h-full rounded-full', healthColor(p.health_score))}
                       style={{ width: `${p.health_score}%` }} />
                   </div>
                   <span className="w-10 text-right text-sm text-muted">{p.health_score}</span>
                 </div>
+
                 {p.top_fix && (
                   <p className="text-xs text-muted mt-2 pl-1">Next: {p.top_fix}</p>
                 )}

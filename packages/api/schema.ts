@@ -239,6 +239,19 @@ export interface Opportunity {
   decided_at: string | null;
 }
 
+export type PlatformDifficulty = 'easy' | 'medium' | 'hard';
+
+export type PlatformPotential = 'high' | 'very_high' | 'extremely_high';
+
+export type PlatformOnboarding =
+  | 'not_started'
+  | 'profile_building'
+  | 'applied'
+  | 'screening'
+  | 'active'
+  | 'rejected'
+  | 'paused';
+
 export interface PlatformHealth {
   id: string;
   business_id: string;
@@ -248,6 +261,13 @@ export interface PlatformHealth {
   health_score: number;
   top_fix: string | null;
   last_checked: string | null;
+  /** 0-5 stars. 0 means the platform has not been researched yet. */
+  region_friendly: number;
+  difficulty: PlatformDifficulty | null;
+  potential: PlatformPotential | null;
+  onboarding_status: PlatformOnboarding;
+  profile_url: string | null;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Logo Concepts</title>
+<style>
+  :root{
+    --paper:#f2ede2; --paper2:#ece4d4; --card:#fcf9f2; --ink:#241f18; --ink2:#544c3f;
+    --muted:#948b79; --line:rgba(36,31,24,.12); --line2:rgba(36,31,24,.2);
+    --clay:#b14e2c; --sage:#5e7152; --gold:#c08a3e;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.5;
+    -webkit-font-smoothing:antialiased;letter-spacing:-.011em;
+    background-image:radial-gradient(rgba(36,31,24,.04) 1px,transparent 1px);background-size:30px 30px}
+  .wrap{max-width:1160px;margin:0 auto;padding:64px 32px 90px}
+  .head{margin-bottom:14px}
+  .eyebrow{font-size:12.5px;font-weight:650;letter-spacing:.16em;text-transform:uppercase;color:var(--clay);margin-bottom:14px}
+  h1{font-size:clamp(34px,5vw,56px);font-weight:600;letter-spacing:-.035em;line-height:1.02}
+  .sub{font-size:18px;color:var(--ink2);max-width:60ch;margin-top:14px}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:48px}
+  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;display:flex;flex-direction:column}
+  .num{font-size:12px;font-weight:700;color:var(--clay);letter-spacing:.04em}
+  .name{font-size:19px;font-weight:600;letter-spacing:-.02em;margin:4px 0 16px}
+  .stage{height:120px;display:flex;align-items:center;justify-content:center;background:var(--paper);border:1px solid var(--line);border-radius:14px;margin-bottom:18px}
+  .stage svg{width:80px;height:80px}
+  .lockup{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  .lockup svg{width:32px;height:32px}
+  .word{font-size:25px;font-weight:600;letter-spacing:-.03em}
+  .word .dot{color:var(--clay)}
+  .mini{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+  .mini .fav{width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+  .mini .fav svg{width:18px;height:18px}
+  .mini .app{width:40px;height:40px;border-radius:10px;background:var(--ink);display:flex;align-items:center;justify-content:center}
+  .mini .app.clay{background:var(--clay)}
+  .mini .app svg{width:24px;height:24px}
+  .mini .tag{font-size:11px;color:var(--muted)}
+  .why{font-size:13.5px;color:var(--ink2);line-height:1.55;margin-top:auto}
+
+  .stripe{margin-top:52px;background:var(--ink);border-radius:20px;padding:40px 36px;display:flex;align-items:center;gap:40px;flex-wrap:wrap;justify-content:center}
+  .stripe .rev{display:flex;align-items:center;gap:13px}
+  .stripe .rev svg{width:34px;height:34px}
+  .stripe .rev .w{font-size:26px;font-weight:600;letter-spacing:-.03em;color:#f4efe3}
+  .stripe .rev .w .dot{color:#df7d45}
+  .caption{text-align:center;color:var(--muted);font-size:13px;margin-top:14px}
+
+  .sectitle{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:60px 0 22px}
+  .words{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:760px){.words{grid-template-columns:1fr}}
+  .wc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px 24px}
+  .wc .big{font-size:30px;font-weight:600;letter-spacing:-.035em;margin-bottom:8px}
+  .wc .lbl{font-size:12.5px;color:var(--muted)}
+  footer{margin-top:60px;color:var(--muted);font-size:13px}
+  footer a{color:var(--clay)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="eyebrow">Nexus · Identity</div>
+    <h1>Logo concepts.</h1>
+    <p class="sub">Six marks built on the idea behind the name — <em>a nexus is where things connect</em> — in the warm-calm palette (ink, clay, sage, gold). Each is shown as an icon, a wordmark lockup, a 18px favicon, and a reversed app icon, so you can judge it at real sizes.</p>
+  </div>
+
+  <div class="grid">
+
+    <!-- 1 · HUB -->
+    <div class="card">
+      <div class="num">01</div><div class="name">The Hub</div>
+      <div class="stage">
+        <svg viewBox="0 0 100 100">
+          <g stroke="#241f18" stroke-width="7" stroke-linecap="round">
+            <line x1="50" y1="50" x2="50" y2="20"/><line x1="50" y1="50" x2="24" y2="72"/><line x1="50" y1="50" x2="76" y2="72"/>
+          </g>
+          <circle cx="50" cy="20" r="8" fill="#241f18"/><circle cx="24" cy="72" r="8" fill="#241f18"/><circle cx="76" cy="72" r="8" fill="#241f18"/>
+          <circle cx="50" cy="50" r="12" fill="#b14e2c"/>
+        </svg>
+      </div>
+      <div class="lockup">
+        <svg viewBox="0 0 100 100"><g stroke="#241f18" stroke-width="7" stroke-linecap="round"><line x1="50" y1="50" x2="50" y2="20"/><line x1="50" y1="50" x2="24" y2="72"/><line x1="50" y1="50" x2="76" y2="72"/></g><circle cx="50" cy="20" r="8" fill="#241f18"/><circle cx="24" cy="72" r="8" fill="#241f18"/><circle cx="76" cy="72" r="8" fill="#241f18"/><circle cx="50" cy="50" r="12" fill="#b14e2c"/></svg>
+        <span class="word">Nexus</span>
+      </div>
+      <div class="mini">
+        <div class="fav"><svg viewBox="0 0 100 100"><g stroke="#241f18" stroke-width="9" stroke-linecap="round"><line x1="50" y1="50" x2="50" y2="20"/><line x1="50" y1="50" x2="24" y2="72"/><line x1="50" y1="50" x2="76" y2="72"/></g><circle cx="50" cy="50" r="13" fill="#b14e2c"/></svg></div>
+        <div class="app clay"><svg viewBox="0 0 100 100"><g stroke="#fff" stroke-width="7" stroke-linecap="round"><line x1="50" y1="50" x2="50" y2="20"/><line x1="50" y1="50" x2="24" y2="72"/><line x1="50" y1="50" x2="76" y2="72"/></g><circle cx="50" cy="20" r="8" fill="#fff"/><circle cx="24" cy="72" r="8" fill="#fff"/><circle cx="76" cy="72" r="8" fill="#fff"/><circle cx="50" cy="50" r="12" fill="#fff"/></svg></div>
+        <span class="tag">18px · app icon</span>
+      </div>
+      <p class="why">The most literal: a central point connecting outward. Reads instantly as a network / connection hub.</p>
+    </div>
+
+    <!-- 2 · NODE-N -->
+    <div class="card">
+      <div class="num">02</div><div class="name">Node-N</div>
+      <div class="stage">
+        <svg viewBox="0 0 100 100">
+          <g stroke="#241f18" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <line x1="24" y1="80" x2="24" y2="24"/><line x1="76" y1="80" x2="76" y2="24"/><line x1="24" y1="24" x2="76" y2="80"/>
+          </g>
+          <circle cx="24" cy="24" r="11" fill="#b14e2c"/><circle cx="76" cy="80" r="11" fill="#b14e2c"/>
+        </svg>
+      </div>
+      <div class="lockup">
+        <svg viewBox="0 0 100 100"><g stroke="#241f18" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="24" y1="80" x2="24" y2="24"/><line x1="76" y1="80" x2="76" y2="24"/><line x1="24" y1="24" x2="76" y2="80"/></g><circle cx="24" cy="24" r="11" fill="#b14e2c"/><circle cx="76" cy="80" r="11" fill="#b14e2c"/></svg>
+        <span class="word">Nexus</span>
+      </div>
+      <div class="mini">
+        <div class="fav"><svg viewBox="0 0 100 100"><g stroke="#241f18" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="26" y1="78" x2="26" y2="26"/><line x1="74" y1="78" x2="74" y2="26"/><line x1="26" y1="26" x2="74" y2="78"/></g><circle cx="26" cy="26" r="11" fill="#b14e2c"/><circle cx="74" cy="78" r="11" fill="#b14e2c"/></svg></div>
+        <div class="app"><svg viewBox="0 0 100 100"><g stroke="#f4efe3" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="24" y1="80" x2="24" y2="24"/><line x1="76" y1="80" x2="76" y2="24"/><line x1="24" y1="24" x2="76" y2="80"/></g><circle cx="24" cy="24" r="11" fill="#df7d45"/><circle cx="76" cy="80" r="11" fill="#df7d45"/></svg></div>
+        <span class="tag">18px · app icon</span>
+      </div>
+      <p class="why">A monogram “N” whose diagonal is a link between two nodes. Letterform + meaning in one — great for a favicon.</p>
+    </div>
+
+    <!-- 3 · NESTED -->
+    <div class="card">
+      <div class="num">03</div><div class="name">Nested</div>
+      <div class="stage">
+        <svg viewBox="0 0 100 100">
+          <rect x="16" y="16" width="68" height="68" rx="17" fill="none" stroke="#241f18" stroke-width="7"/>
+          <rect x="33" y="33" width="34" height="34" rx="9" fill="none" stroke="#b14e2c" stroke-width="7"/>
+          <circle cx="50" cy="50" r="6" fill="#241f18"/>
+        </svg>
+      </div>
+      <div class="lockup">
+        <svg viewBox="0 0 100 100"><rect x="16" y="16" width="68" height="68" rx="17" fill="none" stroke="#241f18" stroke-width="7"/><rect x="33" y="33" width="34" height="34" rx="9" fill="none" stroke="#b14e2c" stroke-width="7"/><circle cx="50" cy="50" r="6" fill="#241f18"/></svg>
+        <span class="word">Nexus</span>
+      </div>
+      <div class="mini">
+        <div class="fav"><svg viewBox="0 0 100 100"><rect x="14" y="14" width="72" height="72" rx="18" fill="none" stroke="#241f18" stroke-width="9"/><rect x="34" y="34" width="32" height="32" rx="9" fill="#b14e2c"/></svg></div>
+        <div class="app clay"><svg viewBox="0 0 100 100"><rect x="18" y="18" width="64" height="64" rx="16" fill="none" stroke="#fff" stroke-width="7"/><rect x="34" y="34" width="32" height="32" rx="9" fill="none" stroke="#fff" stroke-width="7"/><circle cx="50" cy="50" r="6" fill="#fff"/></svg></div>
+        <span class="tag">18px · app icon</span>
+      </div>
+      <p class="why">Things inside things — the nesting tree at the heart of the product. Calm, container-like, very “workspace.”</p>
+    </div>
+
+    <!-- 4 · STACK -->
+    <div class="card">
+      <div class="num">04</div><div class="name">Blocks</div>
+      <div class="stage">
+        <svg viewBox="0 0 100 100">
+          <rect x="18" y="22" width="46" height="17" rx="6" fill="#c08a3e"/>
+          <rect x="27" y="42" width="46" height="17" rx="6" fill="#b14e2c"/>
+          <rect x="36" y="62" width="46" height="17" rx="6" fill="#241f18"/>
+        </svg>
+      </div>
+      <div class="lockup">
+        <svg viewBox="0 0 100 100"><rect x="18" y="22" width="46" height="17" rx="6" fill="#c08a3e"/><rect x="27" y="42" width="46" height="17" rx="6" fill="#b14e2c"/><rect x="36" y="62" width="46" height="17" rx="6" fill="#241f18"/></svg>
+        <span class="word">Nexus</span>
+      </div>
+      <div class="mini">
+        <div class="fav"><svg viewBox="0 0 100 100"><rect x="14" y="20" width="54" height="19" rx="6" fill="#c08a3e"/><rect x="23" y="42" width="54" height="19" rx="6" fill="#b14e2c"/><rect x="32" y="64" width="54" height="19" rx="6" fill="#241f18"/></svg></div>
+        <div class="app"><svg viewBox="0 0 100 100"><rect x="18" y="22" width="46" height="17" rx="6" fill="#d9a85a"/><rect x="27" y="42" width="46" height="17" rx="6" fill="#df7d45"/><rect x="36" y="62" width="46" height="17" rx="6" fill="#f4efe3"/></svg></div>
+        <span class="tag">18px · app icon</span>
+      </div>
+      <p class="why">Cascading content blocks — speaks to the block editor. Warmest, most colorful of the set without being loud.</p>
+    </div>
+
+    <!-- 5 · CONSTELLATION -->
+    <div class="card">
+      <div class="num">05</div><div class="name">Constellation</div>
+      <div class="stage">
+        <svg viewBox="0 0 100 100">
+          <polyline points="24,78 24,24 76,78 76,24" fill="none" stroke="#241f18" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+          <circle cx="24" cy="78" r="7" fill="#b14e2c"/><circle cx="24" cy="24" r="7" fill="#241f18"/><circle cx="76" cy="78" r="7" fill="#241f18"/><circle cx="76" cy="24" r="7" fill="#b14e2c"/>
+        </svg>
+      </div>
+      <div class="lockup">
+        <svg viewBox="0 0 100 100"><polyline points="24,78 24,24 76,78 76,24" fill="none" stroke="#241f18" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/><circle cx="24" cy="78" r="7" fill="#b14e2c"/><circle cx="24" cy="24" r="7" fill="#241f18"/><circle cx="76" cy="78" r="7" fill="#241f18"/><circle cx="76" cy="24" r="7" fill="#b14e2c"/></svg>
+        <span class="word">Nexus</span>
+      </div>
+      <div class="mini">
+        <div class="fav"><svg viewBox="0 0 100 100"><polyline points="26,76 26,26 74,76 74,26" fill="none" stroke="#241f18" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/><circle cx="26" cy="76" r="9" fill="#b14e2c"/><circle cx="26" cy="26" r="9" fill="#241f18"/><circle cx="74" cy="76" r="9" fill="#241f18"/><circle cx="74" cy="26" r="9" fill="#b14e2c"/></svg></div>
+        <div class="app"><svg viewBox="0 0 100 100"><polyline points="24,78 24,24 76,78 76,24" fill="none" stroke="#f4efe3" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/><circle cx="24" cy="78" r="7" fill="#df7d45"/><circle cx="24" cy="24" r="7" fill="#f4efe3"/><circle cx="76" cy="78" r="7" fill="#f4efe3"/><circle cx="76" cy="24" r="7" fill="#df7d45"/></svg></div>
+        <span class="tag">18px · app icon</span>
+      </div>
+      <p class="why">Nodes tracing an “N” — a knowledge graph as a constellation. Distinctive, a little editorial.</p>
+    </div>
+
+    <!-- 6 · WEAVE -->
+    <div class="card">
+      <div class="num">06</div><div class="name">Link</div>
+      <div class="stage">
+        <svg viewBox="0 0 100 100">
+          <rect x="16" y="30" width="42" height="42" rx="14" fill="none" stroke="#241f18" stroke-width="8"/>
+          <rect x="42" y="30" width="42" height="42" rx="14" fill="none" stroke="#b14e2c" stroke-width="8"/>
+        </svg>
+      </div>
+      <div class="lockup">
+        <svg viewBox="0 0 100 100"><rect x="16" y="30" width="42" height="42" rx="14" fill="none" stroke="#241f18" stroke-width="8"/><rect x="42" y="30" width="42" height="42" rx="14" fill="none" stroke="#b14e2c" stroke-width="8"/></svg>
+        <span class="word">Nexus</span>
+      </div>
+      <div class="mini">
+        <div class="fav"><svg viewBox="0 0 100 100"><rect x="12" y="30" width="44" height="44" rx="14" fill="none" stroke="#241f18" stroke-width="10"/><rect x="44" y="30" width="44" height="44" rx="14" fill="none" stroke="#b14e2c" stroke-width="10"/></svg></div>
+        <div class="app clay"><svg viewBox="0 0 100 100"><rect x="16" y="30" width="42" height="42" rx="14" fill="none" stroke="#fff" stroke-width="8"/><rect x="42" y="30" width="42" height="42" rx="14" fill="none" stroke="#fff" stroke-width="8" opacity=".62"/></svg></div>
+        <span class="tag">18px · app icon</span>
+      </div>
+      <p class="why">Two interlocking links — connection, made simple. Clean and friendly; pairs well with a soft wordmark.</p>
+    </div>
+
+  </div>
+
+  <!-- reversed -->
+  <div class="stripe">
+    <div class="rev"><svg viewBox="0 0 100 100"><g stroke="#f4efe3" stroke-width="7" stroke-linecap="round"><line x1="50" y1="50" x2="50" y2="20"/><line x1="50" y1="50" x2="24" y2="72"/><line x1="50" y1="50" x2="76" y2="72"/></g><circle cx="50" cy="20" r="8" fill="#f4efe3"/><circle cx="24" cy="72" r="8" fill="#f4efe3"/><circle cx="76" cy="72" r="8" fill="#f4efe3"/><circle cx="50" cy="50" r="12" fill="#df7d45"/></svg><span class="w">Nexus</span></div>
+    <div class="rev"><svg viewBox="0 0 100 100"><g stroke="#f4efe3" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="24" y1="80" x2="24" y2="24"/><line x1="76" y1="80" x2="76" y2="24"/><line x1="24" y1="24" x2="76" y2="80"/></g><circle cx="24" cy="24" r="11" fill="#df7d45"/><circle cx="76" cy="80" r="11" fill="#df7d45"/></svg><span class="w">Nexus</span></div>
+    <div class="rev"><svg viewBox="0 0 100 100"><rect x="16" y="16" width="68" height="68" rx="17" fill="none" stroke="#f4efe3" stroke-width="7"/><rect x="33" y="33" width="34" height="34" rx="9" fill="none" stroke="#df7d45" stroke-width="7"/><circle cx="50" cy="50" r="6" fill="#f4efe3"/></svg><span class="w">Nexus</span></div>
+  </div>
+  <p class="caption">Marks reversed on ink (dark mode / app bar) — using the lighter dark-mode clay.</p>
+
+  <!-- wordmark studies -->
+  <div class="sectitle">Wordmark studies (logotype only)</div>
+  <div class="words">
+    <div class="wc"><div class="big">Nexus<span style="color:var(--clay)">.</span></div><div class="lbl">Clay period — confident, minimal.</div></div>
+    <div class="wc"><div class="big">ne<span style="color:var(--clay)">x</span>us</div><div class="lbl">All-lowercase, accented “x” as the crossing point.</div></div>
+    <div class="wc"><div class="big" style="letter-spacing:.12em;text-transform:uppercase;font-weight:650;font-size:24px">Nexus</div><div class="lbl">Spaced caps — editorial, premium.</div></div>
+  </div>
+
+  <footer>Nexus — logo exploration · warm-calm identity · <a href="index.html">← branding lab</a></footer>
+</div>
+</body>
+</html>
