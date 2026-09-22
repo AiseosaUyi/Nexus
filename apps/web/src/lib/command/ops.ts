@@ -140,18 +140,59 @@ export async function addPost(supabase: SupabaseClient, businessId: string, args
 
 const DECIDE_POST_MAP: Record<string, string> = { approve: 'scheduled', posted: 'published', reject: 'cancelled' };
 
+/** Merges post_url into the existing properties JSONB instead of replacing
+ * it wholesale — a bare {post_url} update used to wipe out body/media_ref/
+ * quality_score that addPost() had already stored there. Shared by
+ * decidePost (the cc_* decision-vocabulary path) and setCalendarStatus
+ * (the nexus_set_calendar_status literal-status path) — same bug, same fix,
+ * two different callers with different input shapes. */
+async function mergePostUrlIntoProperties(
+  supabase: SupabaseClient, businessId: string, id: string, postUrl: string | undefined,
+): Promise<Record<string, unknown> | undefined> {
+  if (!postUrl) return undefined;
+  const { data: existing, error } = await supabase.from('calendar_entries')
+    .select('properties').eq('id', id).eq('business_id', businessId).single();
+  if (error) throw error;
+  return { ...(existing?.properties as Record<string, unknown> ?? {}), post_url: postUrl };
+}
+
 export async function decidePost(supabase: SupabaseClient, businessId: string, args: {
   id?: string; decision?: string; post_url?: string;
 }) {
   if (!args.id) throw new OpValidationError('id is required');
   const status = DECIDE_POST_MAP[args.decision ?? ''];
   if (!status) throw new OpValidationError('bad decision');
+
+  const propertiesPatch = await mergePostUrlIntoProperties(supabase, businessId, args.id, args.post_url);
+
   const { data, error } = await supabase.from('calendar_entries')
-    .update({ status, ...(args.post_url ? { properties: { post_url: args.post_url } } : {}) })
+    .update({ status, ...(propertiesPatch ? { properties: propertiesPatch } : {}) })
     .eq('id', args.id).eq('business_id', businessId).select('platform').single();
   if (error) throw error;
   await log(supabase, businessId, data.platform, status === 'published' ? 'posted' : 'checked', args.id, status);
   return { status };
+}
+
+const CALENDAR_STATUSES = new Set(['draft', 'scheduled', 'published', 'cancelled']);
+
+/** nexus_set_calendar_status's backing op — takes the literal
+ * calendar_entries.status value directly, unlike decidePost's
+ * decision-vocabulary (approve/posted/reject) indirection, since the MCP
+ * tool's own input schema is the literal status enum. */
+export async function setCalendarStatus(supabase: SupabaseClient, businessId: string, args: {
+  id?: string; status?: string; post_url?: string;
+}) {
+  if (!args.id) throw new OpValidationError('id is required');
+  if (!args.status || !CALENDAR_STATUSES.has(args.status)) throw new OpValidationError('bad status');
+
+  const propertiesPatch = await mergePostUrlIntoProperties(supabase, businessId, args.id, args.post_url);
+
+  const { data, error } = await supabase.from('calendar_entries')
+    .update({ status: args.status, ...(propertiesPatch ? { properties: propertiesPatch } : {}) })
+    .eq('id', args.id).eq('business_id', businessId).select('platform').single();
+  if (error) throw error;
+  await log(supabase, businessId, data.platform, args.status === 'published' ? 'posted' : 'checked', args.id, args.status);
+  return { status: args.status };
 }
 
 export async function recordHealth(supabase: SupabaseClient, businessId: string, args: {

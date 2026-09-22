@@ -9,16 +9,25 @@ import { LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
 function LoginForm() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
+  const next = searchParams.get('next');
   const [showPassword, setShowPassword] = useState(false);
+
+  // A user landing here via /oauth/authorize's redirect is mid-connection-
+  // flow, not just checking in on their workspace — say so, since this is
+  // exactly the moment a stranger explaining "why am I signing in again"
+  // matters most.
+  const isOAuthHandoff = next?.startsWith('/oauth/authorize');
 
   return (
     <div className="w-full max-w-sm mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-black font-display tracking-tight text-foreground">
-          Welcome back
+          {isOAuthHandoff ? 'Sign in to connect' : 'Welcome back'}
         </h1>
         <p className="text-sm text-muted">
-          Your knowledge base is waiting for you.
+          {isOAuthHandoff
+            ? "Sign in to choose which workspace it can access."
+            : 'Your knowledge base is waiting for you.'}
         </p>
       </div>
 
@@ -30,6 +39,7 @@ function LoginForm() {
       )}
 
       <form action={signIn} className="space-y-4">
+        {next && <input type="hidden" name="next" value={next} />}
         <div className="space-y-1">
           <label htmlFor="email" className="text-[13px] font-bold text-muted ml-1 uppercase tracking-wider">
             Email Address

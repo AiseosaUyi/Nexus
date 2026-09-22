@@ -1,3 +1,10 @@
+> **Retired.** This build shipped and has since been replaced by the Nexus Brain MCP
+> (`docs/MCP.md`). The `?key=` query-param auth this doc describes is deleted — the live route is
+> now `apps/web/src/app/api/[transport]/route.ts`, supporting static `nexus_key_` tokens and OAuth
+> 2.1 (DCR + PKCE), with `?key=`/header `COMMAND_CENTER_TOKEN` kept alive only behind
+> `MCP_LEGACY_COMMAND_TOKEN=1` during the migration window. This file is kept for history; see
+> `docs/MCP.md` for the current design.
+
 # Build task for Cursor: hosted MCP endpoint (URL-based custom connector)
 
 Goal: expose the Command Center's 7 tools as a **remote MCP server** at `/api/mcp` in the Next.js

@@ -81,7 +81,12 @@ export function parseInline(raw: string): TiptapTextNode[] {
     // Italic: *text* or _text_ (single, not double)
     if ((ch === '*' || ch === '_') && raw[i + 1] !== ch) {
       const end = raw.indexOf(ch, i + 1);
-      if (end !== -1) {
+      // CommonMark: unlike `*`, a lone `_` doesn't open/close emphasis when
+      // intraword (e.g. `nexus_append_doc` must stay literal, not become
+      // "nexus<em>append</em>doc").
+      const intrawordUnderscore =
+        ch === '_' && ((i > 0 && /\w/.test(raw[i - 1])) || (end !== -1 && /\w/.test(raw[end + 1] ?? '')));
+      if (end !== -1 && !intrawordUnderscore) {
         flush();
         const inner = parseInline(raw.slice(i + 1, end));
         inner.forEach((n) => nodes.push(addMarks(n, [{ type: 'italic' }])));

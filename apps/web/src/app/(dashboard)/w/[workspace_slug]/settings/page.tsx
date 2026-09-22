@@ -1,10 +1,12 @@
 import React from 'react';
+import Link from 'next/link';
 import {
   Settings as SettingsIcon,
   Users,
   Shield,
   Globe,
   ChevronRight,
+  Plug,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/server';
@@ -41,7 +43,13 @@ export default async function SettingsPage({ params }: SettingsProps) {
       .eq('user_id', user.id)
       .single();
 
-    if (member) currentRole = member.role as typeof currentRole;
+    // `as typeof currentRole` here would capture the narrowed literal
+    // 'VIEWER' from the initializer above (a typeof query on a local
+    // reflects its current narrowed type, not its declared union), making
+    // TS believe currentRole could never be anything else afterward —
+    // harmless at runtime (this is just a cast), but it silently defeats
+    // any later `currentRole === 'ADMIN'` check at the type level.
+    if (member) currentRole = member.role as 'ADMIN' | 'EDITOR' | 'VIEWER';
     currentUser = {
       name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
       email: user.email || '',
@@ -160,6 +168,28 @@ export default async function SettingsPage({ params }: SettingsProps) {
                 )}
              </div>
           </section>
+
+          {/* Connections Section — Nexus Brain MCP tokens, connected apps,
+              and integrations. ADMIN-only page, so only linked here for
+              admins (same gate the page itself re-checks server-side). */}
+          {currentRole === 'ADMIN' && (
+            <section className="space-y-6">
+              <div className="flex items-center gap-2 border-b border-border/5 pb-4">
+                <Plug className="w-4 h-4 text-muted/60" />
+                <h3 className="text-sm font-bold text-foreground">Connections</h3>
+              </div>
+              <Link
+                href={`/w/${workspace_slug}/settings/connections`}
+                className="flex items-center justify-between p-4 rounded-xl bg-sidebar/30 border border-border/10 hover:bg-sidebar/50 transition-all group"
+              >
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-bold text-foreground">API tokens, connected apps & integrations</span>
+                  <span className="text-[11px] text-muted">Manage the Nexus Brain MCP server for this workspace</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted/40 group-hover:text-foreground transition-colors" />
+              </Link>
+            </section>
+          )}
 
           {/* Security / Dangerous Section */}
           <section className="space-y-6 pt-10">

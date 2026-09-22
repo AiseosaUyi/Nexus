@@ -282,6 +282,134 @@ export interface CommandActionLog {
   created_at: string;
 }
 
+// ─── Nexus Brain MCP: auth ─────────────────────────────────────────────────────
+
+export interface WorkspaceApiToken {
+  id: string;
+  business_id: string;
+  name: string;
+  token_prefix: string;
+  token_hash: string;
+  scopes: string;
+  created_by: string | null;
+  last_used_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+}
+
+export interface OAuthClientRow {
+  id: string;
+  client_name: string | null;
+  redirect_uris: string[];
+  grant_types: string[];
+  token_endpoint_auth_method: string;
+  created_at: string;
+}
+
+export interface OAuthAuthorizationCode {
+  id: string;
+  code_hash: string;
+  client_id: string;
+  user_id: string;
+  business_id: string;
+  scopes: string;
+  redirect_uri: string;
+  code_challenge: string;
+  code_challenge_method: string;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
+}
+
+export interface OAuthRefreshToken {
+  id: string;
+  token_hash: string;
+  client_id: string;
+  user_id: string;
+  business_id: string;
+  scopes: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+  rotated_from: string | null;
+  created_at: string;
+}
+
+// ─── Nexus Brain MCP: memory ────────────────────────────────────────────────────
+
+export type MemoryKind =
+  | 'fact'
+  | 'decision'
+  | 'preference'
+  | 'open_loop'
+  | 'person'
+  | 'project'
+  | 'event'
+  | 'insight'
+  | 'session_summary';
+
+export type MemoryStatus = 'active' | 'resolved' | 'archived' | 'superseded';
+
+export interface MemoryRow {
+  id: string;
+  business_id: string;
+  kind: MemoryKind;
+  subject: string;
+  content: string;
+  tags: string[];
+  source: string;
+  source_ref: string | null;
+  confidence: number;
+  status: MemoryStatus;
+  supersedes_id: string | null;
+  due_at: string | null;
+  node_id: string | null;
+  dedupe_key: string;
+  recall_count: number;
+  last_recalled_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentSessionRow {
+  id: string;
+  business_id: string;
+  agent: string;
+  client_id: string | null;
+  started_at: string;
+  finished_at: string | null;
+  summary: string | null;
+  stats: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface McpAuditLogRow {
+  id: number;
+  business_id: string | null;
+  token_id: string | null;
+  tool: string;
+  ok: boolean;
+  duration_ms: number | null;
+  args_digest: string | null;
+  created_at: string;
+}
+
+// ─── Nexus Brain MCP: integrations ──────────────────────────────────────────────
+
+export type IntegrationProvider = 'gruve' | 'pulse';
+
+export interface BusinessIntegration {
+  id: string;
+  business_id: string;
+  provider: IntegrationProvider;
+  config: Record<string, unknown>;
+  /** Never returned by any tool, action, or page — see CLAUDE.md guardrails. */
+  secret_enc: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── API Responses ────────────────────────────────────────────────────────────
 
 export interface ApiError {
