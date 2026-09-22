@@ -53,3 +53,27 @@ export function resolveRequestedScopes(requested: string[]): McpScope[] {
   const valid = requested.filter((s): s is McpScope => (MCP_SCOPES as readonly string[]).includes(s));
   return valid.length > 0 ? valid : [...DEFAULT_MCP_SCOPES];
 }
+
+/** Human-readable line per scope for the OAuth consent screen's explicit
+ * disclosure list — single source of truth so the catalog and its consent
+ * copy can't drift apart. `admin` is described on its own; when present it
+ * is shown alone rather than alongside every other granted scope's line. */
+export const MCP_SCOPE_DESCRIPTIONS: Record<McpScope, string> = {
+  'memory:read': 'Read remembered facts, decisions, and open items',
+  'memory:write': 'Remember new facts, decisions, and open items',
+  'docs:read': 'Read documents in this workspace',
+  'docs:write': 'Create and edit documents in this workspace',
+  'calendar:read': 'Read the content calendar',
+  'calendar:write': 'Create and update calendar entries',
+  'command:read': "Read the Command Center's queue and platform health",
+  'command:write': 'Manage Command Center opportunities and posts',
+  'gruve:read': 'Read connected Gruve event, ticket, and sales data',
+  admin: 'Full access to everything in this workspace',
+};
+
+export function describeScopes(scopes: string[]): string[] {
+  if (scopes.includes('admin')) return [MCP_SCOPE_DESCRIPTIONS.admin];
+  return scopes
+    .filter((s): s is McpScope => (MCP_SCOPES as readonly string[]).includes(s))
+    .map((s) => MCP_SCOPE_DESCRIPTIONS[s]);
+}

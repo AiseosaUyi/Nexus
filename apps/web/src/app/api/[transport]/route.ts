@@ -40,11 +40,7 @@ import type { McpTokenExtra } from '@/lib/mcp/context';
 import { registerMetaTools } from '@/lib/mcp/tools/meta';
 import { registerCommandCenterTools } from '@/lib/mcp/tools/command-center';
 import { createServiceClient } from '@/lib/supabase/service';
-
-function appUrl(path: string): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  return `${base.replace(/\/$/, '')}${path}`;
-}
+import { appUrl } from '@/lib/mcp/app-url';
 
 const handler = createMcpHandler(
   (server) => {

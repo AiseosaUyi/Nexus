@@ -55,6 +55,7 @@ export async function signIn(formData: FormData) {
 
   const email = (formData.get('email') as string)?.trim().toLowerCase();
   const password = formData.get('password') as string;
+  const next = formData.get('next') as string | null;
 
   if (!email || !password) {
     return redirect(`/login?error=${encodeURIComponent('Email and password are required')}`);
@@ -67,6 +68,12 @@ export async function signIn(formData: FormData) {
   }
 
   revalidatePath('/', 'layout');
+  // Only redirect to `next` when it's a same-origin relative path — must
+  // reject "//attacker.com" too, which also starts with "/" but browsers
+  // resolve as a full off-site redirect (protocol-relative URL).
+  if (next && next.startsWith('/') && !next.startsWith('//')) {
+    redirect(next);
+  }
   redirect('/dashboard');
 }
 

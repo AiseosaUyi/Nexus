@@ -41,14 +41,20 @@ export async function middleware(request: NextRequest) {
   // Auth routes: /login, /signup
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/signup');
 
-  // Protected routes: anything under /w/* or /dashboard
+  // Protected routes: anything under /w/*, /dashboard, or the OAuth
+  // consent screen (which needs a signed-in user to pick a workspace to
+  // grant access to).
   const isProtectedRoute =
-    pathname.startsWith('/w/') || pathname.startsWith('/dashboard');
+    pathname.startsWith('/w/') || pathname.startsWith('/dashboard') || pathname.startsWith('/oauth/authorize');
 
-  // 1. Unauthenticated users trying to access protected routes → send to /login
+  // 1. Unauthenticated users trying to access protected routes → send to
+  //    /login, preserving the full path+query as `next` so signIn() can
+  //    send them back to (e.g.) the OAuth consent screen instead of
+  //    always landing on /dashboard.
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+    url.search = `?next=${encodeURIComponent(pathname + request.nextUrl.search)}`;
     return NextResponse.redirect(url);
   }
 
