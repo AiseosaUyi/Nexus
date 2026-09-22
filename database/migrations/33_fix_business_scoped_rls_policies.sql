@@ -59,142 +59,171 @@
 -- of these are self-referential (the policy's own table is never
 -- business_members), so this simple fix is safe and sufficient.
 
+-- Each table below is wrapped in `if to_regclass(...) is not null` so this
+-- migration is safe to run regardless of which of these tables actually
+-- exist on the target database — confirmed necessary: this codebase's own
+-- CLAUDE.md asserts every migration through 31 is applied to production,
+-- but a direct read-only check against the real database found `assets`
+-- (06_assets.sql) was never actually applied there, while
+-- calendar_entries/opportunities/platform_health/command_action_log (07,
+-- 26) were. Never assume; check.
+
 -- ── assets ────────────────────────────────────────────────────────────────────
-drop policy if exists "Business members can view assets" on public.assets;
-drop policy if exists "Editors and admins can upload assets" on public.assets;
-drop policy if exists "Admins can delete assets" on public.assets;
+do $$ begin
+  if to_regclass('public.assets') is not null then
+    drop policy if exists "Business members can view assets" on public.assets;
+    drop policy if exists "Editors and admins can upload assets" on public.assets;
+    drop policy if exists "Admins can delete assets" on public.assets;
 
-create policy "Business members can view assets"
-  on public.assets for select
-  using (
-    exists (
-      select 1 from public.business_members bm
-      where bm.business_id = assets.business_id
-        and bm.user_id = auth.uid()
-    )
-  );
+    create policy "Business members can view assets"
+      on public.assets for select
+      using (
+        exists (
+          select 1 from public.business_members bm
+          where bm.business_id = assets.business_id
+            and bm.user_id = auth.uid()
+        )
+      );
 
-create policy "Editors and admins can upload assets"
-  on public.assets for insert
-  with check (
-    exists (
-      select 1 from public.business_members bm
-      where bm.business_id = assets.business_id
-        and bm.user_id = auth.uid()
-        and bm.role in ('ADMIN', 'EDITOR')
-    )
-  );
+    create policy "Editors and admins can upload assets"
+      on public.assets for insert
+      with check (
+        exists (
+          select 1 from public.business_members bm
+          where bm.business_id = assets.business_id
+            and bm.user_id = auth.uid()
+            and bm.role in ('ADMIN', 'EDITOR')
+        )
+      );
 
-create policy "Admins can delete assets"
-  on public.assets for delete
-  using (
-    exists (
-      select 1 from public.business_members bm
-      where bm.business_id = assets.business_id
-        and bm.user_id = auth.uid()
-        and bm.role = 'ADMIN'
-    )
-  );
+    create policy "Admins can delete assets"
+      on public.assets for delete
+      using (
+        exists (
+          select 1 from public.business_members bm
+          where bm.business_id = assets.business_id
+            and bm.user_id = auth.uid()
+            and bm.role = 'ADMIN'
+        )
+      );
+  end if;
+end $$;
 
 -- ── calendar_entries ──────────────────────────────────────────────────────────
-drop policy if exists "Business members can view calendar entries" on public.calendar_entries;
-drop policy if exists "Editors and admins can create calendar entries" on public.calendar_entries;
-drop policy if exists "Editors and admins can update calendar entries" on public.calendar_entries;
+do $$ begin
+  if to_regclass('public.calendar_entries') is not null then
+    drop policy if exists "Business members can view calendar entries" on public.calendar_entries;
+    drop policy if exists "Editors and admins can create calendar entries" on public.calendar_entries;
+    drop policy if exists "Editors and admins can update calendar entries" on public.calendar_entries;
 
-create policy "Business members can view calendar entries"
-  on public.calendar_entries for select
-  using (
-    exists (
-      select 1 from public.business_members bm
-      where bm.business_id = calendar_entries.business_id
-        and bm.user_id = auth.uid()
-    )
-  );
+    create policy "Business members can view calendar entries"
+      on public.calendar_entries for select
+      using (
+        exists (
+          select 1 from public.business_members bm
+          where bm.business_id = calendar_entries.business_id
+            and bm.user_id = auth.uid()
+        )
+      );
 
-create policy "Editors and admins can create calendar entries"
-  on public.calendar_entries for insert
-  with check (
-    exists (
-      select 1 from public.business_members bm
-      where bm.business_id = calendar_entries.business_id
-        and bm.user_id = auth.uid()
-        and bm.role in ('ADMIN', 'EDITOR')
-    )
-  );
+    create policy "Editors and admins can create calendar entries"
+      on public.calendar_entries for insert
+      with check (
+        exists (
+          select 1 from public.business_members bm
+          where bm.business_id = calendar_entries.business_id
+            and bm.user_id = auth.uid()
+            and bm.role in ('ADMIN', 'EDITOR')
+        )
+      );
 
-create policy "Editors and admins can update calendar entries"
-  on public.calendar_entries for update
-  using (
-    exists (
-      select 1 from public.business_members bm
-      where bm.business_id = calendar_entries.business_id
-        and bm.user_id = auth.uid()
-        and bm.role in ('ADMIN', 'EDITOR')
-    )
-  );
+    create policy "Editors and admins can update calendar entries"
+      on public.calendar_entries for update
+      using (
+        exists (
+          select 1 from public.business_members bm
+          where bm.business_id = calendar_entries.business_id
+            and bm.user_id = auth.uid()
+            and bm.role in ('ADMIN', 'EDITOR')
+        )
+      );
+  end if;
+end $$;
 
 -- ── opportunities ─────────────────────────────────────────────────────────────
-drop policy if exists "Members can view opportunities" on public.opportunities;
-drop policy if exists "Editors and admins can create opportunities" on public.opportunities;
-drop policy if exists "Editors and admins can update opportunities" on public.opportunities;
-drop policy if exists "Admins can delete opportunities" on public.opportunities;
+do $$ begin
+  if to_regclass('public.opportunities') is not null then
+    drop policy if exists "Members can view opportunities" on public.opportunities;
+    drop policy if exists "Editors and admins can create opportunities" on public.opportunities;
+    drop policy if exists "Editors and admins can update opportunities" on public.opportunities;
+    drop policy if exists "Admins can delete opportunities" on public.opportunities;
 
-create policy "Members can view opportunities"
-  on public.opportunities for select
-  using (exists (select 1 from public.business_members bm
-    where bm.business_id = opportunities.business_id and bm.user_id = auth.uid()));
+    create policy "Members can view opportunities"
+      on public.opportunities for select
+      using (exists (select 1 from public.business_members bm
+        where bm.business_id = opportunities.business_id and bm.user_id = auth.uid()));
 
-create policy "Editors and admins can create opportunities"
-  on public.opportunities for insert
-  with check (exists (select 1 from public.business_members bm
-    where bm.business_id = opportunities.business_id and bm.user_id = auth.uid()
-      and bm.role in ('ADMIN','EDITOR')));
+    create policy "Editors and admins can create opportunities"
+      on public.opportunities for insert
+      with check (exists (select 1 from public.business_members bm
+        where bm.business_id = opportunities.business_id and bm.user_id = auth.uid()
+          and bm.role in ('ADMIN','EDITOR')));
 
-create policy "Editors and admins can update opportunities"
-  on public.opportunities for update
-  using (exists (select 1 from public.business_members bm
-    where bm.business_id = opportunities.business_id and bm.user_id = auth.uid()
-      and bm.role in ('ADMIN','EDITOR')));
+    create policy "Editors and admins can update opportunities"
+      on public.opportunities for update
+      using (exists (select 1 from public.business_members bm
+        where bm.business_id = opportunities.business_id and bm.user_id = auth.uid()
+          and bm.role in ('ADMIN','EDITOR')));
 
-create policy "Admins can delete opportunities"
-  on public.opportunities for delete
-  using (exists (select 1 from public.business_members bm
-    where bm.business_id = opportunities.business_id and bm.user_id = auth.uid()
-      and bm.role = 'ADMIN'));
+    create policy "Admins can delete opportunities"
+      on public.opportunities for delete
+      using (exists (select 1 from public.business_members bm
+        where bm.business_id = opportunities.business_id and bm.user_id = auth.uid()
+          and bm.role = 'ADMIN'));
+  end if;
+end $$;
 
 -- ── platform_health ───────────────────────────────────────────────────────────
-drop policy if exists "Members can view platform health" on public.platform_health;
-drop policy if exists "Editors and admins can upsert platform health (insert)" on public.platform_health;
-drop policy if exists "Editors and admins can upsert platform health (update)" on public.platform_health;
+do $$ begin
+  if to_regclass('public.platform_health') is not null then
+    drop policy if exists "Members can view platform health" on public.platform_health;
+    drop policy if exists "Editors and admins can upsert platform health (insert)" on public.platform_health;
+    drop policy if exists "Editors and admins can upsert platform health (update)" on public.platform_health;
 
-create policy "Members can view platform health"
-  on public.platform_health for select
-  using (exists (select 1 from public.business_members bm
-    where bm.business_id = platform_health.business_id and bm.user_id = auth.uid()));
+    create policy "Members can view platform health"
+      on public.platform_health for select
+      using (exists (select 1 from public.business_members bm
+        where bm.business_id = platform_health.business_id and bm.user_id = auth.uid()));
 
-create policy "Editors and admins can upsert platform health (insert)"
-  on public.platform_health for insert
-  with check (exists (select 1 from public.business_members bm
-    where bm.business_id = platform_health.business_id and bm.user_id = auth.uid()
-      and bm.role in ('ADMIN','EDITOR')));
+    create policy "Editors and admins can upsert platform health (insert)"
+      on public.platform_health for insert
+      with check (exists (select 1 from public.business_members bm
+        where bm.business_id = platform_health.business_id and bm.user_id = auth.uid()
+          and bm.role in ('ADMIN','EDITOR')));
 
-create policy "Editors and admins can upsert platform health (update)"
-  on public.platform_health for update
-  using (exists (select 1 from public.business_members bm
-    where bm.business_id = platform_health.business_id and bm.user_id = auth.uid()
-      and bm.role in ('ADMIN','EDITOR')));
+    create policy "Editors and admins can upsert platform health (update)"
+      on public.platform_health for update
+      using (exists (select 1 from public.business_members bm
+        where bm.business_id = platform_health.business_id and bm.user_id = auth.uid()
+          and bm.role in ('ADMIN','EDITOR')));
+  end if;
+end $$;
 
 -- ── command_action_log ────────────────────────────────────────────────────────
-drop policy if exists "Members can view action log" on public.command_action_log;
-drop policy if exists "Editors and admins can write action log" on public.command_action_log;
+do $$ begin
+  if to_regclass('public.command_action_log') is not null then
+    drop policy if exists "Members can view action log" on public.command_action_log;
+    drop policy if exists "Editors and admins can write action log" on public.command_action_log;
 
-create policy "Members can view action log"
-  on public.command_action_log for select
-  using (exists (select 1 from public.business_members bm
-    where bm.business_id = command_action_log.business_id and bm.user_id = auth.uid()));
+    create policy "Members can view action log"
+      on public.command_action_log for select
+      using (exists (select 1 from public.business_members bm
+        where bm.business_id = command_action_log.business_id and bm.user_id = auth.uid()));
 
-create policy "Editors and admins can write action log"
-  on public.command_action_log for insert
-  with check (exists (select 1 from public.business_members bm
-    where bm.business_id = command_action_log.business_id and bm.user_id = auth.uid()
-      and bm.role in ('ADMIN','EDITOR')));
+    create policy "Editors and admins can write action log"
+      on public.command_action_log for insert
+      with check (exists (select 1 from public.business_members bm
+        where bm.business_id = command_action_log.business_id and bm.user_id = auth.uid()
+          and bm.role in ('ADMIN','EDITOR')));
+  end if;
+end $$;
