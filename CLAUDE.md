@@ -208,6 +208,35 @@ Server action `importFromURL` in `actions.ts` fetches URLs server-side (avoids C
 
 The users table RLS allows workspace members to see each other via a `business_members` join (migration 20). Comment tables RLS checks workspace membership through `nodes → business_members` chain (migration 21). When adding new tables with user data, always gate SELECT policies on workspace membership, not just `auth.uid()`.
 
+### Nexus Brain MCP (`src/app/api/[transport]/route.ts`)
+
+The remote MCP server — full details in `docs/MCP.md`. The essentials for working in this area:
+
+- **Route location gotcha:** the file lives at `api/[transport]/route.ts`, not `api/mcp/route.ts`.
+  `[transport]` is a literal dynamic segment `mcp-handler` resolves itself; combined with
+  `basePath: '/api'` this produces the public URL `/api/mcp`. Next.js prefers a static route over a
+  dynamic segment for the same path, so a static `api/mcp/route.ts` sitting alongside this one
+  would silently win and the dynamic route would never actually serve traffic — that file was
+  deleted, not left in place, when this route was added.
+- **Tools never accept a workspace, business, tenant, or slug argument.** The bearer token (a
+  `nexus_key_...` static token, an OAuth access token, or — temporarily, behind
+  `MCP_LEGACY_COMMAND_TOKEN=1` — the legacy `COMMAND_CENTER_TOKEN`) is the only source of tenant
+  identity, resolved once via `requireToolScope()` (`lib/mcp/context.ts`). This is a breaking
+  change from the old `cc_*` tools' `workspace` argument, and it's intentional.
+  `nexus_manifest`'s registry (`lib/mcp/manifest.ts`) is keyed by tool name (a `Map`), not
+  appended to with `Array.push()` — `mcp-handler` re-runs the whole tool-registration callback on
+  every request, so an append-only array would duplicate entries in a warm serverless instance.
+- **`memories`/`agent_sessions`/`blocks` full-text search go through Postgres RPCs**
+  (`remember_memory`, `recall_memories`, `search_blocks` in `30_memory.sql`), not
+  `.upsert()`/`.select()` — PostgREST can't target a partial unique index or an expression index
+  as a plain "column."
+- **`appendToNode`'s Yjs diff is real, verified CRDT machinery, not a rebuild-from-scratch.**
+  `prosemirrorToYXmlFragment(pmDoc, fragment)` makes the fragment match `pmDoc` exactly (a
+  sync-to-target diff) — callers compose the full next document (existing + appended) before
+  calling it, they never pass just the new content. See `lib/docs/content.diff.test.ts`.
+- No delete tools anywhere on this surface — memories, docs, and calendar entries are
+  archived/resolved/cancelled, never deleted.
+
 ### Email (`src/lib/email.ts`)
 
 Uses Resend SDK. Two functions: `sendTeamInviteEmail()` and `sendPageShareEmail()`. Both are fire-and-forget — failures are caught and logged but don't block the invitation/share creation. **Currently disabled** — Resend requires a verified custom domain (not a Vercel URL). Invites work via shareable links instead. To enable: add a custom domain in Resend dashboard, set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in env.
@@ -222,7 +251,7 @@ Migrations are plain SQL files in `database/migrations/` and must be applied in 
 3. Update `packages/api/schema.ts` to match
 4. Update RLS policies if needed (check `11_fix_nodes_rls.sql` for the pattern)
 
-**All migrations through `21_fix_comments_rls.sql` must be applied for the current codebase.**
+**All migrations through `31_integrations.sql` must be applied for the current codebase.**
 
 **Critical migrations:**
 - `08_realtime.sql` — adds `yjs_snapshot bytea` column to nodes (required for snapshot storage)
@@ -230,6 +259,9 @@ Migrations are plain SQL files in `database/migrations/` and must be applied in 
 - `17_node_shares.sql` — adds `node_shares` and `access_requests` tables with RLS policies for per-node sharing and access request workflow
 - `20_users_workspace_visibility.sql` — allows workspace members to see each other's profiles (required for member list display)
 - `21_fix_comments_rls.sql` — locks comment threads/comments to workspace members only (security fix)
+- `29_mcp_auth.sql` — Nexus Brain MCP auth: `workspace_api_tokens` (static `nexus_key_` tokens) and the OAuth 2.1 authorization server tables (`oauth_clients`, `oauth_authorization_codes`, `oauth_refresh_tokens`)
+- `30_memory.sql` — the memory model (`memories`, `agent_sessions`, `mcp_audit_log`), the `remember_memory()`/`recall_memories()`/`search_blocks()` RPCs (PostgREST can't target a partial unique index or an expression index directly), and the `blocks_content_search` GIN expression index
+- `31_integrations.sql` — `business_integrations` (Gruve key, encrypted at rest; Pulse tenant slug)
 
 > When querying nullable FK columns in Supabase (e.g. `parent_id`, `teamspace_id`), use `.is('col', null)` not `.eq('col', null)` — the latter silently returns no rows.
 
@@ -286,6 +318,13 @@ RESEND_FROM_EMAIL=              # Defaults to onboarding@resend.dev
 SENTRY_DSN=
 NEXT_PUBLIC_POSTHOG_KEY=
 NEXT_PUBLIC_POSTHOG_HOST=       # Defaults to https://app.posthog.com
+```
+
+**Nexus Brain MCP** (see `docs/MCP.md`):
+```
+NEXUS_MCP_OAUTH_JWT_SECRET=     # required for OAuth; 32+ random bytes, base64
+NEXUS_INTEGRATION_KEY=          # required to save a Gruve key; 32 bytes, base64
+MCP_LEGACY_COMMAND_TOKEN=       # optional "1" during migration off ?key= auth; delete afterwards
 ```
 
 **Playwright only:**
