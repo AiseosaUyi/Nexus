@@ -39,6 +39,8 @@ import { verifyAccessToken } from '@/lib/oauth/tokens';
 import type { McpTokenExtra } from '@/lib/mcp/context';
 import { registerMetaTools } from '@/lib/mcp/tools/meta';
 import { registerCommandCenterTools } from '@/lib/mcp/tools/command-center';
+import { registerMemoryTools } from '@/lib/mcp/tools/memory';
+import { registerSessionTools } from '@/lib/mcp/tools/sessions';
 import { createServiceClient } from '@/lib/supabase/service';
 import { appUrl } from '@/lib/mcp/app-url';
 
@@ -46,6 +48,8 @@ const handler = createMcpHandler(
   (server) => {
     registerMetaTools(server);
     registerCommandCenterTools(server);
+    registerMemoryTools(server);
+    registerSessionTools(server);
   },
   {},
   {

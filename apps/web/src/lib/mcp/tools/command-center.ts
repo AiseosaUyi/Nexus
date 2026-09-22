@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { requireToolScope, mcpToolResult, mcpToolError, type ToolHandlerExtra } from '@/lib/mcp/context';
-import { registerManifestEntry } from '@/lib/mcp/manifest';
+import { registerAuditedTool } from '@/lib/mcp/audit';
 import * as ops from '@/lib/command/ops';
 
 /** Every cc_* handler needs the same "is Command Center on for this
@@ -27,14 +27,14 @@ async function requireCommandCenterEnabled(
 }
 
 export function registerCommandCenterTools(server: McpServer) {
-  registerManifestEntry({
-    name: 'nexus_cc_pending',
-    scope: 'command:read',
-    mutates: false,
-    description: 'Get everything waiting: drafted replies, pending posts, quarantined items, platform health.',
-  });
-  server.registerTool(
-    'nexus_cc_pending',
+  registerAuditedTool(
+    server,
+    {
+      name: 'nexus_cc_pending',
+      scope: 'command:read',
+      mutates: false,
+      description: 'Get everything waiting: drafted replies, pending posts, quarantined items, platform health.',
+    },
     {
       title: 'cc_pending',
       description:
@@ -51,14 +51,14 @@ export function registerCommandCenterTools(server: McpServer) {
     },
   );
 
-  registerManifestEntry({
-    name: 'nexus_cc_capture_opportunity',
-    scope: 'command:write',
-    mutates: true,
-    description: 'Record a new inbound item. Auto-scores scam risk and quarantines obvious scams.',
-  });
-  server.registerTool(
-    'nexus_cc_capture_opportunity',
+  registerAuditedTool(
+    server,
+    {
+      name: 'nexus_cc_capture_opportunity',
+      scope: 'command:write',
+      mutates: true,
+      description: 'Record a new inbound item. Auto-scores scam risk and quarantines obvious scams.',
+    },
     {
       title: 'cc_capture_opportunity',
       description:
@@ -80,28 +80,28 @@ export function registerCommandCenterTools(server: McpServer) {
       const enabled = await requireCommandCenterEnabled(db, businessId);
       if (!enabled.ok) return enabled.error;
       try {
-        return mcpToolResult(await ops.captureOpportunity(db, businessId, args));
+        return mcpToolResult(await ops.captureOpportunity(db, businessId, args as any));
       } catch (e: any) {
         return mcpToolError(e.message ?? String(e));
       }
     },
   );
 
-  registerManifestEntry({
-    name: 'nexus_cc_draft_reply',
-    scope: 'command:write',
-    mutates: true,
-    description: 'Attach/update a draft reply on an existing opportunity and move it into the approval queue.',
-  });
-  server.registerTool(
-    'nexus_cc_draft_reply',
+  registerAuditedTool(
+    server,
+    {
+      name: 'nexus_cc_draft_reply',
+      scope: 'command:write',
+      mutates: true,
+      description: 'Attach/update a draft reply on an existing opportunity and move it into the approval queue.',
+    },
     {
       title: 'cc_draft_reply',
       description:
         'Attach/update a draft reply on an existing opportunity and move it into the approval queue. Mutates data.',
       inputSchema: { id: z.string(), draft_reply: z.string(), fit_score: z.number().optional() },
     },
-    async (args, extra: ToolHandlerExtra) => {
+    async (args: any, extra: ToolHandlerExtra) => {
       const gate = requireToolScope(extra, 'command:write');
       if (!gate.ok) return gate.error;
       const { businessId, db } = gate.context;
@@ -115,21 +115,21 @@ export function registerCommandCenterTools(server: McpServer) {
     },
   );
 
-  registerManifestEntry({
-    name: 'nexus_cc_mark_sent',
-    scope: 'command:write',
-    mutates: true,
-    description: 'After the owner approved and it was actually sent, mark the opportunity sent.',
-  });
-  server.registerTool(
-    'nexus_cc_mark_sent',
+  registerAuditedTool(
+    server,
+    {
+      name: 'nexus_cc_mark_sent',
+      scope: 'command:write',
+      mutates: true,
+      description: 'After the owner approved and it was actually sent, mark the opportunity sent.',
+    },
     {
       title: 'cc_mark_sent',
       description:
         'After the workspace owner approved and the reply was actually sent, mark the opportunity sent. Mutates data.',
       inputSchema: { id: z.string() },
     },
-    async ({ id }, extra: ToolHandlerExtra) => {
+    async ({ id }: { id: string }, extra: ToolHandlerExtra) => {
       const gate = requireToolScope(extra, 'command:write');
       if (!gate.ok) return gate.error;
       const { businessId, db } = gate.context;
@@ -143,14 +143,14 @@ export function registerCommandCenterTools(server: McpServer) {
     },
   );
 
-  registerManifestEntry({
-    name: 'nexus_cc_add_post',
-    scope: 'command:write',
-    mutates: true,
-    description: 'Add a content post to the calendar for a platform, awaiting approval.',
-  });
-  server.registerTool(
-    'nexus_cc_add_post',
+  registerAuditedTool(
+    server,
+    {
+      name: 'nexus_cc_add_post',
+      scope: 'command:write',
+      mutates: true,
+      description: 'Add a content post to the calendar for a platform, awaiting approval.',
+    },
     {
       title: 'cc_add_post',
       description:
@@ -164,7 +164,7 @@ export function registerCommandCenterTools(server: McpServer) {
         quality_score: z.number().optional(),
       },
     },
-    async (args, extra: ToolHandlerExtra) => {
+    async (args: any, extra: ToolHandlerExtra) => {
       const gate = requireToolScope(extra, 'command:write');
       if (!gate.ok) return gate.error;
       const { businessId, db } = gate.context;
@@ -178,21 +178,21 @@ export function registerCommandCenterTools(server: McpServer) {
     },
   );
 
-  registerManifestEntry({
-    name: 'nexus_cc_mark_posted',
-    scope: 'command:write',
-    mutates: true,
-    description: 'After the owner approved and it was published, mark the post posted with the URL.',
-  });
-  server.registerTool(
-    'nexus_cc_mark_posted',
+  registerAuditedTool(
+    server,
+    {
+      name: 'nexus_cc_mark_posted',
+      scope: 'command:write',
+      mutates: true,
+      description: 'After the owner approved and it was published, mark the post posted with the URL.',
+    },
     {
       title: 'cc_mark_posted',
       description:
         'After the workspace owner approved and the post was published, mark it posted with the URL. Mutates data.',
       inputSchema: { id: z.string(), post_url: z.string().optional() },
     },
-    async ({ id, post_url }, extra: ToolHandlerExtra) => {
+    async ({ id, post_url }: { id: string; post_url?: string }, extra: ToolHandlerExtra) => {
       const gate = requireToolScope(extra, 'command:write');
       if (!gate.ok) return gate.error;
       const { businessId, db } = gate.context;
@@ -206,14 +206,14 @@ export function registerCommandCenterTools(server: McpServer) {
     },
   );
 
-  registerManifestEntry({
-    name: 'nexus_cc_record_health',
-    scope: 'command:write',
-    mutates: true,
-    description: 'Store a 0-100 health score for a platform plus the single top fix.',
-  });
-  server.registerTool(
-    'nexus_cc_record_health',
+  registerAuditedTool(
+    server,
+    {
+      name: 'nexus_cc_record_health',
+      scope: 'command:write',
+      mutates: true,
+      description: 'Store a 0-100 health score for a platform plus the single top fix.',
+    },
     {
       title: 'cc_record_health',
       description: 'Store a 0-100 health score for a platform plus the single top fix. Mutates data.',
@@ -225,7 +225,7 @@ export function registerCommandCenterTools(server: McpServer) {
         handle: z.string().optional(),
       },
     },
-    async (args, extra: ToolHandlerExtra) => {
+    async (args: any, extra: ToolHandlerExtra) => {
       const gate = requireToolScope(extra, 'command:write');
       if (!gate.ok) return gate.error;
       const { businessId, db } = gate.context;
