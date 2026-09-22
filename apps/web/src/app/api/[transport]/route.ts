@@ -41,6 +41,8 @@ import { registerMetaTools } from '@/lib/mcp/tools/meta';
 import { registerCommandCenterTools } from '@/lib/mcp/tools/command-center';
 import { registerMemoryTools } from '@/lib/mcp/tools/memory';
 import { registerSessionTools } from '@/lib/mcp/tools/sessions';
+import { registerDocsTools } from '@/lib/mcp/tools/docs';
+import { registerCalendarTools } from '@/lib/mcp/tools/calendar';
 import { createServiceClient } from '@/lib/supabase/service';
 import { appUrl } from '@/lib/mcp/app-url';
 
@@ -50,6 +52,8 @@ const handler = createMcpHandler(
     registerCommandCenterTools(server);
     registerMemoryTools(server);
     registerSessionTools(server);
+    registerDocsTools(server);
+    registerCalendarTools(server);
   },
   {},
   {

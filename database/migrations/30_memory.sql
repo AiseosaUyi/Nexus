@@ -257,3 +257,41 @@ create index if not exists blocks_content_search
       from jsonb_array_elements_text(jsonb_path_query_array(content, '$.**.text'::jsonpath)) as t(value)
     ), '')
   ));
+
+-- nexus_search_docs' content-match half (the title-ILIKE half is a plain
+-- PostgREST .ilike() call, no RPC needed). PostgREST has no way to query
+-- an EXPRESSION index directly — it only exposes real columns as
+-- filterable "columns", and this tsvector is computed inline, not stored
+-- — so the same expression has to be repeated verbatim here for Postgres
+-- to recognize it matches blocks_content_search above and use it rather
+-- than a sequential scan.
+create or replace function public.search_blocks(
+  p_business_id uuid,
+  p_query       text,
+  p_limit       int
+)
+returns table(node_id uuid, title text, snippet text, updated_at timestamptz)
+language sql
+stable
+as $$
+  select distinct on (n.id)
+    n.id as node_id,
+    n.title,
+    left(coalesce((
+      select string_agg(t.value, ' ')
+      from jsonb_array_elements_text(jsonb_path_query_array(b.content, '$.**.text'::jsonpath)) as t(value)
+    ), ''), 200) as snippet,
+    n.updated_at
+  from public.blocks b
+  join public.nodes n on n.id = b.node_id
+  where n.business_id = p_business_id
+    and n.is_archived = false
+    and to_tsvector('english', coalesce((
+      select string_agg(t.value, ' ')
+      from jsonb_array_elements_text(jsonb_path_query_array(b.content, '$.**.text'::jsonpath)) as t(value)
+    ), '')) @@ websearch_to_tsquery('english', p_query)
+  order by n.id, n.updated_at desc
+  limit p_limit;
+$$;
+
+grant execute on function public.search_blocks(uuid, text, int) to authenticated, service_role;

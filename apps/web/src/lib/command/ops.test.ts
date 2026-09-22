@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { decidePost, decideOpportunity, OpValidationError } from './ops';
+import { decidePost, decideOpportunity, setCalendarStatus, OpValidationError } from './ops';
 
 // Regression suite for lib/command/ops.ts — this file had ZERO test
 // coverage before the Nexus Brain MCP build touched it (verified: no
@@ -178,5 +178,34 @@ describe('decideOpportunity', () => {
     await expect(
       decideOpportunity(supabase as any, 'biz-1', { id: 'opp-1', decision: 'bogus' }),
     ).rejects.toBeInstanceOf(OpValidationError);
+  });
+});
+
+describe('setCalendarStatus', () => {
+  it('sets the literal status directly, no decision-vocabulary translation', async () => {
+    const supabase = makeFakeSupabase({ calendarEntryRow: { platform: 'Twitter', properties: {} } });
+    const result = await setCalendarStatus(supabase as any, 'biz-1', { id: 'entry-1', status: 'scheduled' });
+    expect(result).toEqual({ status: 'scheduled' });
+  });
+
+  it('merges post_url into existing properties, same fix as decidePost', async () => {
+    const supabase = makeFakeSupabase({
+      calendarEntryRow: { platform: 'Twitter', properties: { body: 'hello', media_ref: 'img-1' } },
+    });
+    await setCalendarStatus(supabase as any, 'biz-1', { id: 'entry-1', status: 'published', post_url: 'https://x.com/1' });
+    const updateWithProperties = supabase._updates.find((u) => u.properties);
+    expect(updateWithProperties?.properties).toEqual({ body: 'hello', media_ref: 'img-1', post_url: 'https://x.com/1' });
+  });
+
+  it('rejects an unknown status', async () => {
+    const supabase = makeFakeSupabase({ calendarEntryRow: { platform: 'Twitter', properties: {} } });
+    await expect(
+      setCalendarStatus(supabase as any, 'biz-1', { id: 'entry-1', status: 'not-a-real-status' }),
+    ).rejects.toBeInstanceOf(OpValidationError);
+  });
+
+  it('rejects a missing id', async () => {
+    const supabase = makeFakeSupabase({ calendarEntryRow: { platform: 'Twitter', properties: {} } });
+    await expect(setCalendarStatus(supabase as any, 'biz-1', { status: 'draft' })).rejects.toBeInstanceOf(OpValidationError);
   });
 });
