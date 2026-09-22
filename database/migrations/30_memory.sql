@@ -14,6 +14,33 @@ do $$ begin
   create type public.memory_status as enum ('active','resolved','archived','superseded');
 exception when duplicate_object then null; end $$;
 
+-- Postgres's to_tsvector(regconfig, text) IS marked immutable in pg_proc,
+-- but resolving a bare string literal like 'english' to regconfig happens
+-- through that type's text-input function, not a pg_cast entry — and the
+-- planner won't trust a GENERATED ALWAYS AS / expression-index expression
+-- built on that path, failing with "generation expression is not
+-- immutable" (verified against a live Postgres instance while building
+-- this migration, not assumed from memory). Standard, well-documented fix:
+-- wrap it in a SQL function explicitly marked immutable.
+create or replace function public.immutable_to_tsvector(config regconfig, content text)
+returns tsvector
+language sql
+immutable
+parallel safe
+as $$ select to_tsvector(config, coalesce(content, '')); $$;
+
+-- array_to_string(anyarray, text) is a SEPARATE immutability problem from
+-- the one above — it's genuinely marked STABLE in pg_proc (polymorphic
+-- array functions commonly are), not immutable, confirmed the same way:
+-- built a minimal repro table against a live instance rather than guessing
+-- from the first fix looking similar. Same wrapper trick, different function.
+create or replace function public.immutable_array_to_string(arr text[], sep text)
+returns text
+language sql
+immutable
+parallel safe
+as $$ select array_to_string(arr, sep); $$;
+
 create table if not exists public.memories (
   id               uuid primary key default gen_random_uuid(),
   business_id      uuid not null references public.businesses(id) on delete cascade,
@@ -35,9 +62,9 @@ create table if not exists public.memories (
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now(),
   search           tsvector generated always as
-                   (setweight(to_tsvector('english', coalesce(subject,'')),'A') ||
-                    setweight(to_tsvector('english', coalesce(content,'')),'B') ||
-                    setweight(to_tsvector('simple', array_to_string(tags,' ')),'C')) stored
+                   (setweight(public.immutable_to_tsvector('english', subject),'A') ||
+                    setweight(public.immutable_to_tsvector('english', content),'B') ||
+                    setweight(public.immutable_to_tsvector('simple', public.immutable_array_to_string(tags,' ')),'C')) stored
 );
 
 -- Backs nexus_remember's atomic upsert: INSERT ... ON CONFLICT (business_id,
@@ -243,28 +270,40 @@ create index if not exists idx_mcp_audit_business_time on public.mcp_audit_log(b
 alter table public.mcp_audit_log enable row level security;
 
 -- ── blocks full-text search seam for nexus_search_docs ───────────────────────
--- Expression index over every "text" value at any depth of the block's
--- Tiptap JSON, via SQL/JSON path's recursive descent ($.**) — a Tiptap
--- paragraph's runs, a list item's nested text, a table cell's content are
--- all at different nesting depths, so a single-level content->'content'
--- walk would miss most of them. The only change touching an existing
--- table's index set — no columns added to blocks itself.
+-- Extracts every "text" value at any depth of a block's Tiptap JSON, via
+-- SQL/JSON path's recursive descent ($.**) — a paragraph's runs, a list
+-- item's nested text, a table cell's content are all at different nesting
+-- depths, so a single-level content->'content' walk would miss most of
+-- them. Pulled into its own IMMUTABLE function rather than an inline
+-- correlated subquery: Postgres flatly rejects "subquery in index
+-- expression" for CREATE INDEX (a hard restriction, not just an
+-- immutability one — verified against a live instance while building this
+-- migration), and a plain function call is also what lets search_blocks()
+-- below reuse the identical expression instead of duplicating the jsonb
+-- path logic a second time.
+create or replace function public.block_search_text(content jsonb)
+returns text
+language sql
+immutable
+parallel safe
+as $$
+  select coalesce(string_agg(t.value, ' '), '')
+  from jsonb_array_elements_text(jsonb_path_query_array(content, '$.**.text'::jsonpath)) as t(value);
+$$;
+
+-- The only change touching an existing table's index set — no columns
+-- added to blocks itself.
 create index if not exists blocks_content_search
   on public.blocks
-  using gin (to_tsvector('english',
-    coalesce((
-      select string_agg(t.value, ' ')
-      from jsonb_array_elements_text(jsonb_path_query_array(content, '$.**.text'::jsonpath)) as t(value)
-    ), '')
-  ));
+  using gin (public.immutable_to_tsvector('english', public.block_search_text(content)));
 
 -- nexus_search_docs' content-match half (the title-ILIKE half is a plain
 -- PostgREST .ilike() call, no RPC needed). PostgREST has no way to query
 -- an EXPRESSION index directly — it only exposes real columns as
--- filterable "columns", and this tsvector is computed inline, not stored
--- — so the same expression has to be repeated verbatim here for Postgres
--- to recognize it matches blocks_content_search above and use it rather
--- than a sequential scan.
+-- filterable "columns" — so this RPC repeats the identical expression
+-- (via the same block_search_text()/immutable_to_tsvector() functions) for
+-- Postgres to recognize it matches blocks_content_search above and use it
+-- rather than a sequential scan.
 create or replace function public.search_blocks(
   p_business_id uuid,
   p_query       text,
@@ -277,19 +316,14 @@ as $$
   select distinct on (n.id)
     n.id as node_id,
     n.title,
-    left(coalesce((
-      select string_agg(t.value, ' ')
-      from jsonb_array_elements_text(jsonb_path_query_array(b.content, '$.**.text'::jsonpath)) as t(value)
-    ), ''), 200) as snippet,
+    left(public.block_search_text(b.content), 200) as snippet,
     n.updated_at
   from public.blocks b
   join public.nodes n on n.id = b.node_id
   where n.business_id = p_business_id
     and n.is_archived = false
-    and to_tsvector('english', coalesce((
-      select string_agg(t.value, ' ')
-      from jsonb_array_elements_text(jsonb_path_query_array(b.content, '$.**.text'::jsonpath)) as t(value)
-    ), '')) @@ websearch_to_tsquery('english', p_query)
+    and public.immutable_to_tsvector('english', public.block_search_text(b.content))
+        @@ websearch_to_tsquery('english', p_query)
   order by n.id, n.updated_at desc
   limit p_limit;
 $$;
