@@ -394,6 +394,22 @@ export interface McpAuditLogRow {
   created_at: string;
 }
 
+// ─── Nexus Brain MCP: integrations ──────────────────────────────────────────────
+
+export type IntegrationProvider = 'gruve' | 'pulse';
+
+export interface BusinessIntegration {
+  id: string;
+  business_id: string;
+  provider: IntegrationProvider;
+  config: Record<string, unknown>;
+  /** Never returned by any tool, action, or page — see CLAUDE.md guardrails. */
+  secret_enc: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── API Responses ────────────────────────────────────────────────────────────
 
 export interface ApiError {

@@ -43,6 +43,7 @@ import { registerMemoryTools } from '@/lib/mcp/tools/memory';
 import { registerSessionTools } from '@/lib/mcp/tools/sessions';
 import { registerDocsTools } from '@/lib/mcp/tools/docs';
 import { registerCalendarTools } from '@/lib/mcp/tools/calendar';
+import { registerGruveTools } from '@/lib/mcp/tools/gruve';
 import { createServiceClient } from '@/lib/supabase/service';
 import { appUrl } from '@/lib/mcp/app-url';
 
@@ -54,6 +55,7 @@ const handler = createMcpHandler(
     registerSessionTools(server);
     registerDocsTools(server);
     registerCalendarTools(server);
+    registerGruveTools(server);
   },
   {},
   {

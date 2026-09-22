@@ -27,21 +27,23 @@ export function registerMetaTools(server: McpServer) {
       if (!gate.ok) return gate.error;
       const { businessId, businessSlug, scopes, tokenKind, db } = gate.context;
 
-      const { data: business } = await db
-        .from('businesses')
-        .select('id, slug, name, command_center_enabled')
-        .eq('id', businessId)
-        .single();
+      const [{ data: business }, { data: integrations }] = await Promise.all([
+        db.from('businesses').select('id, slug, name, command_center_enabled').eq('id', businessId).single(),
+        db.from('business_integrations').select('provider, config').eq('business_id', businessId),
+      ]);
+
+      const pulseRow = integrations?.find((i) => i.provider === 'pulse');
+      const gruveRow = integrations?.find((i) => i.provider === 'gruve');
+      const pulseConfig = pulseRow?.config as { tenantSlug?: string; baseUrl?: string } | undefined;
+      const gruveConfig = gruveRow?.config as { baseUrl?: string } | undefined;
 
       return mcpToolResult({
         business: { id: businessId, slug: businessSlug, name: business?.name ?? businessSlug },
         scopes,
-        // TODO(step 6): once 31_integrations.sql lands, look these up from
-        // business_integrations instead of returning static not-connected
-        // defaults — see lib/integrations/gruve.ts.
         links: {
-          pulse: null as { tenantSlug: string; baseUrl: string } | null,
-          gruve: { connected: false, baseUrl: null as string | null },
+          pulse: pulseRow && pulseConfig?.tenantSlug ? { tenantSlug: pulseConfig.tenantSlug, baseUrl: pulseConfig.baseUrl ?? null } : null,
+          // connected reflects a row existing, never the decrypted key itself.
+          gruve: { connected: Boolean(gruveRow), baseUrl: gruveConfig?.baseUrl ?? null },
         },
         commandCenterEnabled: Boolean(business?.command_center_enabled),
         tokenKind,
