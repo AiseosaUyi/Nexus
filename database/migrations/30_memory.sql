@@ -83,27 +83,34 @@ create or replace trigger memories_updated_at
 
 alter table public.memories enable row level security;
 
+-- NOTE: `business_id` below must be qualified as `memories.business_id`.
+-- Written bare, it binds to `bm.business_id` (business_members' own
+-- column — the only match in the subquery's FROM scope), collapsing the
+-- policy to "is auth.uid() a member/admin of ANY business at all" and
+-- granting cross-tenant read/write of every workspace's remembered
+-- facts/decisions. Found and fixed before this migration was ever applied
+-- to production.
 create policy "Members can view memories"
   on public.memories for select
   using (exists (select 1 from public.business_members bm
-    where bm.business_id = business_id and bm.user_id = auth.uid()));
+    where bm.business_id = memories.business_id and bm.user_id = auth.uid()));
 
 create policy "Editors and admins can create memories"
   on public.memories for insert
   with check (exists (select 1 from public.business_members bm
-    where bm.business_id = business_id and bm.user_id = auth.uid()
+    where bm.business_id = memories.business_id and bm.user_id = auth.uid()
       and bm.role in ('ADMIN','EDITOR')));
 
 create policy "Editors and admins can update memories"
   on public.memories for update
   using (exists (select 1 from public.business_members bm
-    where bm.business_id = business_id and bm.user_id = auth.uid()
+    where bm.business_id = memories.business_id and bm.user_id = auth.uid()
       and bm.role in ('ADMIN','EDITOR')));
 
 create policy "Admins can delete memories"
   on public.memories for delete
   using (exists (select 1 from public.business_members bm
-    where bm.business_id = business_id and bm.user_id = auth.uid()
+    where bm.business_id = memories.business_id and bm.user_id = auth.uid()
       and bm.role = 'ADMIN'));
 
 -- nexus_remember's atomic upsert. PostgREST/supabase-js's built-in
@@ -247,10 +254,11 @@ create index if not exists idx_agent_sessions_business on public.agent_sessions(
 
 alter table public.agent_sessions enable row level security;
 
+-- Same bare-`business_id` correlation bug as above, qualified here too.
 create policy "Members can view agent sessions"
   on public.agent_sessions for select
   using (exists (select 1 from public.business_members bm
-    where bm.business_id = business_id and bm.user_id = auth.uid()));
+    where bm.business_id = agent_sessions.business_id and bm.user_id = auth.uid()));
 
 -- ── mcp_audit_log ────────────────────────────────────────────────────────────
 -- Service-role only — never store raw tool arguments here, only a digest.

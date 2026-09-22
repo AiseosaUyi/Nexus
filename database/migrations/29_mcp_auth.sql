@@ -27,21 +27,32 @@ create index if not exists idx_workspace_api_tokens_business_id on public.worksp
 
 alter table public.workspace_api_tokens enable row level security;
 
+-- NOTE: `business_id` below must be qualified as
+-- `workspace_api_tokens.business_id`. Written bare, it binds to `bm.business_id`
+-- (business_members' own column — the only match in the subquery's FROM
+-- scope, not an ambiguity error, just a silent wrong bind), collapsing the
+-- policy to "is auth.uid() a member/admin of ANY business at all" — any
+-- signed-up user could view another tenant's token metadata, or forge a
+-- brand-new nexus_key_ token (self-chosen plaintext, self-computed
+-- token_hash) scoped to ANY OTHER business_id via a direct PostgREST
+-- insert, then use it as a Bearer token against the MCP server for full
+-- read/write access to that tenant's memories/docs/calendar/Gruve data.
+-- Found and fixed before this migration was ever applied to production.
 create policy "Members can view workspace api tokens"
   on public.workspace_api_tokens for select
   using (exists (select 1 from public.business_members bm
-    where bm.business_id = business_id and bm.user_id = auth.uid()));
+    where bm.business_id = workspace_api_tokens.business_id and bm.user_id = auth.uid()));
 
 create policy "Admins can insert workspace api tokens"
   on public.workspace_api_tokens for insert
   with check (exists (select 1 from public.business_members bm
-    where bm.business_id = business_id and bm.user_id = auth.uid()
+    where bm.business_id = workspace_api_tokens.business_id and bm.user_id = auth.uid()
       and bm.role = 'ADMIN'));
 
 create policy "Admins can revoke workspace api tokens"
   on public.workspace_api_tokens for update
   using (exists (select 1 from public.business_members bm
-    where bm.business_id = business_id and bm.user_id = auth.uid()
+    where bm.business_id = workspace_api_tokens.business_id and bm.user_id = auth.uid()
       and bm.role = 'ADMIN'));
 
 -- ── OAuth 2.1 authorization server ────────────────────────────────────────────

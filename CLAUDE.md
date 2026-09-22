@@ -251,10 +251,11 @@ Migrations are plain SQL files in `database/migrations/` and must be applied in 
 3. Update `packages/api/schema.ts` to match
 4. Update RLS policies if needed (check `11_fix_nodes_rls.sql` for the pattern)
 
-**All migrations through `31_integrations.sql` must be applied for the current codebase.**
+**All migrations through `33_fix_business_scoped_rls_policies.sql` must be applied for the current codebase.**
 
 **Critical migrations:**
 - `08_realtime.sql` — adds `yjs_snapshot bytea` column to nodes (required for snapshot storage)
+- `11_fix_nodes_rls.sql` / `23_fix_business_members_rls.sql` — fix the recurring "unqualified `business_id` in a `business_members` correlation" bug for `nodes` and for `business_members` itself (see the RLS patterns note below — `32`/`33` are the same bug class, fixed for the remaining tables)
 - `16_save_snapshot_rpc.sql` — adds `save_yjs_snapshot(p_node_id uuid, p_snapshot_hex text)` RPC function that uses `decode(p_snapshot_hex, 'hex')` to bypass PostgREST JSON encoding issues with bytea columns
 - `17_node_shares.sql` — adds `node_shares` and `access_requests` tables with RLS policies for per-node sharing and access request workflow
 - `20_users_workspace_visibility.sql` — allows workspace members to see each other's profiles (required for member list display)
@@ -262,6 +263,10 @@ Migrations are plain SQL files in `database/migrations/` and must be applied in 
 - `29_mcp_auth.sql` — Nexus Brain MCP auth: `workspace_api_tokens` (static `nexus_key_` tokens) and the OAuth 2.1 authorization server tables (`oauth_clients`, `oauth_authorization_codes`, `oauth_refresh_tokens`)
 - `30_memory.sql` — the memory model (`memories`, `agent_sessions`, `mcp_audit_log`), the `remember_memory()`/`recall_memories()`/`search_blocks()` RPCs (PostgREST can't target a partial unique index or an expression index directly), and the `blocks_content_search` GIN expression index
 - `31_integrations.sql` — `business_integrations` (Gruve key, encrypted at rest; Pulse tenant slug)
+- `32_fix_businesses_select_rls.sql` — **security fix**: `02_businesses.sql`'s SELECT policy on `businesses` never actually granted access to anyone (a `bm.business_id = id` correlation bug — `id` bound to `business_members.id`, not `businesses.id`), blocking `getUserBusinesses()`/`/dashboard` and the MCP OAuth consent page
+- `33_fix_business_scoped_rls_policies.sql` — **security fix**: the mirror-image bug (unqualified `business_id` binding to `business_members.business_id` instead of the outer table's) made `assets`, `calendar_entries`, `opportunities`, `platform_health`, and `command_action_log`'s policies cross-tenant — any signed-up user could read/write another workspace's rows via a direct PostgREST call, independent of app code. `business_members` itself is unaffected (already fixed correctly in `23_fix_business_members_rls.sql`, which needs a `SECURITY DEFINER` helper rather than a qualified column, since it's self-referential). See `.claude/security/REVIEW-2026-09-22.md` for the full writeup.
+
+> **RLS pattern, learned three times now (`11`, `23`, `32`/`33`):** in a `using (exists (select 1 from business_members bm where bm.business_id = business_id and bm.user_id = auth.uid()))` policy, the unqualified `business_id` binds to whichever table in scope has that column *closest in* — usually `bm.business_id` (a silent wrong bind, not an ambiguity error), never the outer row. Always qualify explicitly: `bm.business_id = <table>.business_id`. Exception: a policy on `business_members` checking `business_members` itself is self-referential and even the qualified form recurses (`infinite recursion detected in policy for relation business_members`) — that case needs a `SECURITY DEFINER` helper function (`is_business_member()`/`is_business_admin()`) instead, which bypasses RLS internally and breaks the cycle.
 
 > When querying nullable FK columns in Supabase (e.g. `parent_id`, `teamspace_id`), use `.is('col', null)` not `.eq('col', null)` — the latter silently returns no rows.
 
