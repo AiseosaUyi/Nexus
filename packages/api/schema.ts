@@ -282,6 +282,58 @@ export interface CommandActionLog {
   created_at: string;
 }
 
+// ─── Nexus Brain MCP: auth ─────────────────────────────────────────────────────
+
+export interface WorkspaceApiToken {
+  id: string;
+  business_id: string;
+  name: string;
+  token_prefix: string;
+  token_hash: string;
+  scopes: string;
+  created_by: string | null;
+  last_used_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+}
+
+export interface OAuthClientRow {
+  id: string;
+  client_name: string | null;
+  redirect_uris: string[];
+  grant_types: string[];
+  token_endpoint_auth_method: string;
+  created_at: string;
+}
+
+export interface OAuthAuthorizationCode {
+  id: string;
+  code_hash: string;
+  client_id: string;
+  user_id: string;
+  business_id: string;
+  scopes: string;
+  redirect_uri: string;
+  code_challenge: string;
+  code_challenge_method: string;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
+}
+
+export interface OAuthRefreshToken {
+  id: string;
+  token_hash: string;
+  client_id: string;
+  user_id: string;
+  business_id: string;
+  scopes: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+  rotated_from: string | null;
+  created_at: string;
+}
+
 // ─── API Responses ────────────────────────────────────────────────────────────
 
 export interface ApiError {
