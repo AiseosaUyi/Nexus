@@ -43,3 +43,14 @@ export function checkRateLimit(tokenId: string): RateLimitResult {
 export function checkPreAuthRateLimit(ip: string): RateLimitResult {
   return check('preauth-ip', ip, 60_000, 300);
 }
+
+/** Best-effort client IP for pre-auth rate limiting only — never used for
+ * anything security-critical (headers are trivially spoofable by the
+ * caller; Vercel's edge network sets x-forwarded-for on the way in, but a
+ * request that never passed through it could set any value). No existing
+ * utility for this in the codebase (checked middleware.ts and lib/). */
+export function getClientIp(req: Request): string {
+  const forwardedFor = req.headers.get('x-forwarded-for');
+  if (forwardedFor) return forwardedFor.split(',')[0]!.trim();
+  return req.headers.get('x-real-ip') ?? 'unknown';
+}

@@ -11,11 +11,14 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { hasScope, type McpScope } from '@/lib/mcp/scopes';
 import { checkRateLimit } from '@/lib/mcp/rate-limit';
 
+export type McpTokenKind = 'static' | 'oauth' | 'legacy';
+
 export interface McpTokenExtra {
   businessId: string;
   businessSlug: string;
   tokenId: string;
   createdBy: string | null;
+  tokenKind: McpTokenKind;
 }
 
 export interface McpToolContext {
@@ -24,6 +27,7 @@ export interface McpToolContext {
   tokenId: string;
   scopes: string[];
   createdBy: string | null;
+  tokenKind: McpTokenKind;
   db: ReturnType<typeof createServiceClient>;
 }
 
@@ -71,6 +75,7 @@ export function requireToolScope(
       tokenId: meta.tokenId,
       scopes: authInfo.scopes,
       createdBy: meta.createdBy,
+      tokenKind: meta.tokenKind,
       db: createServiceClient(),
     },
   };

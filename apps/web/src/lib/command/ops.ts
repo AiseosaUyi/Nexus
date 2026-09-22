@@ -146,8 +146,20 @@ export async function decidePost(supabase: SupabaseClient, businessId: string, a
   if (!args.id) throw new OpValidationError('id is required');
   const status = DECIDE_POST_MAP[args.decision ?? ''];
   if (!status) throw new OpValidationError('bad decision');
+
+  // Merge post_url into the existing properties JSONB instead of replacing
+  // it wholesale — a bare {post_url} update used to wipe out body/media_ref/
+  // quality_score that addPost() had already stored there.
+  let propertiesPatch: Record<string, unknown> | undefined;
+  if (args.post_url) {
+    const { data: existing, error: fetchError } = await supabase.from('calendar_entries')
+      .select('properties').eq('id', args.id).eq('business_id', businessId).single();
+    if (fetchError) throw fetchError;
+    propertiesPatch = { ...(existing?.properties as Record<string, unknown> ?? {}), post_url: args.post_url };
+  }
+
   const { data, error } = await supabase.from('calendar_entries')
-    .update({ status, ...(args.post_url ? { properties: { post_url: args.post_url } } : {}) })
+    .update({ status, ...(propertiesPatch ? { properties: propertiesPatch } : {}) })
     .eq('id', args.id).eq('business_id', businessId).select('platform').single();
   if (error) throw error;
   await log(supabase, businessId, data.platform, status === 'published' ? 'posted' : 'checked', args.id, status);
