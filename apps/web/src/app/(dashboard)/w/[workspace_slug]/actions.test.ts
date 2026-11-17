@@ -67,7 +67,9 @@ describe('Workspace Server Actions', () => {
 
       expect(result.data).toBeDefined();
       expect(result.data?.id).toBe('node-123');
-      expect(revalidatePath).toHaveBeenCalled();
+      // Callers update the sidebar optimistically and router.push() to the new
+      // page; a revalidation here would trigger a refresh that cancels the push.
+      expect(revalidatePath).not.toHaveBeenCalled();
     });
 
     it('should return error if not authenticated', async () => {
