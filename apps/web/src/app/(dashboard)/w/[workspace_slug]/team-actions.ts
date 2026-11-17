@@ -220,7 +220,7 @@ export async function inviteMember(
     console.error('[BACKEND] Email send failed (invite still created):', emailErr);
   }
 
-  console.log(`[BACKEND] Invitation created for ${email} | token: ${data.token}`);
+  console.log(`[BACKEND] Invitation created for business ${businessId}`);
 
   revalidatePath('/', 'layout');
   return { success: true, token: data.token };

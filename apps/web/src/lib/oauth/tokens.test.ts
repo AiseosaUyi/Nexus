@@ -29,6 +29,15 @@ function makeFakeDb(row: {
   const inserted: any[] = [];
   return {
     from(table: string) {
+      if (table === 'business_members') {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({ maybeSingle: async () => ({ data: { role: 'ADMIN' }, error: null }) }),
+            }),
+          }),
+        };
+      }
       if (table !== 'oauth_refresh_tokens') throw new Error(`unexpected table ${table}`);
       return {
         select: () => ({

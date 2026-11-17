@@ -1,7 +1,8 @@
 import React from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getBlocks } from '../../actions';
+import { getBlocks, getCalendarEntryByNodeId } from '../../actions';
+import { getCurrentUser } from '@/lib/data/queries';
 import NodePageClient from '@/components/dashboard/NodePageClient';
 
 /**
@@ -44,19 +45,19 @@ export default async function NodePage({ params }: NodePageProps) {
   const { workspace_slug, node_id } = await params;
   const supabase = await createClient();
 
-  // 1. Fetch Node metadata (including yjs_snapshot)
-  const { data: node, error: nodeError } = await supabase
-    .from('nodes')
-    .select('*')
-    .eq('id', node_id)
-    .single();
+  // 1. Node (incl. yjs_snapshot), the user (cached — the layout already
+  // fetched it) and the calendar link don't depend on each other: run together.
+  const [{ data: node, error: nodeError }, user, calendarEntry] = await Promise.all([
+    supabase.from('nodes').select('*').eq('id', node_id).single(),
+    getCurrentUser(),
+    getCalendarEntryByNodeId(node_id),
+  ]);
 
   if (nodeError || !node) {
     redirect(`/w/${workspace_slug}/dashboard`);
   }
 
-  // 2. Fetch User Profile for Presence
-  const { data: { user } } = await supabase.auth.getUser();
+  // 2. User Profile for Presence
   // We hard-redirect unauthenticated users earlier in this file, so `user` is
   // guaranteed defined here. Falling back to email-username over an explicit
   // 'Anonymous' string — comments must always carry a real identity.
@@ -68,19 +69,25 @@ export default async function NodePage({ params }: NodePageProps) {
   // Simple deterministic color based on user ID
   const userColor = `hsl(${parseInt((user?.id || '0').substring(0, 8), 16) % 360}, 70%, 50%)`;
 
-  // 3. Fetch teamspace and calendar entry for breadcrumb
+  // 3. Teamspace (breadcrumb) and — only when there is no Yjs snapshot — the
+  // blocks fallback. The editor ignores blocks when a snapshot exists, so
+  // skip that query entirely in the common case.
+  const snapshot = node.yjs_snapshot as unknown;
+  const hasSnapshot =
+    snapshot != null &&
+    !(typeof snapshot === 'string' && (snapshot === '' || snapshot === '\\x'));
+
   let teamspace: { id: string; name: string } | null = null;
-  const [teamspaceResult, calendarEntry] = await Promise.all([
-    node.teamspace_id 
+  const [teamspaceResult, blocks] = await Promise.all([
+    node.teamspace_id
       ? supabase.from('teamspaces').select('id, name').eq('id', node.teamspace_id).single()
       : Promise.resolve({ data: null }),
-    import('../../actions').then(m => m.getCalendarEntryByNodeId(node_id))
+    hasSnapshot ? Promise.resolve([]) : getBlocks(node_id),
   ]);
 
   if (teamspaceResult.data) teamspace = teamspaceResult.data;
 
   // 4. Prepare initial content (Snapshots take precedence over blocks in collaboration)
-  const blocks = await getBlocks(node_id);
   const initialContent = {
     type: 'doc',
     content: blocks.length > 0

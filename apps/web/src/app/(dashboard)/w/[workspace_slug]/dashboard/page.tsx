@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getUserBusinesses } from '@/app/(auth)/actions';
-import { getUserNodes, getTeamspaces } from '../actions';
+import { getUserBusinessesCached, getTreeNodesCached, getTeamspacesCached } from '@/lib/data/queries';
 import WorkspaceDashboardClient from '@/components/dashboard/WorkspaceDashboardClient';
 
 export default async function WorkspaceDashboardPage({
@@ -9,13 +8,13 @@ export default async function WorkspaceDashboardPage({
   params: Promise<{ workspace_slug: string }>;
 }) {
   const { workspace_slug } = await params;
-  const businesses = await getUserBusinesses();
+  const businesses = await getUserBusinessesCached(); // deduped with the layout
   const activeBusiness = businesses.find((b: any) => b.slug === workspace_slug);
   if (!activeBusiness) redirect('/');
 
   const [teamspaces, allNodes] = await Promise.all([
-    getTeamspaces(activeBusiness.id),
-    getUserNodes(activeBusiness.id),
+    getTeamspacesCached(activeBusiness.id),
+    getTreeNodesCached(activeBusiness.id),
   ]);
 
   const recentNodes = [...allNodes]

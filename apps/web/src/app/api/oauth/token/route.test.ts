@@ -37,6 +37,7 @@ interface FakeState {
   } | null;
   client: { id: string } | null;
   business: { id: string; slug: string } | null;
+  isMember?: boolean;
 }
 
 function hashHex(raw: string) {
@@ -105,6 +106,17 @@ function makeFakeDb(state: FakeState) {
             inserted.push({ table: 'oauth_refresh_tokens', values });
             return { error: null };
           },
+        };
+      }
+      if (table === 'business_members') {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({ data: state.isMember === false ? null : { role: 'ADMIN' }, error: null }),
+              }),
+            }),
+          }),
         };
       }
       if (table === 'businesses') {
@@ -317,6 +329,70 @@ describe('POST /api/oauth/token', () => {
     expect(second.status).toBe(400);
     const body = await second.json();
     expect(body.error).toBe('invalid_grant');
+  });
+
+  it('rejects a refresh token presented by a different client_id', async () => {
+    const state: FakeState = {
+      authCode: null,
+      refreshToken: {
+        id: 'rt-3',
+        token_hash: hashHex('raw-refresh-3'),
+        client_id: 'mcp_client_abc',
+        user_id: 'user-1',
+        business_id: 'biz-1',
+        scopes: 'memory:read',
+        expires_at: null,
+        revoked_at: null,
+      },
+      client: { id: 'mcp_client_abc' },
+      business: { id: 'biz-1', slug: 'acme' },
+    };
+    const { createServiceClient } = await import('@/lib/supabase/service');
+    vi.mocked(createServiceClient).mockReturnValue(makeFakeDb(state) as any);
+
+    const { POST } = await import('./route');
+    const res = await POST(
+      new Request('https://nexus.test/api/oauth/token', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ grant_type: 'refresh_token', refresh_token: 'raw-refresh-3', client_id: 'mcp_client_evil' }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('invalid_grant');
+    expect(state.refreshToken?.revoked_at).toBeNull();
+  });
+
+  it('rejects refresh after the user was removed from the workspace', async () => {
+    const state: FakeState = {
+      authCode: null,
+      refreshToken: {
+        id: 'rt-4',
+        token_hash: hashHex('raw-refresh-4'),
+        client_id: 'mcp_client_abc',
+        user_id: 'user-1',
+        business_id: 'biz-1',
+        scopes: 'memory:read',
+        expires_at: null,
+        revoked_at: null,
+      },
+      client: { id: 'mcp_client_abc' },
+      business: { id: 'biz-1', slug: 'acme' },
+      isMember: false,
+    };
+    const { createServiceClient } = await import('@/lib/supabase/service');
+    vi.mocked(createServiceClient).mockReturnValue(makeFakeDb(state) as any);
+
+    const { POST } = await import('./route');
+    const res = await POST(
+      new Request('https://nexus.test/api/oauth/token', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ grant_type: 'refresh_token', refresh_token: 'raw-refresh-4' }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('invalid_grant');
   });
 
   it('rejects an unknown client_id on the authorization_code grant', async () => {

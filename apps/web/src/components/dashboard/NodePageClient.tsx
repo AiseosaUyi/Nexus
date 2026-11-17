@@ -55,6 +55,7 @@ export default function NodePageClient({ node, initialContent, nodeId, userName,
         <div className="w-full max-w-full md:max-w-4xl mx-auto px-6">
           <NexusEditor 
             nodeId={nodeId}
+            businessId={node.business_id}
             initialContent={initialContent}
             initialSnapshot={node.yjs_snapshot as any}
             userName={userName}

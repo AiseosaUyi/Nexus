@@ -28,18 +28,26 @@ export default function CommentCountsLoader({ businessId, children }: CommentCou
     };
     refresh();
 
+    // Bursts of thread changes (e.g. resolving several) trigger ONE refetch.
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(refresh, 500);
+    };
+
     const supabase = createClient();
     const channel = supabase
       .channel(`workspace-comments:${businessId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'comment_threads' },
-        () => refresh()
+        scheduleRefresh
       )
       .subscribe();
 
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [businessId]);

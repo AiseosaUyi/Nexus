@@ -8,8 +8,8 @@
     "lint": "exit 0"
   },
   "dependencies": {
-    "@tiptap/react": "^2.11.5",
-    "@tiptap/starter-kit": "^2.11.5"
+    "@tiptap/react": "^3.34.0",
+    "@tiptap/starter-kit": "^3.34.0"
   },
   "peerDependencies": {
     "react": ">=18",

@@ -4,9 +4,12 @@ import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import SidebarItem from './SidebarItem';
 import SidebarTeamspace from './SidebarTeamspace';
-import SearchModal from './SearchModal';
-import ImportModal from './ImportModal';
-import TeamSettingsModal from '@/components/business/TeamSettingsModal';
+import dynamic from 'next/dynamic';
+
+// Code-split: ImportModal pulls in Tiptap + Yjs (~500 KB) for snapshot
+// generation. It's only downloaded when the user opens it, not on every route.
+const SearchModal = dynamic(() => import('./SearchModal'), { ssr: false });
+const ImportModal = dynamic(() => import('./ImportModal'), { ssr: false });
 import { Node, Teamspace } from '@nexus/api/schema';
 import { buildTree } from '@/lib/tree';
 import { Plus, Search, Clock, Home, Upload, ChevronRight, Sparkles } from 'lucide-react';
@@ -277,13 +280,13 @@ export default function SidebarTree({
       />
 
       {/* Import Modal */}
-      <ImportModal
+      {isImportOpen && <ImportModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         businessId={businessId}
         workspaceSlug={workspaceSlug}
         teamspaces={teamspaces}
-      />
+      />}
     </div>
     </DndContext>
   );

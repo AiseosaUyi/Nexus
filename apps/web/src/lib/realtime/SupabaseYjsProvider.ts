@@ -2,6 +2,8 @@ import { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import * as Y from 'yjs';
 import { Observable } from 'lib0/observable';
 
+export const REALTIME_PRIVATE = process.env.NEXT_PUBLIC_REALTIME_PRIVATE === '1';
+
 export interface SupabaseYjsOptions {
   channelName: string;
   supabase: SupabaseClient;
@@ -25,10 +27,14 @@ export class SupabaseYjsProvider extends Observable<string> {
     this.doc = doc;
 
     // 1. Initialize the Supabase Channel
+    // Private channels are authorised by RLS on realtime.messages (migration
+    // 34). Gated by env so the switch happens only after that migration is
+    // applied — a private join with no policies would be refused.
     this.channel = this.supabase.channel(this.channelName, {
       config: {
         broadcast: { ack: true },
         presence: { key: 'editor' },
+        private: REALTIME_PRIVATE,
       },
     });
 
@@ -56,7 +62,6 @@ export class SupabaseYjsProvider extends Observable<string> {
     // 4. Connect to the channel
     this.channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        console.log(`[REALTIME] Connected to channel: ${this.channelName}`);
         this.emit('status', [{ status: 'connected' }]);
       }
     });

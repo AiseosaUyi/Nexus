@@ -11,3 +11,9 @@ build/
 .pnpm-debug.log*
 .DS_Store
 .gstack/
+
+# Personal documents — never commit
+Claude outputs/
+
+# Turborepo cache/logs (build artifacts)
+.turbo/

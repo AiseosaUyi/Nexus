@@ -7,7 +7,6 @@ import Link from '@tiptap/extension-link';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Collaboration from '@tiptap/extension-collaboration';
-import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 import * as Y from 'yjs';
 import { SlashCommand, suggestion } from './extensions/SlashCommand';
 import { Table as TiptapTable } from '@tiptap/extension-table';
@@ -17,9 +16,7 @@ import { TableHeader } from '@tiptap/extension-table-header';
 import { Image } from '@tiptap/extension-image';
 import { Typography } from '@tiptap/extension-typography';
 import { HorizontalRule } from '@tiptap/extension-horizontal-rule';
-import { Details } from '@tiptap/extension-details';
-import { DetailsContent } from '@tiptap/extension-details-content';
-import { DetailsSummary } from '@tiptap/extension-details-summary';
+import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details';
 import { Youtube } from '@tiptap/extension-youtube';
 import { Callout } from './extensions/Callout';
 import { Audio } from './extensions/Audio';
@@ -29,7 +26,7 @@ import { Comment } from './extensions/Comment';
 import { Mention, mentionSuggestion } from './extensions/Mention';
 import { BlockType } from '@nexus/api/schema';
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { syncBlocks, updateYjsSnapshot } from '@/app/(dashboard)/w/[workspace_slug]/actions';
+import { syncBlocks, updateYjsSnapshot, getTeamMembers } from '@/app/(dashboard)/w/[workspace_slug]/actions';
 import { useDebouncedCallback } from 'use-debounce';
 import { createClient } from '@/lib/supabase/client';
 import { SupabaseYjsProvider } from '@/lib/realtime/SupabaseYjsProvider';
@@ -61,6 +58,8 @@ interface NexusEditorProps {
   initialContent?: any;
   initialSnapshot?: Uint8Array | null;
   nodeId: string;
+  /** Workspace id — used for @mention lookups. */
+  businessId?: string;
   userName: string;
   userColor?: string;
   onChange?: (json: any) => void;
@@ -75,6 +74,7 @@ export default function NexusEditor({
   initialContent,
   initialSnapshot,
   nodeId,
+  businessId,
   userName,
   userColor = '#b14e2c',
   onChange
@@ -124,12 +124,6 @@ export default function NexusEditor({
 
         if (bytes && bytes.length > 0) {
           Y.applyUpdate(doc, bytes);
-          // Log the structure of the loaded content for debugging
-          const frag = doc.getXmlFragment('default');
-          const nodeNames: string[] = [];
-          const walk = (el: any) => { if (el.nodeName) nodeNames.push(el.nodeName); if (el.toArray) el.toArray().forEach(walk); };
-          walk(frag);
-          console.log('[NexusEditor] Snapshot loaded:', { bytes: bytes.length, fragmentLength: frag.length, nodeNames });
         }
       } catch (e) {
         console.error('[NexusEditor] Failed to decode snapshot:', e);
@@ -144,37 +138,91 @@ export default function NexusEditor({
     doc: ydoc,
   }), [nodeId, supabase, ydoc]);
 
-  // 2. Debounced Binary Sync (every 10s of inactivity)
-  const debouncedSnapshotSave = useDebouncedCallback(async () => {
-    const snapshot = Y.encodeStateAsUpdate(ydoc);
-    await updateYjsSnapshot(nodeId, Array.from(snapshot));
-  }, 10000);
+  // Latest editor instance, read by the debounced syncs below (which are
+  // declared before useEditor returns).
+  type JSONNode = { type: string; attrs?: Record<string, unknown>; content?: JSONNode[] };
+  const latestEditorRef = useRef<{ getJSON: () => JSONNode; isDestroyed: boolean } | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 3. Debounced Block Sync (every 30s for search indexing)
-  const debouncedBlockSync = useDebouncedCallback(async (json: any) => {
+  // 2. Debounced Binary Sync — 2s after typing stops, at most every 10s while
+  // typing continues. Reports success/failure to PageHeader's save indicator
+  // and retries once after 5s on failure.
+  const saveSnapshot = useCallback(async (isRetry = false): Promise<void> => {
+    window.dispatchEvent(new CustomEvent('nexus:saving'));
+    let message: string | null = null;
+    try {
+      const snapshot = Y.encodeStateAsUpdate(ydoc);
+      const result = await updateYjsSnapshot(nodeId, Array.from(snapshot));
+      if (result && 'error' in result && result.error) message = result.error;
+    } catch {
+      message = 'Couldn’t reach the server to save your changes.';
+    }
+    if (message === null) {
+      window.dispatchEvent(new CustomEvent('nexus:saved'));
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('nexus:save-error', { detail: { message, retrying: !isRetry } }));
+    if (!isRetry) {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = setTimeout(() => { void saveSnapshot(true); }, 5000);
+    }
+  }, [ydoc, nodeId]);
+
+  const debouncedSnapshotSave = useDebouncedCallback(() => saveSnapshot(), 2000, { maxWait: 10000 });
+
+  // 3. Debounced Block Sync (every 30s for search indexing). getJSON() runs
+  // here, once per sync — not on every keystroke.
+  const debouncedBlockSync = useDebouncedCallback(async () => {
+    const ed = latestEditorRef.current;
+    if (!ed || ed.isDestroyed) return;
+    const json = ed.getJSON();
     const typeMap: Record<string, string> = {
       bulletList: 'list', orderedList: 'list', taskList: 'list',
       blockquote: 'quote', codeBlock: 'code', horizontalRule: 'divider',
     };
     const skipTypes = new Set(['listItem', 'taskItem', 'tableRow', 'tableCell', 'tableHeader']);
     const blockPayloads = (json.content || [])
-      .filter((node: any) => !skipTypes.has(node.type))
-      .map((node: any, index: number) => ({
+      .filter((node: JSONNode) => !skipTypes.has(node.type))
+      .map((node: JSONNode, index: number) => ({
         type: (typeMap[node.type] || node.type) as BlockType,
         content: { tiptapType: node.type, attrs: node.attrs || {}, content: node.content || [] },
         position: index,
       }));
-    await syncBlocks(nodeId, blockPayloads);
+    try {
+      await syncBlocks(nodeId, blockPayloads);
+    } catch {
+      // Search copy only — the snapshot save above is what protects content.
+    }
   }, 30000);
+
+  // Debounced so long documents aren't walked on every keystroke.
+  const debouncedBroadcastThreadIds = useDebouncedCallback(
+    (ed: Parameters<typeof broadcastThreadIds>[0]) => broadcastThreadIds(ed),
+    500,
+  );
+
+  // @mention member list — fetched once per editor, not per keystroke.
+  type Member = { id: string; name: string; email?: string };
+  const membersPromiseRef = useRef<Promise<Member[]> | null>(null);
+  const loadMembers = useCallback(() => {
+    if (!membersPromiseRef.current) {
+      membersPromiseRef.current = businessId
+        ? getTeamMembers(businessId).then((r) => (r?.data ?? []) as Member[]).catch(() => [] as Member[])
+        : Promise.resolve([]);
+    }
+    return membersPromiseRef.current;
+  }, [businessId]);
 
   // 4. Build the editor first so effects can reference it
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ 
-        history: false,
-        heading: { levels: [1, 2, 3, 4] }
-      } as any),
+      StarterKit.configure({
+        // Yjs owns undo history in collaborative mode; ProseMirror's own
+        // history would undo collaborators' edits. (v3 renamed `history`.)
+        undoRedo: false,
+        heading: { levels: [1, 2, 3, 4] },
+      }),
       Placeholder.configure({
         placeholder: ({ node }) => {
           if (node.type.name === 'heading') return `Heading ${node.attrs.level}`;
@@ -211,21 +259,11 @@ export default function NexusEditor({
           ...mentionSuggestion,
           char: '@',
           items: async ({ query }: { query: string }) => {
-             const businessIdMatch = window.location.pathname.match(/\/w\/([^\/]+)/);
-             if (!businessIdMatch) return [];
-             try {
-               const { getTeamMembers } = require('@/app/(dashboard)/w/[workspace_slug]/actions');
-               const { data } = await getTeamMembers(businessIdMatch[1]);
-               const items = data || [];
-               // Add a fallback for testing if no members
-               if (items.length === 0) {
-                 items.push({ id: 'nexus-ai', name: 'Nexus AI', email: 'ai@nexus.so' });
-               }
-               return items.filter((item: any) => item.name.toLowerCase().startsWith(query.toLowerCase()));
-             } catch (err) {
-               console.error('Error fetching members:', err);
-               return [{ id: 'nexus-ai', name: 'Nexus AI', email: 'ai@nexus.so' }];
-             }
+             const members = await loadMembers();
+             const q = query.toLowerCase();
+             return members
+               .filter((m) => String(m.name ?? '').toLowerCase().includes(q))
+               .slice(0, 8);
           }
         }
       }),
@@ -243,7 +281,6 @@ export default function NexusEditor({
       HorizontalRule.configure({
         HTMLAttributes: { class: 'my-8 border-t border-border/20' },
       }),
-      // @ts-ignore — Tiptap v2/v3 peer mismatch; works correctly at runtime
       Collaboration.configure({ document: ydoc }),
     ],
     editorProps: {
@@ -251,12 +288,15 @@ export default function NexusEditor({
         class: 'prose prose-sm sm:prose-base lg:prose-lg focus:outline-none min-h-[500px] w-full max-w-none font-sans text-foreground selection:bg-accent/30',
       },
     },
+    onCreate: ({ editor }) => {
+      latestEditorRef.current = editor;
+    },
     onUpdate: ({ editor }) => {
-      const json = editor.getJSON();
-      onChange?.(json);
+      latestEditorRef.current = editor;
+      if (onChange) onChange(editor.getJSON());
       debouncedSnapshotSave();
-      debouncedBlockSync(json);
-      broadcastThreadIds(editor);
+      debouncedBlockSync();
+      debouncedBroadcastThreadIds(editor);
     },
   }, [ydoc]);
 
@@ -301,10 +341,20 @@ export default function NexusEditor({
       debouncedSnapshotSave.flush();
       debouncedBlockSync.flush();
     };
+    // visibilitychange→hidden is the last event mobile Safari reliably fires
+    // (tab switch, app switch, lock screen); beforeunload often never fires.
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flushPending();
+    };
     window.addEventListener('beforeunload', flushPending);
+    window.addEventListener('pagehide', flushPending);
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       window.removeEventListener('beforeunload', flushPending);
+      window.removeEventListener('pagehide', flushPending);
+      document.removeEventListener('visibilitychange', onVisibility);
       flushPending();
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     };
   }, [debouncedSnapshotSave, debouncedBlockSync]);
 
@@ -384,10 +434,10 @@ export default function NexusEditor({
     }
     if ((e.metaKey || e.ctrlKey) && e.key === 's') {
       e.preventDefault();
-      window.dispatchEvent(new CustomEvent('nexus:saving'));
-      debouncedSnapshotSave.flush();
+      debouncedSnapshotSave.cancel();
+      void saveSnapshot();
     }
-  }, [debouncedSnapshotSave]);
+  }, [debouncedSnapshotSave, saveSnapshot]);
 
   useEffect(() => {
     const handleApplyComment = (e: any) => {
@@ -447,12 +497,14 @@ export default function NexusEditor({
     broadcastThreadIds(editor);
     // Re-broadcast after collaborative updates from Yjs as well — onUpdate
     // covers local edits but Yjs sync from another tab needs this hook.
-    const handler = () => broadcastThreadIds(editor);
+    const handler = ({ transaction }: { transaction: { docChanged: boolean } }) => {
+      if (transaction.docChanged) debouncedBroadcastThreadIds(editor);
+    };
     editor.on('transaction', handler);
     return () => {
       editor.off('transaction', handler);
     };
-  }, [editor]);
+  }, [editor, debouncedBroadcastThreadIds]);
 
   // 8. Cleanup
   useEffect(() => {

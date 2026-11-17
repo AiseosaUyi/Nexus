@@ -2,6 +2,11 @@ import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { checkAiRateLimit } from '@/lib/mcp/rate-limit';
+
+const MAX_SELECTED_CHARS = 20_000;
+const MAX_CONTEXT_CHARS = 40_000;
+const MAX_CUSTOM_PROMPT_CHARS = 2_000;
 
 // Define the action → system prompt registry
 const ACTION_REGISTRY: Record<string, string> = {
@@ -29,14 +34,41 @@ export async function POST(req: NextRequest) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const { action, selectedText, context, customPrompt } = await req.json();
+  const limit = checkAiRateLimit(user.id);
+  if (!limit.ok) {
+    return new Response('Too many AI requests. Try again shortly.', {
+      status: 429,
+      headers: { 'Retry-After': String(limit.retryAfterSeconds ?? 60) },
+    });
+  }
 
-  if (!action || !ACTION_REGISTRY.hasOwnProperty(action)) {
+  let body: { action?: unknown; selectedText?: unknown; context?: unknown; customPrompt?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return new Response('Invalid JSON', { status: 400 });
+  }
+  const action = typeof body.action === 'string' ? body.action : '';
+  const selectedText = typeof body.selectedText === 'string' ? body.selectedText : '';
+  // Surrounding-document context is trimmed (not rejected) so long pages still work.
+  const context = typeof body.context === 'string' ? body.context.slice(0, MAX_CONTEXT_CHARS) : '';
+  const customPrompt = typeof body.customPrompt === 'string' ? body.customPrompt.trim() : '';
+
+  if (
+    selectedText.length > MAX_SELECTED_CHARS ||
+    customPrompt.length > MAX_CUSTOM_PROMPT_CHARS
+  ) {
+    return new Response('Selection is too long for AI. Try a smaller section.', { status: 413 });
+  }
+
+  if (!action || !Object.prototype.hasOwnProperty.call(ACTION_REGISTRY, action)) {
     return new Response('Invalid action', { status: 400 });
   }
 
   const systemPrompt = action === 'custom'
     ? customPrompt
+      ? `You are a writing assistant inside a document editor. Apply the user's instruction to the provided text and return only the resulting text.\n\nUser instruction: ${customPrompt}`
+      : ''
     : ACTION_REGISTRY[action];
 
   if (!systemPrompt) {

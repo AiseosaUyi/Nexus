@@ -40,6 +40,11 @@ export function checkRateLimit(tokenId: string): RateLimitResult {
  * regardless of whether the token turns out to be valid, so this has to
  * gate ahead of resolveApiToken()/verifyAccessToken(), not after. Generous
  * ceiling since legitimate callers can share one IP. */
+/** Per-user cap on the editor's AI endpoint (OpenAI cost guard): 30 / 10 min. */
+export function checkAiRateLimit(userId: string): RateLimitResult {
+  return check('ai', userId, 10 * 60_000, 30);
+}
+
 export function checkPreAuthRateLimit(ip: string): RateLimitResult {
   return check('preauth-ip', ip, 60_000, 300);
 }
