@@ -113,7 +113,9 @@ export async function POST(req: Request) {
       return oauthError(400, 'invalid_request', parsed.error.issues.map((i) => i.message).join('; '));
     }
 
-    const rotated = await rotateRefreshToken(db, parsed.data.refresh_token);
+    const rotated = await rotateRefreshToken(db, parsed.data.refresh_token, {
+      clientId: parsed.data.client_id,
+    });
     if (!rotated.ok) return oauthError(400, 'invalid_grant', rotated.error);
 
     const businessSlug = await resolveBusinessSlug(db, rotated.claims.businessId);

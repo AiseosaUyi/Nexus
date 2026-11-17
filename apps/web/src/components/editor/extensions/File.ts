@@ -1,4 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core';
+import { safeHref } from '@/lib/safe-url';
 
 export interface FileOptions {
   HTMLAttributes: Record<string, any>;
@@ -57,7 +58,7 @@ export const File = Node.create<FileOptions>({
       [
         'a',
         { 
-          href: HTMLAttributes.src, 
+          href: safeHref(HTMLAttributes.src), 
           target: '_blank',
           rel: 'noopener noreferrer',
           class: 'flex items-center gap-3 p-3 bg-sidebar/20 hover:bg-sidebar/40 border border-border/10 rounded-xl transition-all cursor-pointer no-underline' 

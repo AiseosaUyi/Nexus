@@ -15,9 +15,7 @@ import { Image } from '@tiptap/extension-image';
 import { Typography } from '@tiptap/extension-typography';
 import { HorizontalRule } from '@tiptap/extension-horizontal-rule';
 import { Youtube } from '@tiptap/extension-youtube';
-import { Details } from '@tiptap/extension-details';
-import { DetailsContent } from '@tiptap/extension-details-content';
-import { DetailsSummary } from '@tiptap/extension-details-summary';
+import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details';
 import * as Y from 'yjs';
 
 interface ReadOnlyEditorProps {

@@ -18,9 +18,7 @@ import { Table as TiptapTable } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { TableCell } from '@tiptap/extension-table-cell';
-import { Details } from '@tiptap/extension-details';
-import { DetailsContent } from '@tiptap/extension-details-content';
-import { DetailsSummary } from '@tiptap/extension-details-summary';
+import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details';
 import { prosemirrorToYXmlFragment, yDocToProsemirrorJSON } from 'y-prosemirror';
 import { Callout } from '@/components/editor/extensions/Callout';
 import { Audio } from '@/components/editor/extensions/Audio';
@@ -240,7 +238,9 @@ async function syncBlocksForNode(db: SupabaseClient, nodeId: string, doc: Tiptap
  * event/payload contract as SupabaseYjsProvider.ts's live-editor sync. */
 async function broadcastDelta(db: SupabaseClient, nodeId: string, delta: Uint8Array): Promise<void> {
   try {
-    const channel = db.channel(`node:${nodeId}`, { config: { broadcast: { ack: true } } });
+    const channel = db.channel(`node:${nodeId}`, {
+      config: { broadcast: { ack: true }, private: process.env.NEXT_PUBLIC_REALTIME_PRIVATE === '1' },
+    });
     await new Promise<void>((resolve) => {
       channel.subscribe((status: string) => {
         if (status === 'SUBSCRIBED') resolve();

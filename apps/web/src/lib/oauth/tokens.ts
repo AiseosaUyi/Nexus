@@ -20,6 +20,8 @@ const ACCESS_TOKEN_TTL_SECONDS = 60 * 60; // 1h — bounds the blast radius of a
 // membership change not retroactively invalidating an already-issued token;
 // refresh tokens (DB-backed) are what's actually revocable.
 const REFRESH_TOKEN_PREFIX = 'nexus_mcp_rt_';
+/** Refresh tokens expire after 30 days of non-use (each rotation issues a fresh 30-day token). */
+const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export class McpOAuthNotConfiguredError extends Error {
   constructor() {
@@ -72,7 +74,11 @@ export async function verifyAccessToken(token: string): Promise<VerifyAccessToke
   if (!SECRET) return { ok: false, reason: 'not_configured' };
   const key = new TextEncoder().encode(SECRET);
   try {
-    const { payload } = await jwtVerify(token, key, { issuer: 'nexus', audience: 'nexus-mcp-oauth' });
+    const { payload } = await jwtVerify(token, key, {
+      issuer: 'nexus',
+      audience: 'nexus-mcp-oauth',
+      algorithms: ['HS256'],
+    });
     if (
       typeof payload.sub !== 'string' ||
       typeof payload.business_id !== 'string' ||
@@ -130,6 +136,7 @@ export async function mintRefreshToken(
     business_id: claims.businessId,
     scopes: claims.scopes.join(','),
     rotated_from: rotatedFrom ?? null,
+    expires_at: new Date(Date.now() + REFRESH_TOKEN_TTL_MS).toISOString(),
   });
   if (error) throw new Error(`mintRefreshToken: ${error.message}`);
   return raw;
@@ -143,7 +150,11 @@ export type RotateRefreshTokenResult =
  * step (OAuth 2.1-recommended rotation for public clients). The
  * conditional UPDATE (`revoked_at is null`) is the concurrency guard — a
  * replayed/racing refresh token can only win the rotation once. */
-export async function rotateRefreshToken(db: SupabaseClient, rawToken: string): Promise<RotateRefreshTokenResult> {
+export async function rotateRefreshToken(
+  db: SupabaseClient,
+  rawToken: string,
+  opts: { clientId?: string } = {},
+): Promise<RotateRefreshTokenResult> {
   const tokenHash = hashRefreshToken(rawToken);
   const { data: row } = await db
     .from('oauth_refresh_tokens')
@@ -151,9 +162,30 @@ export async function rotateRefreshToken(db: SupabaseClient, rawToken: string): 
     .eq('token_hash', tokenHash)
     .maybeSingle();
   if (!row) return { ok: false, error: 'Invalid refresh token' };
-  if (row.revoked_at) return { ok: false, error: 'Refresh token already used or revoked' };
+  if (opts.clientId && opts.clientId !== row.client_id) {
+    return { ok: false, error: 'Refresh token was not issued to this client' };
+  }
+  if (row.revoked_at) {
+    // Reuse of a rotated token = likely theft. Revoke every live token in
+    // this grant (same user + client + workspace) so the thief's copy dies too.
+    await revokeGrant(db, row).catch(() => undefined);
+    return { ok: false, error: 'Refresh token already used or revoked' };
+  }
   if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) {
     return { ok: false, error: 'Refresh token expired' };
+  }
+
+  // The user must still belong to the workspace — removing someone from a
+  // workspace must cut off their agents too.
+  const { data: membership, error: memberError } = await db
+    .from('business_members')
+    .select('role')
+    .eq('business_id', row.business_id)
+    .eq('user_id', row.user_id)
+    .maybeSingle();
+  if (memberError || !membership) {
+    await revokeGrant(db, row).catch(() => undefined);
+    return { ok: false, error: 'User is no longer a member of this workspace' };
   }
 
   const { data: updated, error } = await db
@@ -175,4 +207,18 @@ export async function rotateRefreshToken(db: SupabaseClient, rawToken: string): 
   };
   const newToken = await mintRefreshToken(db, claims, row.id);
   return { ok: true, refreshToken: newToken, claims };
+}
+
+/** Revokes all still-active refresh tokens for one grant. */
+async function revokeGrant(
+  db: SupabaseClient,
+  row: { client_id: string; user_id: string; business_id: string },
+): Promise<void> {
+  await db
+    .from('oauth_refresh_tokens')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('client_id', row.client_id)
+    .eq('user_id', row.user_id)
+    .eq('business_id', row.business_id)
+    .is('revoked_at', null);
 }

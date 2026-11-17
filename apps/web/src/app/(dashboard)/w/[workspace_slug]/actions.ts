@@ -4,13 +4,42 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { Node, NodeType, CreateNodePayload, Block, BlockType, Teamspace } from '@nexus/api/schema';
 import { extractMentions, stringifyTiptap } from '@/lib/extractMentions';
+import { toUserError } from '@/lib/user-error';
+import { safeFetchText, UnsafeUrlError } from '@/lib/net/safe-fetch';
+
+/**
+ * Invalidates the workspace shell (sidebar tree) only — never the whole app.
+ * Called only for structural changes (create/move/archive/delete); content
+ * edits like title/icon/cover are applied optimistically on the client.
+ */
+function revalidateWorkspace() {
+  revalidatePath('/w/[workspace_slug]', 'layout');
+}
+
+/** Fields a client may change through updateNode. Anything else is dropped. */
+const UPDATABLE_NODE_FIELDS = [
+  'title', 'name', 'is_name_custom', 'icon', 'cover_url', 'parent_id',
+  'position', 'is_archived', 'teamspace_id', 'is_public', 'public_slug',
+] as const;
+type UpdatableNodeField = (typeof UPDATABLE_NODE_FIELDS)[number];
+const STRUCTURAL_NODE_FIELDS = new Set<UpdatableNodeField>([
+  'parent_id', 'position', 'is_archived', 'teamspace_id',
+]);
+
+/** Columns the sidebar/dashboard need. Excludes yjs_snapshot (document body). */
+const TREE_NODE_COLUMNS =
+  'id, business_id, parent_id, teamspace_id, type, title, name, is_name_custom, icon, cover_url, position, is_archived, is_public, public_slug, created_by, created_at, updated_at';
 
 /**
  * Updates a node's Yjs binary snapshot for real-time synchronization.
  * Uses an RPC function with PostgreSQL decode() to bypass PostgREST bytea encoding issues.
+ * The RPC raises (42501) when RLS blocks the write, so failures are never silent.
  */
 export async function updateYjsSnapshot(nodeId: string, snapshot: number[]) {
   const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'You’ve been signed out. Sign in again to keep saving.' };
 
   const hexString = Buffer.from(snapshot).toString('hex');
 
@@ -21,10 +50,9 @@ export async function updateYjsSnapshot(nodeId: string, snapshot: number[]) {
 
   if (error) {
     console.error(`[BACKEND] Error updating Yjs snapshot for node ${nodeId}:`, error);
-    return { error: error.message };
+    return { error: toUserError(error, 'Couldn’t save your latest changes.') };
   }
 
-  console.log(`[BACKEND] Yjs snapshot updated for node ${nodeId} (${snapshot.length} bytes)`);
   return { success: true };
 }
 
@@ -92,7 +120,7 @@ export async function createNode(payload: {
   }
 
   console.log(`[BACKEND] Node created successfully: ${data.id} (Type: ${data.type}, Business: ${data.business_id})`);
-  revalidatePath('/', 'layout');
+  revalidateWorkspace();
   return { data };
 }
 
@@ -105,20 +133,40 @@ export async function updateNode(
 ) {
   const supabase = await createClient();
 
+  // Server Action arguments are untrusted at runtime: the TS Pick<> above is
+  // not enforced, so whitelist explicitly (blocks business_id/created_by etc.).
+  const safeUpdates: Record<string, unknown> = {};
+  for (const key of UPDATABLE_NODE_FIELDS) {
+    if (updates && Object.prototype.hasOwnProperty.call(updates, key)) {
+      safeUpdates[key] = (updates as Record<string, unknown>)[key];
+    }
+  }
+  if (Object.keys(safeUpdates).length === 0) return { error: 'Nothing to update.' };
+
+  if (typeof safeUpdates.cover_url === 'string' && safeUpdates.cover_url) {
+    const cover = safeUpdates.cover_url;
+    const allowed =
+      /^https:\/\//i.test(cover) ||
+      /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(cover) ||
+      (/^linear-gradient\([#0-9a-z%,.\s()-]+\)$/i.test(cover) && !/url\s*\(/i.test(cover));
+    if (!allowed) return { error: 'That cover image isn’t supported.' };
+  }
+
   const { data, error } = await supabase
     .from('nodes')
-    .update(updates)
+    .update(safeUpdates)
     .eq('id', nodeId)
-    .select()
+    .select(TREE_NODE_COLUMNS)
     .single();
 
   if (error) {
     console.error(`[BACKEND] Error updating node ${nodeId}:`, error);
-    return { error: error.message };
+    return { error: toUserError(error, 'Couldn’t update this page.') };
   }
 
-  console.log(`[BACKEND] Node updated successfully: ${nodeId} (Updates: ${Object.keys(updates).join(', ')})`);
-  revalidatePath('/', 'layout');
+  if (Object.keys(safeUpdates).some((k) => STRUCTURAL_NODE_FIELDS.has(k as UpdatableNodeField))) {
+    revalidateWorkspace();
+  }
   return { data };
 }
 
@@ -140,7 +188,7 @@ export async function deleteNode(nodeId: string) {
   }
 
   console.log(`[BACKEND] Node deleted successfully: ${nodeId}`);
-  revalidatePath('/', 'layout');
+  revalidateWorkspace();
   return { success: true };
 }
 
@@ -183,7 +231,7 @@ export async function duplicateNode(nodeId: string) {
   }
 
   console.log(`[BACKEND] Node duplicated successfully: ${data.id} from ${nodeId}`);
-  revalidatePath('/', 'layout');
+  revalidateWorkspace();
   return { data };
 }
 
@@ -196,28 +244,39 @@ export async function syncBlocks(nodeId: string, blocks: { id?: string; type: Bl
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  const blocksToUpsert = blocks.map(block => ({
-    ...block,
-    node_id: nodeId,
-    id: block.id || undefined,
+  if (!Array.isArray(blocks)) return { error: 'Invalid blocks.' };
+
+  // Blocks are a derived search/fallback copy of the document. Replace the
+  // node's set atomically — the old id-less upsert inserted a full duplicate
+  // copy of the document on every sync.
+  const rows = blocks.map((block, index) => ({
+    type: block.type,
+    content: block.content ?? {},
+    position: Number.isFinite(block.position) ? block.position : index,
   }));
 
-  const { data, error: upsertError } = await supabase
-    .from('blocks')
-    .upsert(blocksToUpsert, { onConflict: 'id' })
-    .select();
+  const { data: count, error } = await supabase.rpc('replace_node_blocks', {
+    p_node_id: nodeId,
+    p_blocks: rows,
+  });
 
-  if (upsertError) {
-    console.error(`[BACKEND] Error syncing blocks:`, upsertError);
-    return { error: upsertError.message };
+  if (error) {
+    // PGRST202 = RPC not found (migration 34 not applied yet). Fall back to a
+    // non-atomic delete+insert so we never go back to duplicating rows.
+    if (error.code === 'PGRST202') {
+      const { error: delError } = await supabase.from('blocks').delete().eq('node_id', nodeId);
+      const { error: insError } = delError || rows.length === 0
+        ? { error: delError }
+        : await supabase.from('blocks').insert(rows.map((r) => ({ ...r, node_id: nodeId })));
+      if (!delError && !insError) return { data: { count: rows.length } };
+      console.error('[BACKEND] Error syncing blocks (fallback):', delError ?? insError);
+      return { error: toUserError(delError ?? insError, 'Couldn’t update search for this page.') };
+    }
+    console.error(`[BACKEND] Error syncing blocks:`, error);
+    return { error: toUserError(error, 'Couldn’t update search for this page.') };
   }
 
-  // Optional: Cleanup logic can be added here if needed
-
-  console.log(`[BACKEND] Synced ${blocks.length} blocks for node ${nodeId}`);
-  await supabase.from('nodes').update({ updated_at: new Date().toISOString() }).eq('id', nodeId);
-  
-  return { data };
+  return { data: { count: count as number } };
 }
 
 /**
@@ -249,7 +308,7 @@ export async function getUserNodes(businessId: string) {
   const startTime = Date.now();
   const { data, error } = await supabase
     .from('nodes')
-    .select('*')
+    .select(TREE_NODE_COLUMNS)
     .eq('business_id', businessId)
     .eq('is_archived', false)
     .order('position', { ascending: true });
@@ -303,7 +362,7 @@ export async function createTeamspace(payload: {
     .single();
 
   if (error) return { error: error.message };
-  revalidatePath('/', 'layout');
+  revalidateWorkspace();
   return { data };
 }
 
@@ -335,7 +394,7 @@ export async function updateTeamspace(id: string, updates: Partial<Teamspace>) {
     .single();
 
   if (error) return { error: error.message };
-  revalidatePath('/', 'layout');
+  revalidateWorkspace();
   return { data };
 }
 
@@ -346,7 +405,7 @@ export async function deleteTeamspace(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from('teamspaces').delete().eq('id', id);
   if (error) return { error: error.message };
-  revalidatePath('/', 'layout');
+  revalidateWorkspace();
   return { success: true };
 }
 
@@ -376,7 +435,7 @@ export async function toggleNodePublic(nodeId: string, isPublic: boolean) {
   }
 
   console.log(`[BACKEND] Node ${nodeId} is_public set to ${isPublic}`);
-  revalidatePath('/', 'layout');
+  revalidateWorkspace();
   return { data };
 }
 
@@ -439,10 +498,15 @@ export async function getNodeShares(nodeId: string) {
   return { data: enriched };
 }
 
+const SHARE_PERMISSIONS = new Set(['view', 'comment', 'edit', 'full']);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function inviteToNode(nodeId: string, email: string, permission: string = 'view') {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
+  if (!SHARE_PERMISSIONS.has(permission)) return { error: 'Invalid permission level.' };
+  if (typeof email !== 'string' || !EMAIL_RE.test(email.trim())) return { error: 'Enter a valid email address.' };
 
   const { data, error } = await supabase
     .from('node_shares')
@@ -497,6 +561,7 @@ export async function removeNodeShare(nodeId: string, email: string) {
 }
 
 export async function updateNodeSharePermission(nodeId: string, email: string, permission: string) {
+  if (!SHARE_PERMISSIONS.has(permission)) return { error: 'Invalid permission level.' };
   const supabase = await createClient();
   const { error } = await supabase
     .from('node_shares')
@@ -1008,7 +1073,7 @@ export async function createCalendarEntry(payload: {
     }
 
     console.log(`[Calendar] Entry created: ${entry.id} → node ${node.id}`);
-    revalidatePath('/', 'layout');
+    revalidateWorkspace();
     return { data: entry };
   } catch (err: any) {
     console.error('[Calendar] Unexpected error during creation:', err);
@@ -1164,24 +1229,25 @@ export async function importFromURL(url: string): Promise<{
   html: string;
   error?: string;
 }> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+  // Signed-in users only — this makes the server fetch an arbitrary URL.
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { title: '', html: '', error: 'Sign in to import pages.' };
 
-    const response = await fetch(url, {
+  try {
+    // SSRF-safe: blocks private/loopback/metadata addresses (re-checked on
+    // every redirect hop), http(s) only, 5 MB body cap, 10s timeout.
+    const { response, text: raw, finalUrl } = await safeFetchText(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; Nexus/1.0; +https://nexus.so)',
         Accept: 'text/html,application/xhtml+xml',
       },
-      signal: controller.signal,
+      timeoutMs: 10_000,
     });
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
-      return { title: '', html: '', error: `HTTP ${response.status}: ${response.statusText}` };
+      return { title: '', html: '', error: `That page returned an error (HTTP ${response.status}).` };
     }
-
-    const raw = await response.text();
 
     // Initial title extraction from HTML (fallback)
     const titleMatch = raw.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
@@ -1189,9 +1255,14 @@ export async function importFromURL(url: string): Promise<{
       ? titleMatch[1].replace(/<[^>]*>/g, '').trim().slice(0, 200)
       : 'Imported Page';
 
-    // Special handling for Notion links
+    // Special handling for Notion links — matched on the parsed hostname, so
+    // "evil.com/?notion.so" can't steer the follow-up API request.
     let html = '';
-    const isNotion = url.includes('notion.site') || url.includes('notion.so');
+    const host = finalUrl.hostname.toLowerCase();
+    const isNotion =
+      host === 'notion.so' || host === 'www.notion.so' ||
+      host === 'notion.site' || host.endsWith('.notion.site');
+    url = finalUrl.toString();
 
     if (isNotion) {
       const { parseNotionPage, convertRecordMapToHtml } = await import('@/lib/notion-parser');
@@ -1243,8 +1314,16 @@ export async function importFromURL(url: string): Promise<{
 
     return { title, html, error: undefined };
   } catch (err: unknown) {
+    if (err instanceof UnsafeUrlError) {
+      return { title: '', html: '', error: err.message };
+    }
     const message = err instanceof Error ? err.message : String(err);
     console.error('[Import] importFromURL error:', message);
-    return { title: '', html: '', error: message };
+    const timedOut = err instanceof Error && err.name === 'AbortError';
+    return {
+      title: '',
+      html: '',
+      error: timedOut ? 'That page took too long to respond.' : 'Couldn’t fetch that page.',
+    };
   }
 }

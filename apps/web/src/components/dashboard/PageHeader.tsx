@@ -24,6 +24,7 @@ import {
   Eye,
   Pencil,
   ChevronDown,
+  AlertTriangle,
 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import Link from 'next/link';
@@ -153,22 +154,40 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
   const [coverUrl, setCoverUrl] = useState<string | null>(initialCoverUrl ?? null);
   const [isCoverPickerOpen, setIsCoverPickerOpen] = useState(false);
   const coverFileRef = useRef<HTMLInputElement>(null);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveError, setSaveError] = useState<{ message: string; retrying: boolean } | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Reflects the editor's REAL save outcome (nexus:saved / nexus:save-error
+  // from NexusEditor), not a timer. An error stays visible until a save succeeds.
   useEffect(() => {
+    const clear = () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
     const handleSaving = () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      setSaveStatus('saving');
-      saveTimerRef.current = setTimeout(() => {
-        setSaveStatus('saved');
-        saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
-      }, 1500);
+      clear();
+      setSaveStatus((s) => (s === 'error' ? s : 'saving'));
+      // Safety net: never spin forever if no result event arrives.
+      saveTimerRef.current = setTimeout(() => setSaveStatus((s) => (s === 'saving' ? 'idle' : s)), 15000);
+    };
+    const handleSaved = () => {
+      clear();
+      setSaveError(null);
+      setSaveStatus('saved');
+      saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
+    };
+    const handleError = (e: Event) => {
+      clear();
+      const detail = (e as CustomEvent<{ message?: string; retrying?: boolean }>).detail ?? {};
+      setSaveError({ message: detail.message || 'Couldn’t save your latest changes.', retrying: !!detail.retrying });
+      setSaveStatus('error');
     };
     window.addEventListener('nexus:saving', handleSaving);
+    window.addEventListener('nexus:saved', handleSaved);
+    window.addEventListener('nexus:save-error', handleError);
     return () => {
       window.removeEventListener('nexus:saving', handleSaving);
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      window.removeEventListener('nexus:saved', handleSaved);
+      window.removeEventListener('nexus:save-error', handleError);
+      clear();
     };
   }, []);
 
@@ -417,12 +436,21 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
             )}
             
             <span className="text-foreground/90 font-bold truncate max-w-[100px] md:max-w-[200px]">{title || "Untitled"}</span>
-            {saveStatus !== 'idle' && (
-              <span className="flex items-center gap-1 text-[10px] md:text-[11px] text-foreground/40 font-normal ml-0.5 md:ml-1 shrink-0">
+            {saveStatus === 'error' ? (
+              <span
+                role="alert"
+                title={saveError?.message}
+                className="flex items-center gap-1 text-[10px] md:text-[11px] text-red-400 font-medium ml-0.5 md:ml-1 shrink-0"
+              >
+                <AlertTriangle className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                <span>{saveError?.retrying ? 'Save failed — retrying' : 'Not saved'}</span>
+              </span>
+            ) : saveStatus !== 'idle' && (
+              <span aria-live="polite" className="flex items-center gap-1 text-[10px] md:text-[11px] text-foreground/40 font-normal ml-0.5 md:ml-1 shrink-0">
                 {saveStatus === 'saving' ? (
-                  <Loader2 className="w-2.5 h-2.5 md:w-3 h-3 animate-spin" />
+                  <Loader2 className="w-2.5 h-2.5 md:w-3 md:h-3 animate-spin" />
                 ) : (
-                  <Check className="w-2.5 h-2.5 md:w-3 h-3 text-green-500" />
+                  <Check className="w-2.5 h-2.5 md:w-3 md:h-3 text-green-500" />
                 )}
                 <span className="hidden xs:inline">{saveStatus === 'saving' ? 'Saving...' : 'Saved'}</span>
               </span>
@@ -824,7 +852,7 @@ export default function PageHeader({ title: initialTitle, icon: initialIcon, cov
                   {cover.url.startsWith('linear-gradient') ? (
                     <div className="w-full h-full" style={{ background: cover.url }} />
                   ) : (
-                    <img src={cover.url} alt={cover.label} className="w-full h-full object-cover" loading="lazy" />
+                    <img src={cover.url.replace('w=1200', 'w=300')} alt={cover.label} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                   )}
                   <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/20 transition-colors flex items-end p-1">
                     <span className="text-[9px] text-white font-medium opacity-0 group-hover/thumb:opacity-100 transition-opacity drop-shadow-sm">{cover.label}</span>

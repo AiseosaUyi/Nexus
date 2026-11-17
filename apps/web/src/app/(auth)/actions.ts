@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { toUserError } from '@/lib/user-error';
 
 export async function signUp(formData: FormData) {
   const supabase = await createClient();
@@ -109,17 +110,42 @@ export async function createBusiness(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const name = formData.get('name') as string;
-  const slug = formData.get('slug') as string;
+  const name = String(formData.get('name') ?? '').trim();
+  const slug = String(formData.get('slug') ?? '').trim().toLowerCase();
 
-  const { data, error } = await supabase
+  if (name.length < 1 || name.length > 80) {
+    return { error: 'Workspace name must be between 1 and 80 characters.' };
+  }
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?$/.test(slug)) {
+    return { error: 'Slug can only use lowercase letters, numbers and dashes (max 48).' };
+  }
+
+  // Insert WITHOUT .select(): INSERT ... RETURNING must also pass the SELECT
+  // policy, and the owner's membership row is only created by the AFTER
+  // INSERT trigger — so returning the row failed with an RLS error. Generate
+  // the id here, insert, then read it back once the membership exists.
+  const id = crypto.randomUUID();
+  const { error } = await supabase
     .from('businesses')
-    .insert([{ name, slug, owner_id: user.id }])
-    .select()
-    .single();
+    .insert([{ id, name, slug, owner_id: user.id }]);
 
   if (error) {
-    return { error: error.message };
+    console.error('[createBusiness] insert failed:', error);
+    if (error.code === '23505') return { error: 'That workspace URL is already taken. Try another slug.' };
+    return { error: toUserError(error, 'Couldn’t create the workspace. Please try again.') };
+  }
+
+  const { data, error: readError } = await supabase
+    .from('businesses')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (readError) {
+    console.error('[createBusiness] read-back failed:', readError);
+    // The workspace exists; return the minimum the client needs to navigate.
+    revalidatePath('/', 'layout');
+    return { data: { id, name, slug, owner_id: user.id } };
   }
 
   revalidatePath('/', 'layout');

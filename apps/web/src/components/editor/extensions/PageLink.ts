@@ -1,4 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core';
+import { safeHref } from '@/lib/safe-url';
 
 export interface PageLinkOptions {
   HTMLAttributes: Record<string, any>;
@@ -54,7 +55,7 @@ export const PageLink = Node.create<PageLinkOptions>({
       [
         'a',
         { 
-          href: HTMLAttributes.href, 
+          href: safeHref(HTMLAttributes.href), 
           class: 'flex items-center gap-2 p-2 hover:bg-hover rounded-lg transition-all cursor-pointer no-underline border border-transparent hover:border-border/10' 
         },
         ['span', { class: 'text-lg shrink-0' }, HTMLAttributes.icon || '📄'],

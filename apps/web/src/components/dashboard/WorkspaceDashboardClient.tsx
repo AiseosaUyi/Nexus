@@ -12,7 +12,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Node, Teamspace } from '@nexus/api/schema';
 import NewPageModal from './NewPageModal';
-import ImportModal from './ImportModal';
+import dynamic from 'next/dynamic';
+
+// Code-split: only downloaded when opened (pulls in Tiptap + Yjs).
+const ImportModal = dynamic(() => import('./ImportModal'), { ssr: false });
 
 interface Props {
   businessId: string;
@@ -271,13 +274,13 @@ export default function WorkspaceDashboardClient({
         teamspaces={teamspaces}
       />
 
-      <ImportModal
+      {isImportOpen && <ImportModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         businessId={businessId}
         workspaceSlug={workspaceSlug}
         teamspaces={teamspaces}
-      />
+      />}
     </>
   );
 }
