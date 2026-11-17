@@ -42,8 +42,9 @@ export default function NewPageModal({
       });
       if (result.data) {
         window.dispatchEvent(new CustomEvent('nexus:node-created', { detail: { node: result.data } }));
-        onClose();
+        // Navigate before closing: closing unmounts this modal.
         router.push(`/w/${workspaceSlug}/n/${result.data.id}`);
+        onClose();
       }
     });
   };

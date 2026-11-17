@@ -119,8 +119,10 @@ export async function createNode(payload: {
     return { error: error.message };
   }
 
-  console.log(`[BACKEND] Node created successfully: ${data.id} (Type: ${data.type}, Business: ${data.business_id})`);
-  revalidateWorkspace();
+  // No revalidatePath here: every caller adds the node to the sidebar
+  // optimistically (nexus:node-created / local state) and then router.push()es
+  // to it. A revalidation in this action's response triggers a router refresh
+  // that cancels that push — the "New page doesn't open" bug.
   return { data };
 }
 
