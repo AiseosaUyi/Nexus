@@ -1,16 +1,25 @@
 import type { NextConfig } from "next";
+import { buildCsp } from "./src/lib/security/csp";
+
+const CSP_REPORT_ONLY = buildCsp({
+  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  posthogHost: process.env.NEXT_PUBLIC_POSTHOG_KEY ? process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com" : undefined,
+  isDev: process.env.NODE_ENV !== "production",
+});
 
 const nextConfig: NextConfig = {
-  // Baseline security headers. `frame-ancestors 'none'` stops clickjacking
-  // (e.g. framing the OAuth consent page to trick an "Allow" click). A full
-  // script-src CSP is intentionally not set yet — it needs browser testing
-  // against Tiptap, PostHog, Supabase Realtime and YouTube embeds.
+  // Baseline security headers. The enforced CSP only covers framing/base/
+  // plugins (`frame-ancestors 'none'` stops clickjacking the OAuth consent
+  // page). The full policy runs report-only until /api/csp-report shows no
+  // violations on real traffic — then rename that header to enforce it.
   async headers() {
     return [
       {
         source: "/:path*",
         headers: [
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'" },
+          // Full policy in report-only mode (see src/lib/security/csp.ts).
+          { key: "Content-Security-Policy-Report-Only", value: CSP_REPORT_ONLY },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

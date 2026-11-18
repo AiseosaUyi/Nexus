@@ -75,6 +75,6 @@ export const config = {
     // Skips: Next internals, static assets, and bearer-token APIs (MCP, OAuth,
     // Command Center) that never use the Supabase session cookie — so they
     // don't pay for a Supabase Auth round trip on every request.
-    '/((?!_next/static|_next/image|favicon.ico|\\.well-known|api/mcp|api/oauth|api/command|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|css|js|map|txt|xml)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|\\.well-known|api/mcp|api/oauth|api/command|api/csp-report|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|css|js|map|txt|xml)$).*)',
   ],
 };
