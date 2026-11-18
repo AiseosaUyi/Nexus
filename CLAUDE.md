@@ -38,27 +38,33 @@ pnpm supabase db reset            # Reset DB and replay migrations
 ```
 
 ### E2E setup
-Copy `.env.local.example` → `.env.local` in `apps/web` and set:
+Copy `.env.example` → `.env.local` in `apps/web` and set:
 ```
 E2E_TEST_EMAIL=your@email.com
 E2E_TEST_PASSWORD=yourpassword
 ```
 The `setup` Playwright project runs `e2e/auth.setup.ts` to store session cookies in `playwright/.auth/user.json` before authenticated tests run.
 
+### CI (`.github/workflows/ci.yml`)
+On every push/PR to `main`: install → `tsc --noEmit` (apps/web) → `pnpm lint` → `pnpm test` (apps/web, Vitest) → `pnpm build`. E2E only runs if `E2E_TEST_EMAIL` is set as a repo secret, and even then `continue-on-error: true` — it never blocks the merge. Match this order locally before pushing.
+
 ---
 
 ## Monorepo structure
 
 ```
-apps/web/          Next.js 16 application (primary codebase)
-packages/api/      Shared TypeScript types (schema.ts — no runtime code)
-packages/editor/   Tiptap editor package (unused at runtime — types only)
-packages/ui/       Shared UI primitives
-database/migrations/  Ordered SQL files applied to Supabase
-supabase/          Supabase local config
+apps/web/               Next.js 16 application (primary codebase)
+packages/api/           Shared TypeScript types (schema.ts — no runtime code)
+packages/editor/        Tiptap editor package (unused at runtime — types only)
+packages/ui/            Shared UI primitives
+services/command-mcp/   Legacy local MCP for the (opt-in, per-workspace) Command Center /
+                        freelance-hub feature — predates and is separate from the Nexus
+                        Brain MCP in apps/web/src/app/api/[transport]/; see its own README.
+database/migrations/    Ordered SQL files applied to Supabase
+supabase/               Supabase local config
 ```
 
-**Package manager**: pnpm 10 with workspaces. **Build orchestration**: Turborepo.
+**Package manager**: pnpm 10 with workspaces (`apps/*`, `packages/*`, `services/*`). **Build orchestration**: Turborepo. **Node**: 20.x (see root `package.json` `engines`).
 
 ---
 
@@ -239,7 +245,7 @@ The remote MCP server — full details in `docs/MCP.md`. The essentials for work
 
 ### Email (`src/lib/email.ts`)
 
-Uses Resend SDK. Two functions: `sendTeamInviteEmail()` and `sendPageShareEmail()`. Both are fire-and-forget — failures are caught and logged but don't block the invitation/share creation. **Currently disabled** — Resend requires a verified custom domain (not a Vercel URL). Invites work via shareable links instead. To enable: add a custom domain in Resend dashboard, set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in env.
+Uses **Brevo**'s transactional REST API directly (no SDK). Two functions: `sendTeamInviteEmail()` and `sendPageShareEmail()`. Both are fire-and-forget — failures are caught and logged but don't block the invitation/share creation. If `BREVO_API_KEY` / `BREVO_SENDER_EMAIL` aren't set, sending is skipped with a warning and invites still work via the shareable link. Signup does **not** send a confirmation email (the `signUp` action auto-confirms) — wiring signup confirmation through this sender is a known open item.
 
 ---
 
@@ -251,7 +257,9 @@ Migrations are plain SQL files in `database/migrations/` and must be applied in 
 3. Update `packages/api/schema.ts` to match
 4. Update RLS policies if needed (check `11_fix_nodes_rls.sql` for the pattern)
 
-**All migrations through `33_fix_business_scoped_rls_policies.sql` must be applied for the current codebase.**
+**All migrations through `35_restore_blocks_write_policies.sql` must be applied for the current codebase** (34 and 35 were applied to production on 2026-11-18).
+
+> **Production can drift from this folder.** In Nov 2026 the live `blocks` table was found with only SELECT policies (and a `check_is_business_member()` helper that isn't in any migration) — every app write was silently refused. Before trusting a policy from the repo, check the live one: `select policyname, cmd from pg_policies where tablename = '<table>';`
 
 **Critical migrations:**
 - `08_realtime.sql` — adds `yjs_snapshot bytea` column to nodes (required for snapshot storage)
@@ -265,6 +273,8 @@ Migrations are plain SQL files in `database/migrations/` and must be applied in 
 - `31_integrations.sql` — `business_integrations` (Gruve key, encrypted at rest; Pulse tenant slug)
 - `32_fix_businesses_select_rls.sql` — **security fix**: `02_businesses.sql`'s SELECT policy on `businesses` never actually granted access to anyone (a `bm.business_id = id` correlation bug — `id` bound to `business_members.id`, not `businesses.id`), blocking `getUserBusinesses()`/`/dashboard` and the MCP OAuth consent page
 - `33_fix_business_scoped_rls_policies.sql` — **security fix**: the mirror-image bug (unqualified `business_id` binding to `business_members.business_id` instead of the outer table's) made `assets`, `calendar_entries`, `opportunities`, `platform_health`, and `command_action_log`'s policies cross-tenant — any signed-up user could read/write another workspace's rows via a direct PostgREST call, independent of app code. `business_members` itself is unaffected (already fixed correctly in `23_fix_business_members_rls.sql`, which needs a `SECURITY DEFINER` helper rather than a qualified column, since it's self-referential). See `.claude/security/REVIEW-2026-09-22.md` for the full writeup.
+- `34_security_and_data_integrity.sql` — Nov 2026 audit: owner can SELECT their own `businesses` row (fixes "new row violates row-level security policy" on Create workspace), closes the `comments` FOR ALL insert hole, binds `accept_invitation` to the invited email, limits `node_shares` writes to editors/admins, adds the `nodes_guard_protected_columns` trigger (shared guests can edit content only), makes `save_yjs_snapshot` raise on an RLS-blocked write, adds the atomic `replace_node_blocks()` RPC, and `realtime.messages` policies for private `node:<id>` channels
+- `35_restore_blocks_write_policies.sql` — restores the INSERT/UPDATE/DELETE policies on `blocks` that were missing in production (drift)
 
 > **RLS pattern, learned three times now (`11`, `23`, `32`/`33`):** in a `using (exists (select 1 from business_members bm where bm.business_id = business_id and bm.user_id = auth.uid()))` policy, the unqualified `business_id` binds to whichever table in scope has that column *closest in* — usually `bm.business_id` (a silent wrong bind, not an ambiguity error), never the outer row. Always qualify explicitly: `bm.business_id = <table>.business_id`. Exception: a policy on `business_members` checking `business_members` itself is self-referential and even the qualified form recurses (`infinite recursion detected in policy for relation business_members`) — that case needs a `SECURITY DEFINER` helper function (`is_business_member()`/`is_business_admin()`) instead, which bypasses RLS internally and breaks the cycle.
 
@@ -296,7 +306,7 @@ New E2E spec files must be added to the `testMatch` regex in `apps/web/playwrigh
 
 ## Deployment
 
-No `vercel.json` — Vercel auto-detects Next.js from `apps/web/package.json`. Set **Root Directory** to `apps/web` in Vercel project settings and leave all Framework Settings at defaults (no overrides). Environment variables must be configured in Vercel dashboard (see below).
+Vercel auto-detects Next.js from `apps/web/package.json`. Set **Root Directory** to `apps/web` in Vercel project settings and leave all Framework Settings at defaults (no overrides). `apps/web/vercel.json` only pins functions to **`dub1` (Dublin)**, next to the Supabase database in AWS eu-west-1 — keep them co-located; every page render makes several sequential DB round trips. Environment variables must be configured in Vercel dashboard (see below). The Vercel team scope is `aiseosauyiidahorgmailcoms-projects` (the CLI may default to another team — pass `--scope`).
 
 ---
 
@@ -312,10 +322,16 @@ SUPABASE_SERVICE_ROLE_KEY=
 OPENAI_API_KEY=                # AI bubble menu
 ```
 
-**Optional — email (Resend):**
+**Optional — email (Brevo):**
 ```
-RESEND_API_KEY=                 # Team invites & page sharing emails
-RESEND_FROM_EMAIL=              # Defaults to onboarding@resend.dev
+BREVO_API_KEY=                  # Team invites & page sharing emails
+BREVO_SENDER_EMAIL=             # Verified Brevo sender address
+BREVO_SENDER_NAME=              # Defaults to "Nexus"
+```
+
+**Realtime:**
+```
+NEXT_PUBLIC_REALTIME_PRIVATE=1  # Private, RLS-authorised editor channels (needs migration 34). Set in Vercel Production.
 ```
 
 **Optional — monitoring:**
