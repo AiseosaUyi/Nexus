@@ -250,3 +250,36 @@ export async function sendCommentNotificationEmail({
     text: `${commenterName} mentioned you in ${documentName}: "${trimmed}". View: ${commentUrl}`,
   });
 }
+
+export async function sendSignupConfirmationEmail({
+  to,
+  name,
+  confirmUrl,
+}: {
+  to: string;
+  name?: string;
+  confirmUrl: string;
+}): Promise<SendResult> {
+  const greeting = name ? `Hi ${escapeHtml(name)},` : 'Hi,';
+  const html = renderEmailLayout({
+    preheader: 'Confirm your email to finish creating your Nexus account',
+    headline: 'Confirm your email',
+    bodyHtml: `${greeting}<br/><br/>Confirm this is your email address to finish setting up your Nexus account.`,
+    ctaLabel: 'Confirm my email',
+    ctaUrl: confirmUrl,
+    footerNote: `This link expires in 24 hours. If you didn't create a Nexus account, you can ignore this email.`,
+  });
+
+  return sendBrevoEmail({
+    to,
+    ...(name ? { toName: name } : {}),
+    subject: 'Confirm your email for Nexus',
+    html,
+    text: `${name ? `Hi ${name},\n\n` : ''}Confirm your email to finish creating your Nexus account: ${confirmUrl}\n\nIf you didn't create a Nexus account, ignore this email.`,
+  });
+}
+
+/** True when Brevo credentials are present (emails can actually be sent). */
+export function isEmailConfigured(): boolean {
+  return Boolean(process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL);
+}
