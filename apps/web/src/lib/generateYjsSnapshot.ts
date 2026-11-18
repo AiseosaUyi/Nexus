@@ -21,7 +21,7 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { prosemirrorToYDoc } from 'y-prosemirror';
 
 const SNAPSHOT_EXTENSIONS = [
-  StarterKit.configure({ history: false } as any),
+  StarterKit.configure({ undoRedo: false, link: false }), // Link added below
   TaskList,
   TaskItem.configure({ nested: true }),
   Link.configure({ openOnClick: false }),
