@@ -123,6 +123,7 @@ function makeFakeDb(opts: {
         // createNode's sibling-position lookup .select().eq().eq().order().limit().
         const chain: any = {
           eq: () => chain,
+          is: () => chain,
           maybeSingle: async () => ({ data: opts.node ?? null, error: null }),
           order: () => chain,
           limit: async () => ({ data: [], error: null }),
