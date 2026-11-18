@@ -112,9 +112,22 @@ data. None call an LLM.
 |---|---|---|
 | `nexus_list_tree` | `docs:read` | Teamspaces and nodes |
 | `nexus_search_docs` | `docs:read` | Title (substring) + block-content (Postgres FTS) search, merged |
-| `nexus_read_doc` | `docs:read` | Markdown, clipped to `maxChars` (default 20000) |
-| `nexus_create_doc` | `docs:write` | New document, optionally seeded with markdown |
-| `nexus_append_doc` | `docs:write` | Diffs markdown into the existing Yjs doc — an open editor merges it live |
+| `nexus_read_doc` | `docs:read` | Markdown, paged: returns `totalChars`, `offset`, `truncated`, `nextOffset`. `maxChars` defaults to 100000 (max 500000); pass `offset: nextOffset` for the next page |
+| `nexus_create_doc` | `docs:write` | New document, optionally seeded with markdown. `teamspaceId`/`parentId` must be uuids in this workspace; a parent decides the teamspace (omit `teamspaceId` to inherit it) |
+| `nexus_append_doc` | `docs:write` | Diffs markdown into the existing Yjs doc — an open editor merges it live. `timestamp` is opt-in (default `false`) |
+| `nexus_replace_doc` | `docs:write` | Overwrites the whole body, through the same Yjs diff path as append |
+| `nexus_replace_section` | `docs:write` | Replaces the body under the first heading matching `heading` (case-insensitive, leading `#`s ignored) up to the next heading of the same or higher level. Keeps the heading; errors with the doc's headings if none match |
+| `nexus_create_teamspace` | `docs:write` | `name`, `icon?`, `description?` — appended at the end of the sidebar |
+| `nexus_update_teamspace` | `docs:write` | `id` + any of `name`, `icon`, `description`, `position` |
+| `nexus_move_node` | `docs:write` | `nodeId`, `teamspaceId \| null`, `parentId \| null`, `position?` (zero-based index among new siblings; omitted = end). Moves the subtree; descendants follow the teamspace. Refuses cycles |
+| `nexus_rename_node` | `docs:write` | Sets `title`; the sidebar `name` follows unless it was custom-named |
+| `nexus_archive_node` | `docs:write` | Soft delete of the node and its subtree (`is_archived`); `restore: true` reverses it |
+
+There is deliberately **no hard delete** on the MCP surface. Every tool that takes a `teamspaceId` or
+`parentId` checks that it is a uuid and belongs to the token's business before writing: the MCP uses
+a service-role client, so RLS does not catch a cross-tenant id. A bad id comes back as a tool
+error (`… not found in this workspace`, `… must be a uuid`), never a raw Postgres error. New pages
+are positioned per `(business_id, teamspace_id, parent_id)`.
 
 **Calendar**
 

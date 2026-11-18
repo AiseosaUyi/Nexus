@@ -256,8 +256,57 @@ async function broadcastDelta(db: SupabaseClient, nodeId: string, delta: Uint8Ar
   }
 }
 
+/** Bad caller input (malformed id, a target outside this workspace, a
+ * move that would create a cycle, a missing heading). MCP tools surface
+ * the message verbatim as a tool error instead of leaking a Postgres
+ * error string. */
+export class DocInputError extends Error {}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isUuid(value: unknown): value is string {
+  return typeof value === 'string' && UUID_RE.test(value);
+}
+
+function assertUuid(value: string, label: string): void {
+  if (!isUuid(value)) throw new DocInputError(`${label} must be a uuid (got "${value}")`);
+}
+
+/** Saves a full next-document state through the same Yjs path every
+ * server-side write uses: diff into the existing CRDT (so an open editor
+ * merges it as a peer update), persist via save_yjs_snapshot, recompute
+ * the denormalised blocks copy, broadcast the delta. */
+async function writeDoc(
+  db: SupabaseClient,
+  nodeId: string,
+  existingBytes: Uint8Array | null,
+  nextJSON: TiptapDoc,
+  label: string,
+): Promise<{ delta: Uint8Array }> {
+  const { snapshot, delta } = diffAppendIntoDoc(existingBytes, nextJSON);
+
+  const { error } = await db.rpc('save_yjs_snapshot', {
+    p_node_id: nodeId,
+    p_snapshot_hex: Buffer.from(snapshot).toString('hex'),
+  });
+  if (error) throw new Error(`${label} (save): ${error.message}`);
+
+  await syncBlocksForNode(db, nodeId, nextJSON);
+  await broadcastDelta(db, nodeId, delta);
+
+  return { delta };
+}
+
+async function loadDocJSON(db: SupabaseClient, businessId: string, nodeId: string) {
+  const node = await fetchNode(db, businessId, nodeId);
+  const existingBytes = decodeSnapshot(node.yjs_snapshot as string | Uint8Array | number[] | null);
+  const currentJSON = existingBytes ? snapshotToProseMirrorJSON(existingBytes) : EMPTY_DOC;
+  return { node, existingBytes, currentJSON };
+}
+
 export interface AppendOptions {
   heading?: string;
+  /** Opt-in: prefix the appended content with an italic ISO timestamp. */
   timestamp?: boolean;
 }
 
@@ -268,26 +317,151 @@ export async function appendToNode(
   markdown: string,
   opts: AppendOptions = {},
 ): Promise<{ delta: Uint8Array }> {
-  const node = await fetchNode(db, businessId, nodeId);
-  const existingBytes = decodeSnapshot(node.yjs_snapshot as string | Uint8Array | number[] | null);
-  const currentJSON = existingBytes ? snapshotToProseMirrorJSON(existingBytes) : EMPTY_DOC;
+  const { existingBytes, currentJSON } = await loadDocJSON(db, businessId, nodeId);
   const nextJSON = appendContent(currentJSON, markdownToProseMirror(markdown), {
     heading: opts.heading,
-    timestamp: opts.timestamp ?? true,
+    timestamp: opts.timestamp ?? false,
   });
+  return writeDoc(db, nodeId, existingBytes, nextJSON, 'appendToNode');
+}
 
-  const { snapshot, delta } = diffAppendIntoDoc(existingBytes, nextJSON);
+function nonEmptyDoc(doc: TiptapDoc): TiptapDoc {
+  return doc.content?.length ? doc : EMPTY_DOC;
+}
 
-  const { error } = await db.rpc('save_yjs_snapshot', {
-    p_node_id: nodeId,
-    p_snapshot_hex: Buffer.from(snapshot).toString('hex'),
-  });
-  if (error) throw new Error(`appendToNode (save): ${error.message}`);
+/** Overwrites the whole document. Still a CRDT diff (not a rebuild), so
+ * an open editor receives it as a normal peer update. */
+export async function replaceNodeContent(
+  db: SupabaseClient,
+  businessId: string,
+  nodeId: string,
+  markdown: string,
+): Promise<{ delta: Uint8Array }> {
+  const { existingBytes } = await loadDocJSON(db, businessId, nodeId);
+  return writeDoc(db, nodeId, existingBytes, nonEmptyDoc(markdownToProseMirror(markdown)), 'replaceNodeContent');
+}
 
-  await syncBlocksForNode(db, nodeId, nextJSON);
-  await broadcastDelta(db, nodeId, delta);
+function textOf(node: TiptapJSONNode): string {
+  if (typeof node.text === 'string') return node.text;
+  return (node.content ?? []).map(textOf).join('');
+}
 
-  return { delta };
+function normaliseHeading(text: string): string {
+  return text.replace(/^#+\s*/, '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+/** Pure: swaps the body under the first top-level heading whose text
+ * matches `heading` (case/whitespace-insensitive, leading #'s ignored).
+ * The section runs until the next heading of the same or a higher level.
+ * The heading itself is kept; a duplicate copy of it at the start of the
+ * replacement is dropped. */
+export function replaceSectionContent(current: TiptapDoc, heading: string, replacement: TiptapDoc): TiptapDoc {
+  const target = normaliseHeading(heading);
+  if (!target) throw new DocInputError('heading must not be empty');
+  const blocks = current.content ?? [];
+  const start = blocks.findIndex((b) => b.type === 'heading' && normaliseHeading(textOf(b)) === target);
+  if (start === -1) {
+    const available = blocks.filter((b) => b.type === 'heading').map((b) => textOf(b).trim()).filter(Boolean);
+    throw new DocInputError(
+      `Heading "${heading}" not found.` + (available.length ? ` Headings in this doc: ${available.map((h) => `"${h}"`).join(', ')}` : ' This doc has no headings.'),
+    );
+  }
+  const level = Number(blocks[start].attrs?.level ?? 1);
+  let end = start + 1;
+  while (end < blocks.length) {
+    const b = blocks[end];
+    if (b.type === 'heading' && Number(b.attrs?.level ?? 1) <= level) break;
+    end++;
+  }
+  let body = replacement.content ?? [];
+  if (body[0]?.type === 'heading' && normaliseHeading(textOf(body[0])) === target) body = body.slice(1);
+  // Drop a lone empty paragraph (what an empty markdown string parses to).
+  if (body.length === 1 && body[0].type === 'paragraph' && !body[0].content?.length) body = [];
+  return { type: 'doc', content: [...blocks.slice(0, start + 1), ...body, ...blocks.slice(end)] };
+}
+
+export async function replaceNodeSection(
+  db: SupabaseClient,
+  businessId: string,
+  nodeId: string,
+  heading: string,
+  markdown: string,
+): Promise<{ delta: Uint8Array }> {
+  const { existingBytes, currentJSON } = await loadDocJSON(db, businessId, nodeId);
+  const nextJSON = replaceSectionContent(currentJSON, heading, markdownToProseMirror(markdown));
+  return writeDoc(db, nodeId, existingBytes, nextJSON, 'replaceNodeSection');
+}
+
+// ---- Placement: tenant ownership + positions -------------------------
+
+export interface Placement {
+  teamspaceId: string | null;
+  parentId: string | null;
+}
+
+/** The MCP's db client is service-role (RLS bypassed), so nothing below
+ * the app stops a caller from pointing a node at another workspace's
+ * teamspace or parent. Every write that sets teamspace_id/parent_id goes
+ * through here first. A parent decides the teamspace: if teamspaceId is
+ * omitted it is inherited; if given it must match. */
+export async function resolvePlacement(
+  db: SupabaseClient,
+  businessId: string,
+  input: { teamspaceId?: string | null; parentId?: string | null },
+): Promise<Placement> {
+  let teamspaceId = input.teamspaceId ?? null;
+  const parentId = input.parentId ?? null;
+
+  if (teamspaceId !== null) {
+    assertUuid(teamspaceId, 'teamspaceId');
+    const { data, error } = await db
+      .from('teamspaces')
+      .select('id')
+      .eq('id', teamspaceId)
+      .eq('business_id', businessId)
+      .maybeSingle();
+    if (error) throw new Error(`resolvePlacement (teamspace): ${error.message}`);
+    if (!data) throw new DocInputError(`Teamspace ${teamspaceId} not found in this workspace`);
+  }
+
+  if (parentId !== null) {
+    assertUuid(parentId, 'parentId');
+    const { data: parent, error } = await db
+      .from('nodes')
+      .select('id, teamspace_id, type')
+      .eq('id', parentId)
+      .eq('business_id', businessId)
+      .maybeSingle();
+    if (error) throw new Error(`resolvePlacement (parent): ${error.message}`);
+    if (!parent) throw new DocInputError(`Parent node ${parentId} not found in this workspace`);
+    const parentTeamspace = (parent.teamspace_id as string | null) ?? null;
+    if (input.teamspaceId === undefined) {
+      teamspaceId = parentTeamspace;
+    } else if (teamspaceId !== parentTeamspace) {
+      throw new DocInputError(
+        `Parent node ${parentId} is in teamspace ${parentTeamspace ?? '(none)'}, not ${teamspaceId ?? '(none)'}`,
+      );
+    }
+  }
+
+  return { teamspaceId, parentId };
+}
+
+/** Sibling query scoped to (business_id, teamspace_id, parent_id). Uses
+ * .is() for nulls — .eq(col, null) silently matches nothing. */
+function siblingsQuery(db: SupabaseClient, businessId: string, placement: Placement, columns: string) {
+  let q = db.from('nodes').select(columns).eq('business_id', businessId);
+  q = placement.teamspaceId === null ? q.is('teamspace_id', null) : q.eq('teamspace_id', placement.teamspaceId);
+  q = placement.parentId === null ? q.is('parent_id', null) : q.eq('parent_id', placement.parentId);
+  return q;
+}
+
+export async function nextPosition(db: SupabaseClient, businessId: string, placement: Placement): Promise<number> {
+  const { data } = await siblingsQuery(db, businessId, placement, 'position')
+    .order('position', { ascending: false })
+    .limit(1);
+  const rows = (data ?? []) as unknown as Array<{ position: number }>;
+  return rows.length ? Number(rows[0].position) + 1 : 0;
 }
 
 export interface CreateNodeInput {
@@ -298,17 +472,8 @@ export interface CreateNodeInput {
 }
 
 export async function createNode(db: SupabaseClient, businessId: string, input: CreateNodeInput): Promise<NodeRow> {
-  let position = 0;
-  {
-    const { data: siblings } = await db
-      .from('nodes')
-      .select('position')
-      .eq('business_id', businessId)
-      .eq('parent_id', input.parentId ?? null)
-      .order('position', { ascending: false })
-      .limit(1);
-    position = siblings?.length ? (siblings[0].position as number) + 1 : 0;
-  }
+  const placement = await resolvePlacement(db, businessId, input);
+  const position = await nextPosition(db, businessId, placement);
 
   const { data: created, error } = await db
     .from('nodes')
@@ -318,8 +483,8 @@ export async function createNode(db: SupabaseClient, businessId: string, input: 
       title: input.title,
       name: input.title,
       is_name_custom: false,
-      parent_id: input.parentId ?? null,
-      teamspace_id: input.teamspaceId ?? null,
+      parent_id: placement.parentId,
+      teamspace_id: placement.teamspaceId,
       position,
     })
     .select('id, business_id, title, type, parent_id, teamspace_id, yjs_snapshot')
@@ -331,6 +496,216 @@ export async function createNode(db: SupabaseClient, businessId: string, input: 
   }
 
   return created as NodeRow;
+}
+
+// ---- Organising: move / rename / archive -----------------------------
+
+async function fetchNodeMeta(db: SupabaseClient, businessId: string, nodeId: string) {
+  assertUuid(nodeId, 'nodeId');
+  const { data, error } = await db
+    .from('nodes')
+    .select('id, parent_id, teamspace_id, is_name_custom, is_archived')
+    .eq('id', nodeId)
+    .eq('business_id', businessId)
+    .maybeSingle();
+  if (error) throw new Error(`fetchNodeMeta: ${error.message}`);
+  if (!data) throw new DocNotFoundError(`Node ${nodeId} not found in this workspace`);
+  return data as { id: string; parent_id: string | null; teamspace_id: string | null; is_name_custom: boolean; is_archived: boolean };
+}
+
+/** All descendants of `rootId` within the business (not including root). */
+async function descendantIds(db: SupabaseClient, businessId: string, rootId: string): Promise<string[]> {
+  const { data, error } = await db.from('nodes').select('id, parent_id').eq('business_id', businessId);
+  if (error) throw new Error(`descendantIds: ${error.message}`);
+  const children = new Map<string, string[]>();
+  for (const row of (data ?? []) as Array<{ id: string; parent_id: string | null }>) {
+    if (!row.parent_id) continue;
+    const list = children.get(row.parent_id) ?? [];
+    list.push(row.id);
+    children.set(row.parent_id, list);
+  }
+  const out: string[] = [];
+  const queue = [...(children.get(rootId) ?? [])];
+  const seen = new Set<string>([rootId]);
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+    queue.push(...(children.get(id) ?? []));
+  }
+  return out;
+}
+
+export interface MoveNodeInput {
+  teamspaceId: string | null;
+  parentId: string | null;
+  /** Zero-based index among the new siblings; omitted = append at end. */
+  position?: number;
+}
+
+export async function moveNode(
+  db: SupabaseClient,
+  businessId: string,
+  nodeId: string,
+  input: MoveNodeInput,
+): Promise<{ nodeId: string; teamspaceId: string | null; parentId: string | null; position: number }> {
+  await fetchNodeMeta(db, businessId, nodeId);
+  const placement = await resolvePlacement(db, businessId, input);
+
+  const descendants = await descendantIds(db, businessId, nodeId);
+  if (placement.parentId !== null && (placement.parentId === nodeId || descendants.includes(placement.parentId))) {
+    throw new DocInputError('Cannot move a node under itself or one of its descendants');
+  }
+
+  // Siblings at the destination, excluding the node being moved.
+  const { data: siblingData, error: sibError } = await siblingsQuery(db, businessId, placement, 'id, position').order('position', {
+    ascending: true,
+  });
+  if (sibError) throw new Error(`moveNode (siblings): ${sibError.message}`);
+  const siblings = ((siblingData ?? []) as unknown as Array<{ id: string; position: number }>).filter((s) => s.id !== nodeId);
+
+  let index = siblings.length;
+  if (input.position !== undefined) {
+    if (!Number.isInteger(input.position) || input.position < 0) throw new DocInputError('position must be a non-negative integer');
+    index = Math.min(input.position, siblings.length);
+  }
+
+  const { error: moveError } = await db
+    .from('nodes')
+    .update({ teamspace_id: placement.teamspaceId, parent_id: placement.parentId, position: index })
+    .eq('id', nodeId)
+    .eq('business_id', businessId);
+  if (moveError) throw new Error(`moveNode: ${moveError.message}`);
+
+  // Renumber only the siblings whose slot actually changed.
+  const ordered = [...siblings.slice(0, index), { id: nodeId, position: index }, ...siblings.slice(index)];
+  for (let i = 0; i < ordered.length; i++) {
+    const s = ordered[i];
+    if (s.id === nodeId || Number(s.position) === i) continue;
+    const { error } = await db.from('nodes').update({ position: i }).eq('id', s.id).eq('business_id', businessId);
+    if (error) throw new Error(`moveNode (renumber): ${error.message}`);
+  }
+
+  // A subtree lives in one teamspace — keep descendants in step.
+  if (descendants.length) {
+    const { error } = await db
+      .from('nodes')
+      .update({ teamspace_id: placement.teamspaceId })
+      .in('id', descendants)
+      .eq('business_id', businessId);
+    if (error) throw new Error(`moveNode (descendants): ${error.message}`);
+  }
+
+  return { nodeId, teamspaceId: placement.teamspaceId, parentId: placement.parentId, position: index };
+}
+
+/** Renames the page H1. The sidebar label follows unless the user gave it
+ * a custom name (is_name_custom), mirroring the editor's behaviour. */
+export async function renameNode(db: SupabaseClient, businessId: string, nodeId: string, title: string): Promise<{ nameUpdated: boolean }> {
+  const trimmed = title.trim();
+  if (!trimmed) throw new DocInputError('title must not be empty');
+  const meta = await fetchNodeMeta(db, businessId, nodeId);
+  const updates: Record<string, unknown> = { title: trimmed };
+  if (!meta.is_name_custom) updates.name = trimmed;
+  const { error } = await db.from('nodes').update(updates).eq('id', nodeId).eq('business_id', businessId);
+  if (error) throw new Error(`renameNode: ${error.message}`);
+  return { nameUpdated: !meta.is_name_custom };
+}
+
+/** Soft delete: sets is_archived on the node and its whole subtree.
+ * `archived: false` restores them. There is no hard delete on the MCP. */
+export async function setNodeArchived(
+  db: SupabaseClient,
+  businessId: string,
+  nodeId: string,
+  archived: boolean,
+): Promise<{ nodeIds: string[] }> {
+  await fetchNodeMeta(db, businessId, nodeId);
+  const ids = [nodeId, ...(await descendantIds(db, businessId, nodeId))];
+  const { error } = await db.from('nodes').update({ is_archived: archived }).in('id', ids).eq('business_id', businessId);
+  if (error) throw new Error(`setNodeArchived: ${error.message}`);
+  return { nodeIds: ids };
+}
+
+// ---- Teamspaces -------------------------------------------------------
+
+export interface TeamspaceRow {
+  id: string;
+  business_id: string;
+  name: string;
+  icon: string | null;
+  description: string | null;
+  position: number;
+}
+
+const TEAMSPACE_COLUMNS = 'id, business_id, name, icon, description, position';
+
+/** Same logic as the createTeamspace server action (append at the end of
+ * the business's teamspaces), against an explicit business instead of
+ * the cookie session. */
+export async function createTeamspace(
+  db: SupabaseClient,
+  businessId: string,
+  input: { name: string; icon?: string | null; description?: string | null; createdBy?: string | null },
+): Promise<TeamspaceRow> {
+  const name = input.name.trim();
+  if (!name) throw new DocInputError('name must not be empty');
+  const { data: last } = await db
+    .from('teamspaces')
+    .select('position')
+    .eq('business_id', businessId)
+    .order('position', { ascending: false })
+    .limit(1);
+  const position = (((last ?? []) as Array<{ position: number }>)[0]?.position ?? -1) + 1;
+
+  const { data, error } = await db
+    .from('teamspaces')
+    .insert({
+      business_id: businessId,
+      name,
+      icon: input.icon || null,
+      description: input.description ?? null,
+      position,
+      created_by: input.createdBy ?? null,
+    })
+    .select(TEAMSPACE_COLUMNS)
+    .single();
+  if (error) throw new Error(`createTeamspace: ${error.message}`);
+  return data as TeamspaceRow;
+}
+
+export async function updateTeamspace(
+  db: SupabaseClient,
+  businessId: string,
+  id: string,
+  input: { name?: string; icon?: string | null; description?: string | null; position?: number },
+): Promise<TeamspaceRow> {
+  assertUuid(id, 'id');
+  // Explicit whitelist — business_id/created_by/is_private are never writable here.
+  const updates: Record<string, unknown> = {};
+  if (input.name !== undefined) {
+    if (!input.name.trim()) throw new DocInputError('name must not be empty');
+    updates.name = input.name.trim();
+  }
+  if (input.icon !== undefined) updates.icon = input.icon || null;
+  if (input.description !== undefined) updates.description = input.description;
+  if (input.position !== undefined) {
+    if (!Number.isInteger(input.position) || input.position < 0) throw new DocInputError('position must be a non-negative integer');
+    updates.position = input.position;
+  }
+  if (Object.keys(updates).length === 0) throw new DocInputError('Nothing to update');
+
+  const { data, error } = await db
+    .from('teamspaces')
+    .update(updates)
+    .eq('id', id)
+    .eq('business_id', businessId)
+    .select(TEAMSPACE_COLUMNS)
+    .maybeSingle();
+  if (error) throw new Error(`updateTeamspace: ${error.message}`);
+  if (!data) throw new DocInputError(`Teamspace ${id} not found in this workspace`);
+  return data as TeamspaceRow;
 }
 
 export { proseMirrorToMarkdown, markdownToProseMirror } from './markdown';
