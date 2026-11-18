@@ -37,7 +37,7 @@ import { markdownToProseMirror, proseMirrorToMarkdown, type TiptapDoc, type Tipt
 // containing any of them, and PMNode.fromJSON would silently drop them on
 // the way back in.
 const SNAPSHOT_EXTENSIONS = [
-  StarterKit.configure({ history: false } as any),
+  StarterKit.configure({ undoRedo: false, link: false }), // Link added below
   TaskList,
   TaskItem.configure({ nested: true }),
   Link.configure({ openOnClick: false }),

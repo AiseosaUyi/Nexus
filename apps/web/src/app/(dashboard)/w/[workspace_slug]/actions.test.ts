@@ -30,6 +30,7 @@ describe('Workspace Server Actions', () => {
     insert: vi.fn(),
     update: vi.fn(),
     eq: vi.fn(),
+    is: vi.fn(),
     order: vi.fn(),
     limit: vi.fn(),
     single: vi.fn(),
@@ -47,6 +48,7 @@ describe('Workspace Server Actions', () => {
     mockSupabase.insert.mockReturnValue(mockSupabase);
     mockSupabase.update.mockReturnValue(mockSupabase);
     mockSupabase.eq.mockReturnValue(mockSupabase);
+    mockSupabase.is.mockReturnValue(mockSupabase);
     mockSupabase.order.mockReturnValue(mockSupabase);
     mockSupabase.limit.mockReturnValue(mockSupabase);
   });

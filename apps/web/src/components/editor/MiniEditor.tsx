@@ -23,6 +23,7 @@ export default function MiniEditor({ content, placeholder, onChange, autoFocus }
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3, 4] },
+        link: false, // configured separately below
       }),
       Placeholder.configure({
         placeholder: ({ node }) => {

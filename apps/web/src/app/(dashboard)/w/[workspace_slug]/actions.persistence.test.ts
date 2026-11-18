@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { syncBlocks, updateNode, updateYjsSnapshot, importFromURL } from './actions';
+import { syncBlocks, updateNode, updateYjsSnapshot, importFromURL, createNode } from './actions';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
@@ -17,9 +17,12 @@ function makeSupabase() {
     upsert: vi.fn(),
     select: vi.fn(),
     eq: vi.fn(),
+    is: vi.fn(),
+    order: vi.fn(),
+    limit: vi.fn(),
     single: vi.fn(),
   };
-  for (const k of ['from', 'update', 'insert', 'delete', 'upsert', 'select', 'eq']) {
+  for (const k of ['from', 'update', 'insert', 'delete', 'upsert', 'select', 'eq', 'is', 'order']) {
     chain[k].mockReturnValue(chain);
   }
   return chain;
@@ -137,5 +140,25 @@ describe('importFromURL', () => {
     expect(res.error).toBe('That address can’t be imported.');
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
+  });
+});
+
+describe('createNode sibling position', () => {
+  it('uses IS NULL (not eq "null") for a top-level page', async () => {
+    sb.limit.mockResolvedValue({ data: [{ position: 4 }], error: null });
+    sb.single.mockResolvedValue({ data: { id: 'n1' }, error: null });
+    await createNode({ business_id: 'biz-1', type: 'document' });
+    expect(sb.is).toHaveBeenCalledWith('parent_id', null);
+    expect(sb.eq).not.toHaveBeenCalledWith('parent_id', null);
+    expect(sb.insert).toHaveBeenCalledWith([expect.objectContaining({ position: 5, parent_id: null })]);
+  });
+
+  it('uses eq for a nested page', async () => {
+    sb.limit.mockResolvedValue({ data: [], error: null });
+    sb.single.mockResolvedValue({ data: { id: 'n2' }, error: null });
+    await createNode({ business_id: 'biz-1', type: 'document', parent_id: 'parent-1' });
+    expect(sb.eq).toHaveBeenCalledWith('parent_id', 'parent-1');
+    expect(sb.is).not.toHaveBeenCalled();
+    expect(sb.insert).toHaveBeenCalledWith([expect.objectContaining({ position: 0, parent_id: 'parent-1' })]);
   });
 });

@@ -51,8 +51,8 @@ const CommentComposer = forwardRef<CommentComposerHandle, CommentComposerProps>(
           blockquote: false,
           codeBlock: false,
           horizontalRule: false,
-          history: { depth: 50 },
-        } as any),
+          undoRedo: { depth: 50 }, // v3 name; `history` was silently ignored
+        }),
         Placeholder.configure({ placeholder }),
         Mention.configure({
           suggestion: {

@@ -71,12 +71,18 @@ export async function createNode(payload: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  // Get the current max position for siblings to place the new node at the bottom
-  const { data: siblings, error: positionError } = await supabase
+  // Get the current max position for siblings to place the new node at the bottom.
+  // NULL needs .is(): .eq('parent_id', null) sends the string "null" and errors
+  // (22P02), which left every new top-level page at position 0.
+  const siblingsQuery = supabase
     .from('nodes')
     .select('position')
-    .eq('business_id', payload.business_id)
-    .eq('parent_id', payload.parent_id || null)
+    .eq('business_id', payload.business_id);
+  const { data: siblings, error: positionError } = await (
+    payload.parent_id
+      ? siblingsQuery.eq('parent_id', payload.parent_id)
+      : siblingsQuery.is('parent_id', null)
+  )
     .order('position', { ascending: false })
     .limit(1);
 

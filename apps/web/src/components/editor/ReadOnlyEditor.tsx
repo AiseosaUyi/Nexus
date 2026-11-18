@@ -61,7 +61,7 @@ export default function ReadOnlyEditor({ content, snapshot }: ReadOnlyEditorProp
 
   const extensions = useMemo(() => {
     const base = [
-      StarterKit.configure({ history: hasSnapshot ? false : undefined } as any),
+      StarterKit.configure({ ...(hasSnapshot ? { undoRedo: false as const } : {}), link: false }), // Link added below
       Link.configure({ openOnClick: true }),
       TaskList,
       TaskItem.configure({ nested: true }),

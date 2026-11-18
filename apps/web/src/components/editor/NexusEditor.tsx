@@ -222,6 +222,7 @@ export default function NexusEditor({
         // history would undo collaborators' edits. (v3 renamed `history`.)
         undoRedo: false,
         heading: { levels: [1, 2, 3, 4] },
+        link: false, // configured separately below
       }),
       Placeholder.configure({
         placeholder: ({ node }) => {

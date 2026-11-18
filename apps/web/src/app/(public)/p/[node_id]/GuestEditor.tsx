@@ -88,7 +88,7 @@ export default function GuestEditor({ nodeId, initialSnapshot }: GuestEditorProp
     editable: true,
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ history: false } as any),
+      StarterKit.configure({ undoRedo: false, link: false }), // Link added below with custom options
       Link.configure({ openOnClick: false }),
       TaskList,
       TaskItem.configure({ nested: true }),
