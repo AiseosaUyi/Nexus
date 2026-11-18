@@ -45,6 +45,11 @@ export function checkAiRateLimit(userId: string): RateLimitResult {
   return check('ai', userId, 10 * 60_000, 30);
 }
 
+/** Confirmation-email resends: 3 per email per 15 minutes (Brevo cost + inbox spam guard). */
+export function checkConfirmationEmailRateLimit(email: string): RateLimitResult {
+  return check('confirm-email', email.toLowerCase(), 15 * 60_000, 3);
+}
+
 export function checkPreAuthRateLimit(ip: string): RateLimitResult {
   return check('preauth-ip', ip, 60_000, 300);
 }

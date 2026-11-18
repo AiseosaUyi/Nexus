@@ -4,6 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { toUserError } from '@/lib/user-error';
+import { createServiceClient } from '@/lib/supabase/service';
+import { isEmailConfigured } from '@/lib/email';
+import { sendConfirmation, safeNextPath, CONFIRM_OTP_TYPES, type ConfirmOtpType } from '@/lib/auth/confirmation';
+import { checkConfirmationEmailRateLimit } from '@/lib/mcp/rate-limit';
+
+/** Local dev without Brevo can't send mail; production must never skip verification. */
+function canSkipEmailVerification(): boolean {
+  return process.env.VERCEL_ENV !== 'production' && process.env.NODE_ENV !== 'production' && !isEmailConfigured();
+}
 
 export async function signUp(formData: FormData) {
   const supabase = await createClient();
@@ -19,36 +28,73 @@ export async function signUp(formData: FormData) {
     return redirect(`/signup?error=${encodeURIComponent('Password must be at least 6 characters')}`);
   }
 
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { full_name: fullName },
-    },
-  });
+  const admin = createServiceClient();
 
-  if (error) {
-    return redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+  // Local dev without Brevo: there's no way to deliver a link, so create the
+  // account pre-confirmed and sign straight in. Never in production.
+  if (canSkipEmailVerification()) {
+    const { error: createError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName },
+    });
+    if (createError) {
+      return redirect(`/signup?error=${encodeURIComponent(createError.message)}`);
+    }
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) return redirect(`/signup?error=${encodeURIComponent(signInError.message)}`);
+    revalidatePath('/', 'layout');
+    return redirect('/dashboard');
   }
 
-  // Auto-confirm user if email confirmation is enabled and no session was returned
-  if (!data.session && data.user) {
-    const { createClient: createAdminClient } = await import('@supabase/supabase-js');
-    const admin = createAdminClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
-    await admin.auth.admin.updateUserById(data.user.id, { email_confirm: true });
+  // Create the account UNCONFIRMED and email a confirmation link through our
+  // Brevo sender. Previously the account was auto-confirmed with the admin
+  // API, so anyone could register (and receive shares/invites for) an email
+  // address they don't own.
+  const result = await sendConfirmation(admin, { kind: 'signup', email, password, fullName });
 
-    // Sign them in now that they're confirmed
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError) {
-      return redirect(`/signup?error=${encodeURIComponent(signInError.message)}`);
+  if (!result.ok) {
+    if (result.reason === 'email_exists') {
+      return redirect(`/signup?error=${encodeURIComponent('An account with this email already exists. Sign in instead.')}`);
     }
+    console.error('[signUp] confirmation failed:', result.reason, result.detail);
+    return redirect(
+      `/signup?error=${encodeURIComponent(
+        result.reason === 'send_failed'
+          ? 'Your account was created, but we couldn’t send the confirmation email. Sign in to get a new link.'
+          : 'We couldn’t create your account right now. Please try again.',
+      )}`,
+    );
+  }
+
+  return redirect('/signup?sent=1');
+}
+
+/**
+ * Confirms an email from the link in the confirmation email. Called by the
+ * button on /auth/confirm (POST), never on page load — link scanners in
+ * corporate inboxes pre-open URLs and would otherwise consume the token.
+ */
+export async function confirmEmail(formData: FormData) {
+  const tokenHash = String(formData.get('token_hash') ?? '');
+  const type = String(formData.get('type') ?? '') as ConfirmOtpType;
+  const next = safeNextPath(String(formData.get('next') ?? ''));
+
+  if (!tokenHash || !(CONFIRM_OTP_TYPES as readonly string[]).includes(type)) {
+    return redirect(`/login?error=${encodeURIComponent('That confirmation link is invalid. Sign in to get a new one.')}`);
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+  if (error) {
+    return redirect(
+      `/login?error=${encodeURIComponent('That confirmation link has expired or was already used. Sign in to get a new one.')}`,
+    );
   }
 
   revalidatePath('/', 'layout');
-  redirect('/dashboard');
+  return redirect(next);
 }
 
 export async function signIn(formData: FormData) {
@@ -65,6 +111,20 @@ export async function signIn(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    // GoTrue only reports "not confirmed" after the password checks out, so
+    // only the account's owner can trigger a resend.
+    if ((error as { code?: string }).code === 'email_not_confirmed' || /email not confirmed/i.test(error.message)) {
+      const limit = checkConfirmationEmailRateLimit(email);
+      if (limit.ok) {
+        const sent = await sendConfirmation(createServiceClient(), {
+          kind: 'resend',
+          email,
+          next: safeNextPath(next),
+        });
+        if (!sent.ok) console.error('[signIn] resend confirmation failed:', sent.reason, sent.detail);
+      }
+      return redirect(`/login?notice=confirm-sent${next ? `&next=${encodeURIComponent(safeNextPath(next))}` : ''}`);
+    }
     return redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
@@ -188,61 +248,56 @@ export async function authenticateAndAcceptInvite(formData: FormData) {
       return { error: 'Missing required email, password, or invite token' };
     }
 
+    // 0. The invite must be live AND addressed to this email. Holding a token
+    // that was emailed to an address is our proof of owning that address, so
+    // it's the only case where an account may be confirmed without clicking a
+    // confirmation link. (Previously any unconfirmed account was confirmed
+    // here before the invite was even checked.)
+    const { data: inviteRows } = await supabase.rpc('get_invitation_by_token', { p_token: token });
+    const invite = Array.isArray(inviteRows) ? inviteRows[0] : inviteRows;
+    const inviteIsLive =
+      !!invite && !invite.accepted_at && new Date(invite.expires_at).getTime() > Date.now();
+    if (!inviteIsLive) {
+      return { error: 'This invitation is invalid, expired, or already used.' };
+    }
+    if (String(invite.email).trim().toLowerCase() !== email) {
+      return { error: 'This invitation was sent to a different email address. Use the invited email to accept it.' };
+    }
+
     // 1. Authenticate (Login or Signup)
     if (isExisting) {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      
-      // Self-healing: If login fails due to unconfirmed email, try to confirm it now (since we have the key)
-      if (signInError?.message === 'Email not confirmed') {
-        const { data: userCheck } = await supabase.from('users').select('id').eq('email', email).single();
-        if (userCheck?.id) {
-          const { createClient: createAdminClient } = await import('@supabase/supabase-js');
-          const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-          if (serviceRoleKey && supabaseUrl) {
-            const admin = createAdminClient(supabaseUrl, serviceRoleKey);
-            await admin.auth.admin.updateUserById(userCheck.id, { email_confirm: true });
-            // Retry sign-in
-            const { error: retryError } = await supabase.auth.signInWithPassword({ email, password });
-            if (retryError) return { error: retryError.message };
-          } else {
-            return { error: 'Your email is not confirmed. Please check your inbox or contact the workspace owner.' };
-          }
-        } else {
-          return { error: 'Email not confirmed. Please check your inbox.' };
-        }
+      if (signInError && ((signInError as { code?: string }).code === 'email_not_confirmed' || /email not confirmed/i.test(signInError.message))) {
+        // Password already verified by GoTrue; the invite above proves the email.
+        const admin = createServiceClient();
+        const { data: userRow } = await admin.from('users').select('id').eq('email', email).maybeSingle();
+        if (!userRow?.id) return { error: 'Your email is not confirmed. Please check your inbox.' };
+        await admin.auth.admin.updateUserById(userRow.id, { email_confirm: true });
+        const { error: retryError } = await supabase.auth.signInWithPassword({ email, password });
+        if (retryError) return { error: retryError.message };
       } else if (signInError) {
         return { error: signInError.message };
       }
     } else {
       if (!fullName) return { error: 'Please provide your full name to create an account' };
-      
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      if (!password || password.length < 6) return { error: 'Password must be at least 6 characters' };
+
+      // admin.createUser doesn't trigger Supabase's own confirmation mail.
+      const admin = createServiceClient();
+      const { error: createError } = await admin.auth.admin.createUser({
         email,
         password,
-        options: { data: { full_name: fullName } },
+        email_confirm: true,
+        user_metadata: { full_name: fullName },
       });
-
-      if (signUpError) return { error: signUpError.message };
-
-      // Auto-confirm logic for new accounts if no session was returned
-      if (!signUpData.session && signUpData.user) {
-        const { createClient: createAdminClient } = await import('@supabase/supabase-js');
-        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-        if (!serviceRoleKey || !supabaseUrl) {
-          return { error: 'Server configuration error: Missing API keys for auto-confirmation.' };
-        }
-
-        const admin = createAdminClient(supabaseUrl, serviceRoleKey);
-        await admin.auth.admin.updateUserById(signUpData.user.id, { email_confirm: true });
-        
-        // Final sign-in to establish session
-        const { error: finalSignInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (finalSignInError) return { error: 'Account created but could not sign in automatically: ' + finalSignInError.message };
+      if (createError) {
+        const exists = (createError as { code?: string }).code === 'email_exists' || /already (been )?registered|already exists/i.test(createError.message);
+        return { error: exists ? 'An account with this email already exists. Sign in to accept the invitation.' : createError.message };
       }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) return { error: 'Account created but could not sign in automatically: ' + signInError.message };
     }
 
     // 2. Accept the Invitation using the RPC

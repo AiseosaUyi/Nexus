@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { signIn } from '../actions';
-import { LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { LogIn, AlertCircle, Eye, EyeOff, MailCheck } from 'lucide-react';
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
+  const notice = searchParams.get('notice');
   const next = searchParams.get('next');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -30,6 +31,13 @@ function LoginForm() {
             : 'Your knowledge base is waiting for you.'}
         </p>
       </div>
+
+      {notice === 'confirm-sent' && !error && (
+        <div role="status" className="p-3 rounded-lg bg-accent/10 border border-accent/20 flex items-start gap-3 text-foreground text-sm">
+          <MailCheck className="w-4 h-4 shrink-0 mt-0.5 text-accent" aria-hidden />
+          <p>Please confirm your email first. We&apos;ve sent a new confirmation link to your inbox.</p>
+        </div>
+      )}
 
       {error && (
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-500 text-sm animate-in shake-1">

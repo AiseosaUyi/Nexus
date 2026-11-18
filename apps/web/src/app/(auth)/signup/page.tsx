@@ -4,12 +4,34 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { signUp } from '../actions';
-import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, MailCheck } from 'lucide-react';
 
 function SignupForm() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
+  const sent = searchParams.get('sent') === '1';
   const [showPassword, setShowPassword] = useState(false);
+
+  if (sent) {
+    return (
+      <div role="status" className="w-full max-w-sm mx-auto space-y-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="mx-auto w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
+          <MailCheck className="w-6 h-6 text-accent" aria-hidden />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-3xl font-black font-display tracking-tight text-foreground">Check your inbox</h1>
+          <p className="text-sm text-muted">
+            We&apos;ve sent you a link to confirm your email. Click it to finish creating your account.
+          </p>
+        </div>
+        <p className="text-xs text-muted">
+          Nothing there? Check spam, or{' '}
+          <Link href="/login" className="text-foreground font-bold hover:underline">sign in</Link>{' '}
+          and we&apos;ll send a new link.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-sm mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
